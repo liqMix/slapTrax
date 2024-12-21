@@ -9,11 +9,15 @@ require (
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
 	github.com/ebitengine/purego v0.8.0 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
+	golang.org/x/image v0.20.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/text v0.18.0 // indirect
 )
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.5
 	github.com/radovskyb/watcher v1.0.7 // indirect
+	github.com/tinne26/etxt v0.0.9
+	gopkg.in/yaml.v2 v2.4.0
 )

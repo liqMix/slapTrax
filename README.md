@@ -35,7 +35,19 @@ The game also has a chart editor that allows players to create their own charts 
 ### Need
 - Songs (aiming for at least 6-8)
     - Packaged
+    - Checksum (includes chart data to help verify score submissions)
     - Metadata
+        - Version
+        - Album Art
+        - Song Preview Start Timestamp
+        - Title
+        - External URL
+        - Artist
+        - Difficulty
+        - Length
+        - Notes
+        - BPM
+        - Charted By
     - Audio
     - Art
     - Charts
@@ -98,6 +110,10 @@ The game also has a chart editor that allows players to create their own charts 
     - Rendering
         - Interchangeable (2d / 3d / etc)
         - Divorced from game logic
+    - Localization
+        - English
+        - Japanese
+        - On-demand (?)
 
 ### Nice (no particular order (server's probably nicest))
 - Server
@@ -105,6 +121,8 @@ The game also has a chart editor that allows players to create their own charts 
     - In-game direct song downloads
     - Persistent User Profile
     - Online Leaderboards
+    - Provide ad-hoc localization (?)
+    - Update messages (?)
 - More songs
 - UI Skins
 - Song Filter/Order
@@ -128,14 +146,7 @@ The game also has a chart editor that allows players to create their own charts 
 - Song (once highlighted in Song Selection)
     - Song Audio Preview
     - Details Render
-        - Album Art
-        - Title
-        - Artist
-        - Difficulty
-        - Length
-        - Notes
-        - BPM
-        - Charted By
+        - Metadata
         - High Score
         - Note Heatmap (?)
     - Difficulty Selection
