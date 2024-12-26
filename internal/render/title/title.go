@@ -17,7 +17,6 @@ type Renderer struct {
 }
 
 func (r *Renderer) Init(s state.State, t types.Theme) {
-	// Get current theme from settings
 	switch t {
 	case types.ThemeDefault:
 		r.renderer = &Default{}

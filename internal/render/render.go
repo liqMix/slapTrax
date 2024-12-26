@@ -23,6 +23,8 @@ func GetRenderer(gs types.GameState, s state.State) IRenderer {
 	case types.GameStateTitle:
 		r = &title.Renderer{}
 	}
+
+	// Get current theme from settings
 	r.Init(s, user.Current.Settings.Theme)
 	return r
 }
