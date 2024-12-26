@@ -7,14 +7,14 @@ import (
 )
 
 type State struct {
-	text string
-	flag *ebiten.Image
+	Text string
+	Flag *ebiten.Image
 }
 
 func New(arg interface{}) *State {
 	return &State{
-		text: l.String(l.DEBUG_GREETING),
-		flag: l.Flag(),
+		Text: l.String(l.DEBUG_GREETING),
+		Flag: l.Flag(),
 	}
 }
 

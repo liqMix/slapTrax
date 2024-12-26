@@ -9,7 +9,7 @@ import (
 )
 
 type PlayRenderer interface {
-	Draw(screen *ebiten.Image)
+	Draw(screen *ebiten.Image, state *play.State)
 	drawTrack(screen *ebiten.Image, t *song.Track)
 	drawNote(screen *ebiten.Image, n *song.Note)
 }
@@ -32,5 +32,5 @@ func (r *Renderer) Init(s state.State, t types.Theme) {
 }
 
 func (r *Renderer) Draw(screen *ebiten.Image) {
-	r.renderer.Draw(screen)
+	r.renderer.Draw(screen, &r.state)
 }

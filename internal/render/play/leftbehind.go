@@ -3,14 +3,13 @@ package play
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/song"
+	play "github.com/liqmix/ebiten-holiday-2024/internal/state/play"
 )
 
-type LeftBehind struct {
-	Renderer
-}
+type LeftBehind struct{}
 
-func (r *LeftBehind) Draw(screen *ebiten.Image) {
-	for _, t := range r.state.Tracks {
+func (r *LeftBehind) Draw(screen *ebiten.Image, state *play.State) {
+	for _, t := range state.Tracks {
 		r.drawTrack(screen, &t)
 	}
 }

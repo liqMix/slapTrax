@@ -8,7 +8,7 @@ import (
 )
 
 type TitleRenderer interface {
-	Draw(screen *ebiten.Image)
+	Draw(screen *ebiten.Image, state *title.State)
 }
 
 type Renderer struct {
@@ -29,5 +29,5 @@ func (r *Renderer) Init(s state.State, t types.Theme) {
 }
 
 func (r *Renderer) Draw(screen *ebiten.Image) {
-	r.renderer.Draw(screen)
+	r.renderer.Draw(screen, &r.state)
 }
