@@ -5,7 +5,14 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/state/title"
 )
 
-type LeftBehind struct{}
+type LeftBehind struct {
+	state *title.State
+}
 
-func (r *LeftBehind) Draw(screen *ebiten.Image, state *title.State) {
+func (r LeftBehind) New(s *title.State) TitleRenderer {
+	return &LeftBehind{
+		state: s,
+	}
+}
+func (r *LeftBehind) Draw(screen *ebiten.Image) {
 }

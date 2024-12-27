@@ -6,11 +6,18 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/render"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
+
+type Position struct {
+	X float64
+	Y float64
+}
 
 type RenderState struct {
 	state.State
@@ -43,17 +50,19 @@ func NewGame() *Game {
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	panic("nope")
 }
-func (g *Game) LayoutF(logicWinWidth, logicWinHeight float64) (float64, float64) {
+func (g *Game) LayoutF(displayWidth, displayHeight float64) (float64, float64) {
+	s := user.Settings()
+
 	// Calculate scale based on window vs canvas ratio
-	scaleX := logicWinWidth / float64(config.CANVAS_WIDTH)
-	scaleY := logicWinHeight / float64(config.CANVAS_HEIGHT)
+	scaleX := displayWidth / float64(s.RenderWidth)
+	scaleY := displayHeight / float64(s.RenderHeight)
 	g.renderScale = math.Min(scaleX, scaleY)
 
 	// Calculate centering offsets
-	g.offsetX = (logicWinWidth - float64(config.CANVAS_WIDTH)*g.renderScale) / 2
-	g.offsetY = (logicWinHeight - float64(config.CANVAS_HEIGHT)*g.renderScale) / 2
+	g.offsetX = (displayWidth - float64(s.RenderWidth)*g.renderScale) / 2
+	g.offsetY = (displayHeight - float64(s.RenderHeight)*g.renderScale) / 2
 
-	return logicWinWidth, logicWinHeight
+	return displayWidth, displayHeight
 }
 
 // TODO: some sort of time step
@@ -83,7 +92,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	op.GeoM.Translate(g.offsetX, g.offsetY)
 
 	// Create canvas at base resolution
-	canvas := ebiten.NewImage(config.CANVAS_WIDTH, config.CANVAS_HEIGHT)
+	canvas, ok := cache.GetImage("canvas")
+	if !ok {
+		s := user.Settings()
+		canvas = ebiten.NewImage(s.RenderWidth, s.RenderHeight)
+		cache.SetImage("canvas", canvas)
+	}
 
 	if g.currentState != nil && g.currentState.Renderer != nil {
 		g.currentState.Renderer.Draw(canvas)

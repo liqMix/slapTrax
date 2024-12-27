@@ -11,20 +11,18 @@ import (
 
 // TODO: Clean up this mess of renderer renrderd rennder
 type IRenderer interface {
-	Init(s state.State, t types.Theme)
 	Draw(screen *ebiten.Image)
 }
 
 func GetRenderer(gs types.GameState, s state.State) IRenderer {
-	var r IRenderer
+	t := user.Settings().Theme
+
 	switch gs {
 	case types.GameStatePlay:
-		r = &play.Renderer{}
+		return play.GetRenderer(s, t)
 	case types.GameStateTitle:
-		r = &title.Renderer{}
+		return title.GetRenderer(s, t)
 	}
 
-	// Get current theme from settings
-	r.Init(s, user.Current.Settings.Theme)
-	return r
+	panic("No renderer found for game state" + gs.String())
 }

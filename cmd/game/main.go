@@ -8,12 +8,16 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 func main() {
+	// TODO: Read in user settings file if it exists to pick up existing settings?
+	s := user.Settings()
+
 	// Ebiten junk
 	ebiten.SetWindowTitle(config.TITLE)
-	ebiten.SetWindowSize(config.CANVAS_WIDTH, config.CANVAS_HEIGHT)
+	ebiten.SetWindowSize(s.RenderWidth, s.RenderHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetVsyncEnabled(true)
 

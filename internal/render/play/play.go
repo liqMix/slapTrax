@@ -2,34 +2,31 @@ package play
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/song"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
 	play "github.com/liqmix/ebiten-holiday-2024/internal/state/play"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
 type PlayRenderer interface {
-	Draw(screen *ebiten.Image, state *play.State)
-	drawTrack(screen *ebiten.Image, t *song.Track)
-	drawNote(screen *ebiten.Image, n *song.Note)
+	New(*play.State) PlayRenderer
+	Draw(screen *ebiten.Image)
+
+	drawBackground(screen *ebiten.Image)
+	drawProfile(screen *ebiten.Image)
+	drawSongInfo(screen *ebiten.Image)
+	drawScore(screen *ebiten.Image)
+	drawTracks(screen *ebiten.Image)
 }
 
-type Renderer struct {
-	state    play.State
-	renderer PlayRenderer
-}
+func GetRenderer(s state.State, t types.Theme) PlayRenderer {
+	state := s.(*play.State)
 
-func (r *Renderer) Init(s state.State, t types.Theme) {
 	switch t {
 	case types.ThemeDefault:
-		r.renderer = &Default{}
-	case types.ThemeLeftBehind:
-		r.renderer = &LeftBehind{}
+		return Default{}.New(state)
+	default:
+		return Default{}.New(state)
+		// case types.ThemeLeftBehind:
+		// 	r.renderer = &LeftBehind{}
 	}
-
-	r.state = *s.(*play.State)
-}
-
-func (r *Renderer) Draw(screen *ebiten.Image) {
-	r.renderer.Draw(screen, &r.state)
 }

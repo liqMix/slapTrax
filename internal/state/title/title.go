@@ -13,7 +13,7 @@ type State struct {
 
 func New(arg interface{}) *State {
 	return &State{
-		Text: l.String(l.DEBUG_GREETING),
+		Text: l.String(l.TITLE),
 		Flag: l.Flag(),
 	}
 }

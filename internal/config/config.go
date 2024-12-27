@@ -6,9 +6,7 @@ const (
 	DEBUG = true
 
 	// System
-	TITLE         = "Ebiten Holiday Jam 2024"
-	CANVAS_WIDTH  = 1280
-	CANVAS_HEIGHT = 720
+	TITLE = "Ebiten Holiday Jam 2024"
 
 	// Assets
 	SONG_DIR        = "assets/songs"

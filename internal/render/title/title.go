@@ -8,25 +8,19 @@ import (
 )
 
 type TitleRenderer interface {
-	Draw(screen *ebiten.Image, state *title.State)
+	New(*title.State) TitleRenderer
+	Draw(screen *ebiten.Image)
 }
 
-type Renderer struct {
-	state    title.State
-	renderer TitleRenderer
-}
+func GetRenderer(s state.State, t types.Theme) TitleRenderer {
+	state := s.(*title.State)
 
-func (r *Renderer) Init(s state.State, t types.Theme) {
 	switch t {
 	case types.ThemeDefault:
-		r.renderer = &Default{}
-	case types.ThemeLeftBehind:
-		r.renderer = &LeftBehind{}
+		return Default{}.New(state)
+	default:
+		return Default{}.New(state)
+		// case types.ThemeLeftBehind:
+		// 	return LeftBehind{}.New(state)
 	}
-
-	r.state = *s.(*title.State)
-}
-
-func (r *Renderer) Draw(screen *ebiten.Image) {
-	r.renderer.Draw(screen, &r.state)
 }

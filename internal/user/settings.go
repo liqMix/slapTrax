@@ -6,14 +6,19 @@ import "github.com/liqmix/ebiten-holiday-2024/internal/types"
 // TODO: store in user profile for persistence
 type UserSettings struct {
 	// System/Graphics
-	// Fullscreen	bool
-	// VSync	bool
+	Fullscreen bool
+	VSync      bool
+
+	ScreenWidth  int
+	ScreenHeight int
+	RenderWidth  int
+	RenderHeight int
 
 	// Game
-	Theme types.Theme
-	// AudioOffset	float64
-	// InputOffset	float64
-	// NoteSpeed	float64
+	Theme       types.Theme
+	AudioOffset float64
+	InputOffset float64
+	NoteSpeed   float64
 
 	// Audio
 	BGMVolume         float64
@@ -22,12 +27,13 @@ type UserSettings struct {
 	SongPreviewVolume float64
 }
 
-// DefaultSettings returns a new Settings struct with default values
 var DefaultSettings = UserSettings{
 	Theme:             types.ThemeDefault,
 	BGMVolume:         0.5,
 	SFXVolume:         0.5,
 	SongVolume:        0.5,
 	SongPreviewVolume: 0.5,
-	// NoteSpeed: 1.0,
+	RenderWidth:       1280,
+	RenderHeight:      720,
+	NoteSpeed:         1.0,
 }

@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
@@ -125,23 +126,38 @@ func loadSong(folderName string) *Song {
 
 	// Load the charts
 	song.Charts = make(map[Difficulty]Chart)
-	easyChartPath := songPath + "/easy.yaml"
-	easyChartFile, err := os.ReadFile(easyChartPath)
-	if err == nil {
-		easyChart := ParseChart(Easy, easyChartFile)
-		song.Charts[Easy] = *easyChart
-	} else {
-		fmt.Println("No easy chart found for song " + song.Title)
-	}
 
-	hardChartPath := songPath + "/hard.yaml"
-	hardChartFile, err := os.ReadFile(hardChartPath)
-	if err == nil {
-		hardChart := ParseChart(Hard, hardChartFile)
-		song.Charts[Hard] = *hardChart
+	// Find all .midi files in the song directory
+	// and load them as charts with the chart name as the difficulty.
+	// If not an integer, ignore it.
+	chartDir, err := os.ReadDir(songPath)
+	if err != nil {
 		return nil
-	} else {
-		fmt.Println("No hard chart found for song " + song.Title)
+	}
+	for _, entry := range chartDir {
+		name := entry.Name()
+		if !entry.IsDir() && filepath.Ext(name) == ".midi" {
+			// check if integer directly
+			d, err := strconv.Atoi(name[:len(name)-5])
+			if err != nil {
+				continue
+			}
+			difficulty := Difficulty(d)
+			chartPath := path.Join(songPath, name)
+			chartFile, err := os.ReadFile(chartPath)
+			if err != nil {
+				return nil
+			}
+			chart, err := ParseChart(&song, chartFile)
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+			if chart != nil {
+				chart.Difficulty = difficulty
+				song.Charts[difficulty] = *chart
+			}
+		}
 	}
 
 	// Calculate the checksum

@@ -10,42 +10,67 @@ import (
 
 type TrackName string
 
-// tracks from left to right
 const (
-	LeftBottom  TrackName = "track.left.bottom"
-	LeftTop     TrackName = "track.left.top"
-	Tap1        TrackName = "track.tap1"
-	Tap2        TrackName = "track.tap2"
-	Tap3        TrackName = "track.tap3"
-	Space       TrackName = "track.space"
-	Tap4        TrackName = "track.tap4"
-	Tap5        TrackName = "track.tap5"
-	Tap6        TrackName = "track.tap6"
-	RightTop    TrackName = "track.right.top"
-	RightBottom TrackName = "track.right.bottom"
+	LeftBottom  TrackName = "track.leftbottom"
+	LeftTop     TrackName = "track.lefttop"
+	Center      TrackName = "track.center"
+	RightBottom TrackName = "track.rightbottom"
+	RightTop    TrackName = "track.righttop"
 
-	// Hmm...
-	ExtraTop    TrackName = "track.extra.top"    // nav keys
-	ExtraBottom TrackName = "track.extra.bottom" // arrow keys
+	EdgeTop  TrackName = "track.edgetop"
+	EdgeTap1 TrackName = "track.edgetap1"
+	EdgeTap2 TrackName = "track.edgetap2"
+	EdgeTap3 TrackName = "track.edgetap3"
 )
+
+func TrackNames() []TrackName {
+	return []TrackName{
+		LeftBottom,
+		LeftTop,
+		Center,
+		RightBottom,
+		RightTop,
+		EdgeTop,
+		EdgeTap1,
+		EdgeTap2,
+		EdgeTap3,
+	}
+}
 
 type Track struct {
 	Name          TrackName
-	Notes         []Note
-	notesInPlay   []*Note
+	Notes         []*Note
+	VisibleNotes  []*Note
 	activeStart   int64 // when the track was activated for a hit
+	activeEnd     int64 // when the track was deactivated for a hit
+	isHeld        bool
 	nextNoteIndex int
 }
 
-func NewTrack(name TrackName, notes []Note) *Track {
+func NewTrack(name TrackName, notes []*Note) *Track {
+	// Reset the notes
+	for _, n := range notes {
+		n.Reset()
+	}
+
+	// Sort the notes by target time
+	sort.Slice(notes, func(i, j int) bool {
+		return notes[i].Target < notes[j].Target
+	})
+
 	return &Track{
-		Name: name,
+		Name:         name,
+		Notes:        notes,
+		VisibleNotes: make([]*Note, 0),
 	}
 }
+
 func (t *Track) Reset() {
-	t.notesInPlay = nil
+	t.VisibleNotes = make([]*Note, 0)
 	t.activeStart = 0
+	t.activeEnd = 0
 	t.nextNoteIndex = 0
+	t.isHeld = false
 	for _, n := range t.Notes {
 		n.Reset()
 	}
@@ -57,62 +82,79 @@ func (t *Track) StartHit(currentTime int64) {
 		return
 	}
 	t.activeStart = currentTime + config.INPUT_OFFSET
+	t.activeEnd = 0
 }
 
 func (t *Track) EndHit(currentTime int64) {
 	if t.activeStart > 0 {
 		t.activeStart = 0
+		t.activeEnd = currentTime + config.INPUT_OFFSET
 	}
 }
-
-// Allow notes to travel through the judgement line
-const MAX_PROGRESS = 1.1
 
 func (t *Track) Update(currentTime int64) *hit.HitRating {
 	var notes []*Note
 	var rating *hit.HitRating
 
-	for _, n := range t.notesInPlay {
+	for _, n := range t.VisibleNotes {
 		n.Update(currentTime)
 
-		// If the note is not hittable yet, continue
-		if n.HitTime < currentTime-hit.Window.Bad {
+		// If the note is not hittable yet, keep it, no interaction yet
+		if n.Target < currentTime-hit.Window.Bad {
+			notes = append(notes, n)
 			continue
 		}
 
-		// If the note has traveled past the judgement line
-		if n.Progress > MAX_PROGRESS {
+		// If the note has traveled too far (and it's not a hold note)
+		if n.Target > currentTime+hit.Window.Bad && n.TargetRelease == 0 {
 			// If the note has not been hit, mark it as missed
-			if !n.IsHit() {
+			if !n.WasHit() {
 				n.Hit(currentTime)
 			}
 			continue
 		}
 
-		// If the note is beyond the hit window, continue
-		if n.HitTime > currentTime+hit.Window.Bad {
+		// By this time we have a note (or held note) that is within the hit window
+		if t.isHeld {
+			// If we released or we're past the max hold, release the note
+			if t.activeEnd > 0 || n.TargetRelease > currentTime+hit.Window.Bad {
+				n.Release(currentTime)
+				t.isHeld = false
+				t.activeEnd = 0
+				continue
+			}
+
+			// Keep holding
+			notes = append(notes, n)
 			continue
 		}
 
-		// If active, check if hit is within window
-		// only allow one hit per track at a time
-		if t.activeStart > 0 && rating != nil {
+		// If we have an active track
+		if t.activeStart > 0 {
 			timeDiff := int64(math.Abs(float64(n.Target - t.activeStart)))
 			hitRating := hit.GetHitRating(timeDiff)
-			if hitRating != hit.Rating.Miss {
-				n.Hit(currentTime)
-				rating = &hitRating
-				break
+			n.Hit(currentTime)
+			rating = &hitRating
+
+			// If the note is a hold note, set the track as active and keep it in play
+			if n.TargetRelease > 0 {
+				t.isHeld = true
+				notes = append(notes, n)
 			}
+
+			// Reset the active start time
+			t.activeStart = 0
+			continue
 		}
 
+		notes = append(notes, n)
 	}
 
 	// Add notes to play when their travel time starts
 	for t.nextNoteIndex < len(t.Notes) {
 		note := t.Notes[t.nextNoteIndex]
 		if currentTime >= (note.Target - config.GetTravelTime()) {
-			notes = append(notes, &note)
+			notes = append(notes, note)
 			t.nextNoteIndex++
 		} else {
 			// Since notes are ordered by start time, no need to check further
@@ -120,11 +162,6 @@ func (t *Track) Update(currentTime int64) *hit.HitRating {
 		}
 	}
 
-	t.notesInPlay = notes
-
-	// Sort notes by Z depth (back to front)
-	sort.Slice(t.notesInPlay, func(i, j int) bool {
-		return t.notesInPlay[i].Progress > t.notesInPlay[j].Progress
-	})
+	t.VisibleNotes = notes
 	return rating
 }

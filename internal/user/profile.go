@@ -1,11 +1,15 @@
 package user
 
 type UserProfile struct {
-	Username string
+	Name     string
 	Settings UserSettings
 }
 
 var Current = UserProfile{
-	Username: "Zezima",
+	Name:     "Zezima",
 	Settings: DefaultSettings,
+}
+
+func Settings() UserSettings {
+	return Current.Settings
 }
