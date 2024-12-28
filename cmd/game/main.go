@@ -8,6 +8,7 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/ebiten-holiday-2024/internal/song"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
@@ -26,6 +27,7 @@ func main() {
 
 	// Init audio
 	audio.InitAudioManager()
+	song.InitSongs()
 
 	// Do the game
 	game := internal.NewGame()

@@ -26,7 +26,7 @@ type State struct {
 }
 
 func New(arg interface{}) *State {
-	args, ok := arg.(*PlayArgs)
+	args, ok := arg.(PlayArgs)
 	if !ok {
 		panic("Invalid play state args")
 	}
@@ -73,4 +73,8 @@ func (p *State) Update() (*types.GameState, interface{}, error) {
 		p.Tracks[track].Update(p.elapsedTime)
 	}
 	return nil, nil, nil
+}
+
+func (p *State) CurrentTime() int64 {
+	return p.elapsedTime
 }

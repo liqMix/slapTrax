@@ -28,51 +28,6 @@ func InitSongs() {
 	}
 }
 
-// Ensure we have the files we need in the song directory
-func validateSongDir(folderName string) bool {
-	dirName := path.Join(config.SONG_DIR, folderName)
-	_, err := os.Stat(dirName)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	// metadata file (song.yaml)
-	metaPath := path.Join(dirName, config.SONG_META_NAME)
-	_, err = os.Stat(metaPath)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	// audio file (audio.wav/.ogg/.mp3)
-	songPath := path.Join(dirName, config.SONG_AUDIO_NAME)
-	_, err = os.Stat(songPath + ".wav")
-	if os.IsNotExist(err) {
-		_, err = os.Stat(songPath + ".ogg")
-		if os.IsNotExist(err) {
-			_, err = os.Stat(songPath + ".mp3")
-			if os.IsNotExist(err) {
-				return false
-			}
-		}
-	}
-
-	// at least one chart file (easy.yaml/hard.yaml)
-	_, err = os.Stat(dirName + "/easy.yaml")
-	if os.IsNotExist(err) {
-		_, err = os.Stat(dirName + "/hard.yaml")
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-
-	// maybe no art is ok ?
-	// _, err = os.Stat(dirName + "/art.png")
-	// if os.IsNotExist(err) {
-	// 	return false
-	// }
-	return true
-}
-
 func readSongDir() []string {
 	songDir, err := os.ReadDir(config.SONG_DIR)
 	if err != nil {
@@ -82,24 +37,80 @@ func readSongDir() []string {
 	songs := make([]string, 0)
 	for _, entry := range songDir {
 		if entry.IsDir() {
-			if validateSongDir(entry.Name()) {
-				songs = append(songs, entry.Name())
-			}
+			songs = append(songs, entry.Name())
 		}
 	}
 	return songs
 }
 
+// // Ensure we have the files we need in the song directory
+// func validateSongDir(folderName string) bool {
+// 	dirName := path.Join(config.SONG_DIR, folderName)
+// 	_, err := os.Stat(dirName)
+// 	if os.IsNotExist(err) {
+// 		fmt.Println("Song directory does not exist: " + dirName)
+// 		return false
+// 	}
+
+// 	// metadata file
+// 	metaPath := path.Join(dirName, config.SONG_META_NAME)
+// 	_, err = os.Stat(metaPath)
+// 	if os.IsNotExist(err) {
+// 		fmt.Println("Song metadata file does not exist: " + metaPath)
+// 		return false
+// 	}
+
+// 	// audio file (audio.wav/.ogg/.mp3)
+// 	songPath := path.Join(dirName, config.SONG_AUDIO_NAME)
+// 	_, err = os.Stat(songPath + ".wav")
+// 	if os.IsNotExist(err) {
+// 		_, err = os.Stat(songPath + ".ogg")
+// 		if os.IsNotExist(err) {
+// 			_, err = os.Stat(songPath + ".mp3")
+// 			if os.IsNotExist(err) {
+// 				fmt.Println("Song audio file does not exist: " + songPath)
+// 				return false
+// 			}
+// 		}
+// 	}
+
+// 	// at least one chart file (.midi with integer name)
+// 	chartDir, err := os.ReadDir(dirName)
+// 	if err != nil {
+// 		return false
+// 	}
+// 	for _, entry := range chartDir {
+// 		name := entry.Name()
+// 		if !entry.IsDir() && filepath.Ext(name) == ".midi" {
+// 			// check if integer directly
+// 			_, err := strconv.Atoi(name[:len(name)-5])
+// 			if err != nil {
+// 				fmt.Println("Invalid chart file name: " + name)
+// 				return false
+// 			}
+// 		}
+// 	}
+
+// 	// maybe no art is ok ?
+// 	// _, err = os.Stat(dirName + "/art.png")
+// 	// if os.IsNotExist(err) {
+// 	// 	return false
+// 	// }
+// 	return true
+// }
+
 func loadSong(folderName string) *Song {
 	// Load the song from the directory
-	songPath := config.SONG_DIR + "/" + folderName
-	songFile, err := os.ReadFile(songPath + "/song.yaml")
+	songPath := path.Join(config.SONG_DIR, folderName)
+	songFile, err := os.ReadFile(path.Join(songPath, config.SONG_META_NAME))
 	if err != nil {
+		fmt.Println("Error reading song metadata file: " + err.Error())
 		return nil
 	}
 
 	var song Song
 	if err := yaml.Unmarshal(songFile, &song); err != nil {
+		fmt.Println("Error unmarshalling song metadata: " + err.Error())
 		return nil
 	}
 
@@ -107,9 +118,10 @@ func loadSong(folderName string) *Song {
 	artPath := songPath + "/art.png"
 	artImg, _, err := ebitenutil.NewImageFromFile(artPath)
 	if err != nil {
-		return nil
+		fmt.Println("Error loading album art: " + err.Error())
+	} else {
+		song.Art = *artImg
 	}
-	song.Art = *artImg
 
 	// Identify the audio file
 	audioPath := songPath + "/audio.wav"
@@ -118,7 +130,8 @@ func loadSong(folderName string) *Song {
 		if _, err := os.Stat(audioPath); os.IsNotExist(err) {
 			audioPath = songPath + "/audio.mp3"
 			if _, err := os.Stat(audioPath); os.IsNotExist(err) {
-				panic("No audio file found for song " + song.Title)
+				fmt.Println("No audio file found for song " + song.Title)
+				return nil
 			}
 		}
 	}
@@ -127,37 +140,48 @@ func loadSong(folderName string) *Song {
 	// Load the charts
 	song.Charts = make(map[Difficulty]Chart)
 
-	// Find all .midi files in the song directory
+	// Find all  files in the song directory
 	// and load them as charts with the chart name as the difficulty.
 	// If not an integer, ignore it.
 	chartDir, err := os.ReadDir(songPath)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 	for _, entry := range chartDir {
 		name := entry.Name()
-		if !entry.IsDir() && filepath.Ext(name) == ".midi" {
+		if !entry.IsDir() && filepath.Ext(name) == ".mid" {
 			// check if integer directly
-			d, err := strconv.Atoi(name[:len(name)-5])
+			fmt.Println(name)
+			d, err := strconv.Atoi(name[:len(name)-4])
 			if err != nil {
+				fmt.Println("Invalid chart file name: " + name)
 				continue
 			}
+
 			difficulty := Difficulty(d)
 			chartPath := path.Join(songPath, name)
 			chartFile, err := os.ReadFile(chartPath)
 			if err != nil {
-				return nil
+				fmt.Println("Error reading chart file: " + err.Error())
+				continue
 			}
+
 			chart, err := ParseChart(&song, chartFile)
 			if err != nil {
-				fmt.Println(err)
-				return nil
+				fmt.Println("Error parsing chart file: " + err.Error())
+				continue
 			}
 			if chart != nil {
 				chart.Difficulty = difficulty
 				song.Charts[difficulty] = *chart
 			}
 		}
+	}
+
+	if len(song.Charts) == 0 {
+		fmt.Println("No valid charts found for song " + song.Title)
+		return nil
 	}
 
 	// Calculate the checksum
@@ -217,4 +241,14 @@ func GetAll() []*Song {
 		songList = append(songList, &song)
 	}
 	return songList
+}
+
+func GetTestSong() *Song {
+	for _, song := range songs {
+		fmt.Println(song.Title)
+		if song.Title == "another" {
+			return &song
+		}
+	}
+	panic("No test song found")
 }

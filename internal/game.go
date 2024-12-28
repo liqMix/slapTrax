@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -9,7 +10,9 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/render"
+	"github.com/liqmix/ebiten-holiday-2024/internal/song"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
+	"github.com/liqmix/ebiten-holiday-2024/internal/state/play"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
@@ -42,8 +45,12 @@ func getState(gs types.GameState, arg interface{}) *RenderState {
 }
 func NewGame() *Game {
 	return &Game{
-		currentState: getState(types.GameStateTitle, nil),
-		stateStack:   []*RenderState{},
+		// currentState: getState(types.GameStateTitle, nil),
+		currentState: getState(types.GameStatePlay, play.PlayArgs{
+			Song:       song.GetTestSong(),
+			Difficulty: 7,
+		}),
+		stateStack: []*RenderState{},
 	}
 }
 
@@ -85,6 +92,7 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Clear()
+	screen.Fill(color.Black)
 
 	// Create transform for centered rendering
 	op := &ebiten.DrawImageOptions{}
@@ -98,6 +106,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		canvas = ebiten.NewImage(s.RenderWidth, s.RenderHeight)
 		cache.SetImage("canvas", canvas)
 	}
+	canvas.Clear()
+	canvas.Fill(color.Black)
 
 	if g.currentState != nil && g.currentState.Renderer != nil {
 		g.currentState.Renderer.Draw(canvas)

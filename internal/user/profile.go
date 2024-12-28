@@ -10,6 +10,6 @@ var Current = UserProfile{
 	Settings: DefaultSettings,
 }
 
-func Settings() UserSettings {
-	return Current.Settings
+func Settings() *UserSettings {
+	return &Current.Settings
 }
