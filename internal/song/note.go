@@ -1,6 +1,10 @@
 package song
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/config"
+import (
+	"math"
+
+	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+)
 
 type MarkerType int
 
@@ -57,11 +61,7 @@ func (n *Note) Release(currentTime int64) {
 }
 
 // Updates note's progress towards the target
+// 0 = not started, 1 = at target
 func (n *Note) Update(currentTime int64) {
-	travelTime := config.TRAVEL_TIME / int64(config.NOTE_SPEED)
-	progress := float64(currentTime-n.Target) / float64(travelTime)
-	if progress < 0 {
-		progress = 0
-	}
-	n.Progress = float64(currentTime-n.Target) / float64(travelTime)
+	n.Progress = math.Max(0, 1-(float64(n.Target-currentTime)/(float64(config.TRAVEL_TIME)/config.NOTE_SPEED)))
 }
