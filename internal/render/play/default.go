@@ -2,6 +2,7 @@ package play
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -37,7 +38,7 @@ type Default struct {
 }
 
 func (r Default) New(s *play.State) PlayRenderer {
-	baseImg.Fill(color.White)
+	baseImg.Fill(white)
 	return &Default{
 		state: s,
 	}
@@ -92,18 +93,24 @@ var (
 		Y: mainBottom - (mainHeight / 2),
 	}
 	centerTrackWidth = 0.3
+	mainScoreScale   = 0.1
 
 	// Edge
 	edgeCenter = NormPoint{
 		X: edgeLeft + (edgeWidth / 2),
 		Y: mainCenter.Y,
 	}
-	edgeLeft   = mainRight + offset*2
+	edgeLeft   = mainRight + offset
 	edgeRight  = 1 - offset
 	edgeHeight = 0.8 * mainHeight
 	edgeTop    = 1 - (offset + edgeHeight)
 	edgeBottom = 1 - offset
 	edgeWidth  = edgeRight - edgeLeft
+
+	// Colors
+	black = color.RGBA{0, 0, 0, 255}
+	gray  = color.RGBA{100, 100, 100, 255}
+	white = color.RGBA{200, 200, 200, 255}
 )
 
 func (r *Default) drawMainTracks(screen *ebiten.Image) {
@@ -232,6 +239,47 @@ func (r *Default) drawMainTracks(screen *ebiten.Image) {
 		cache.SetImage(string(song.Center), img)
 	}
 	screen.DrawImage(img, nil)
+
+	// Then draw the area for combo / hit display
+	// It's a box with rounded corners at the very center of main tracks
+	// It will obscure some of the vanishing point lines
+	img, ok = cache.GetImage("play.maincombo")
+	if !ok {
+		s := user.Settings()
+		img = ebiten.NewImage(s.RenderWidth, s.RenderHeight)
+
+		// Draw the box
+		x := (mainCenter.X - (mainScoreScale / 2)) * float64(s.RenderWidth)
+		y := (mainCenter.Y - (mainScoreScale / 2)) * float64(s.RenderHeight)
+		width := mainScoreScale * float64(s.RenderWidth)
+		height := mainScoreScale * float64(s.RenderHeight)
+
+		// Fill
+		border := 0.01 * float64(s.RenderHeight)
+
+		// Border
+		vector.DrawFilledRect(
+			img,
+			float32(x),
+			float32(y),
+			float32(width),
+			float32(height),
+			gray,
+			true,
+		)
+
+		vector.DrawFilledRect(
+			img,
+			float32(x+border/2),
+			float32(y+border/2),
+			float32(width-border),
+			float32(height-border),
+			black,
+			true,
+		)
+		cache.SetImage("play.maincombo", img)
+	}
+	screen.DrawImage(img, nil)
 }
 
 func (r *Default) drawEdgeTracks(screen *ebiten.Image) {
@@ -283,6 +331,7 @@ func (r *Default) drawEdgeTracks(screen *ebiten.Image) {
 	if !ok {
 		img = r.createLaneBackground(LaneConfig{
 			CurveAmount:    0,
+			LaneCount:      3,
 			VanishingPoint: edgeCenter,
 			Left: NormPoint{
 				X: edgeLeft,
@@ -308,6 +357,7 @@ type LaneConfig struct {
 	Right          NormPoint // Bottom right point (0-1 space)
 	VanishingPoint NormPoint // Convergence point (0-1 space)
 	CurveAmount    float64   // 0 = right angle at center, 1 = straight line
+	LaneCount      int       // Number of lanes
 }
 
 func (r *Default) createLaneBackground(config LaneConfig) *ebiten.Image {
@@ -319,6 +369,7 @@ func (r *Default) createLaneBackground(config LaneConfig) *ebiten.Image {
 	center := config.Center.RenderPoint()
 	// curve := config.CurveAmount
 	vanishingPoint := config.VanishingPoint.RenderPoint()
+	laneCount := math.Max(1, float64(config.LaneCount))
 
 	// Draw the target line
 	targetLine := vector.Path{}
@@ -327,10 +378,6 @@ func (r *Default) createLaneBackground(config LaneConfig) *ebiten.Image {
 	targetLine.LineTo(right.X, right.Y)
 
 	// Draw the guide lines to vanishing point
-	guideLineCenter := vector.Path{}
-	guideLineCenter.MoveTo(center.X, center.Y)
-	guideLineCenter.LineTo(vanishingPoint.X, vanishingPoint.Y)
-
 	guideLineLeft := vector.Path{}
 	guideLineLeft.MoveTo(left.X, left.Y)
 	guideLineLeft.LineTo(vanishingPoint.X, vanishingPoint.Y)
@@ -340,7 +387,7 @@ func (r *Default) createLaneBackground(config LaneConfig) *ebiten.Image {
 	guideLineRight.LineTo(vanishingPoint.X, vanishingPoint.Y)
 
 	opts := vector.StrokeOptions{
-		Width:   4,
+		Width:   3,
 		LineCap: vector.LineCapRound,
 	}
 
@@ -351,26 +398,115 @@ func (r *Default) createLaneBackground(config LaneConfig) *ebiten.Image {
 		Width: 1,
 	}
 
-	var guideAlpha float32 = 0.5
-	vs, is = guideLineCenter.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
-		Width:    1,
-		LineJoin: vector.LineJoinRound,
-	})
-	for i := range vs {
-		vs[i].ColorA = guideAlpha
+	var guideColor = color.RGBA{
+		R: gray.R,
+		G: gray.G,
+		B: gray.B,
+		A: 150,
 	}
-	img.DrawTriangles(vs, is, baseImg, nil)
+	// Draw separate center guides lines for each lane
+	// currently onyl supports straight lanes
+	if laneCount > 1 {
+		// Calculate lane width
+		laneWidth := (right.X - left.X) / float32(laneCount)
+		for i := 1; i < int(laneCount); i++ {
+			from := Point{
+				X: left.X + (laneWidth * float32(i)),
+				Y: left.Y,
+			}
+			r.drawDashedLine(img,
+				from,
+				vanishingPoint,
+				10,
+				10,
+				guideColor,
+			)
+		}
+	} else {
+		r.drawDashedLine(img,
+			center,
+			vanishingPoint,
+			10,
+			10,
+			guideColor,
+		)
+	}
 
 	vs, is = guideLineLeft.AppendVerticesAndIndicesForStroke(nil, nil, &opts)
-	for i := range vs {
-		vs[i].ColorA = guideAlpha
-	}
+	colorVertices(vs, guideColor)
 	img.DrawTriangles(vs, is, baseImg, nil)
 
-	vs, is = guideLineRight.AppendVerticesAndIndicesForStroke(nil, nil, &opts)
-	for i := range vs {
-		vs[i].ColorA = guideAlpha
-	}
+	vs, is = guideLineRight.AppendVerticesAndIndicesForStroke(vs, is, &opts)
+	colorVertices(vs, guideColor)
 	img.DrawTriangles(vs, is, baseImg, nil)
 	return img
+}
+
+func colorVertices(vs []ebiten.Vertex, color color.RGBA) {
+	for i := range vs {
+		vs[i].ColorR = float32(color.R) / 255
+		vs[i].ColorG = float32(color.G) / 255
+		vs[i].ColorB = float32(color.B) / 255
+		vs[i].ColorA = float32(color.A) / 255
+	}
+}
+func (r *Default) drawDashedLine(img *ebiten.Image, start Point, end Point, dashLength float32, gapLength float32, color color.RGBA) {
+	dx := end.X - start.X
+	dy := end.Y - start.Y
+	length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
+
+	// Normalize direction vector
+	nx := dx / length
+	ny := dy / length
+
+	// Calculate number of segments
+	totalLength := dashLength + gapLength
+	segments := int(length / totalLength)
+
+	// Draw dash segments
+	for i := 0; i < segments; i++ {
+		dashStart := Point{
+			X: start.X + nx*float32(i)*totalLength,
+			Y: start.Y + ny*float32(i)*totalLength,
+		}
+		dashEnd := Point{
+			X: dashStart.X + nx*dashLength,
+			Y: dashStart.Y + ny*dashLength,
+		}
+
+		path := vector.Path{}
+		path.MoveTo(dashStart.X, dashStart.Y)
+		path.LineTo(dashEnd.X, dashEnd.Y)
+
+		vs, is := path.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
+			Width: 1,
+		})
+
+		colorVertices(vs, color)
+		img.DrawTriangles(vs, is, baseImg, nil)
+	}
+
+	// Draw final dash if there's remaining space
+	remainingLength := length - float32(segments)*totalLength
+	if remainingLength > 0 && remainingLength > dashLength {
+		finalStart := Point{
+			X: start.X + nx*float32(segments)*totalLength,
+			Y: start.Y + ny*float32(segments)*totalLength,
+		}
+		finalEnd := Point{
+			X: finalStart.X + nx*dashLength,
+			Y: finalStart.Y + ny*dashLength,
+		}
+
+		path := vector.Path{}
+		path.MoveTo(finalStart.X, finalStart.Y)
+		path.LineTo(finalEnd.X, finalEnd.Y)
+
+		vs, is := path.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
+			Width: 1,
+		})
+
+		colorVertices(vs, color)
+		img.DrawTriangles(vs, is, baseImg, nil)
+	}
 }
