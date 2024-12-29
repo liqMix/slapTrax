@@ -1,0 +1,12 @@
+title: "My Great Song"
+title_link: "https://example.com/song"
+artist: "My Great Artist"
+artist_link: "https://example.com/artist"
+album: "My Great Album"
+album_link: "https://example.com/album"
+year: 2021
+bpm: 120
+preview_start: 30000
+charted_by: "My Great Charter"
+charted_by_link: "https://example.com/charter"
+version: "1.0.0"
