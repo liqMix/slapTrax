@@ -30,13 +30,15 @@ const (
 	SONG_PREVIEW_FADE   float64 = 1000.0
 
 	// Game
-	AUDIO_OFFSET int64   = -235 // The amount of time the audio is ahead of the notes.
-	INPUT_OFFSET int64   = -5   // The amount of time the input is ahead of the notes.
-	GRACE_PERIOD int64   = 5000 // The amount of time before the song starts that the player can get ready.
-	TRAVEL_TIME  int64   = 2500 // The amount of time it takes for a note to travel from it's spawn point to the hit zone.
-	NOTE_SPEED   float64 = 1.0  // The speed at which notes travel.
+	AUDIO_OFFSET int64 = -235 // The amount of time the audio is ahead of the notes.
+	INPUT_OFFSET int64 = -5   // The amount of time the input is ahead of the notes.
+	// GRACE_PERIOD int64   = 2000 // The amount of time before the song starts that the player can get ready.
+	TRAVEL_TIME int64   = 2500 // The amount of time it takes for a note to travel from it's spawn point to the hit zone.
+	NOTE_SPEED  float64 = 0.25 // The speed at which notes travel. total travel time = TRAVEL_TIME / NOTE_SPEED
 )
 
-func GetTravelTime() int64 {
-	return TRAVEL_TIME / int64(NOTE_SPEED)
-}
+var (
+	GracePeriod                     = ActualTravelTimeInt64 / 2
+	ActualTravelTimeInt64   int64   = int64(float64(TRAVEL_TIME) / NOTE_SPEED)
+	ActualTravelTimeFloat64 float64 = float64(TRAVEL_TIME) / NOTE_SPEED
+)

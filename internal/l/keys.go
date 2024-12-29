@@ -38,6 +38,13 @@ const (
 	SETTINGS_AUDIO_SONGVOLUME        = "settings.audio.songvolume"
 	SETTINGS_AUDIO_SONGPREVIEWVOLUME = "settings.audio.songpreviewvolume"
 
+	// States
+	//// Play
+	HIT_PERFECT = "hit.perfect"
+	HIT_GOOD    = "hit.good"
+	HIT_BAD     = "hit.bad"
+	HIT_MISS    = "hit.miss"
+
 	// Etc
 	UNKNOWN = "unknown"
 )

@@ -5,6 +5,7 @@ import (
 
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/score"
 	"github.com/liqmix/ebiten-holiday-2024/internal/song"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -18,7 +19,7 @@ type PlayArgs struct {
 type State struct {
 	Song       *song.Song
 	Difficulty song.Difficulty
-	Tracks     []song.Track
+	Tracks     []*song.Track
 	Score      score.Score
 
 	startTime   time.Time
@@ -38,13 +39,19 @@ func New(arg interface{}) *State {
 	}
 
 	audio.InitSong(song)
+
 	return &State{
 		Song:        song,
 		Difficulty:  difficulty,
 		Tracks:      chart.Tracks,
-		elapsedTime: -config.GRACE_PERIOD,
+		elapsedTime: 0,
 		startTime:   time.Now(),
 	}
+}
+
+func (p *State) IsTrackPressed(trackName song.TrackName) bool {
+	keys := TrackNameToKeys[trackName]
+	return input.AnyKeysPressed(keys)
 }
 
 func (p *State) inGracePeriod() bool {
@@ -53,7 +60,7 @@ func (p *State) inGracePeriod() bool {
 	}
 
 	// Update elapsed time
-	p.elapsedTime = time.Since(p.startTime).Milliseconds() - config.GRACE_PERIOD
+	p.elapsedTime = time.Since(p.startTime).Milliseconds() - config.GracePeriod
 
 	// Start the audio when the elapsed time is equal to the audio offset
 	if p.elapsedTime >= config.AUDIO_OFFSET {
@@ -64,13 +71,25 @@ func (p *State) inGracePeriod() bool {
 }
 
 func (p *State) Update() (*types.GameState, interface{}, error) {
-	if p.inGracePeriod() {
-		return nil, nil, nil
+	if !p.inGracePeriod() {
+		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + config.AUDIO_OFFSET
 	}
 
-	p.elapsedTime = int64(audio.CurrentSongPositionMS()) + config.AUDIO_OFFSET
-	for track := range p.Tracks {
-		p.Tracks[track].Update(p.elapsedTime)
+	// Handle input
+	for _, track := range p.Tracks {
+		keys := TrackNameToKeys[track.Name]
+		if input.AnyKeysJustPressed(keys) {
+			track.Activate(p.elapsedTime)
+		} else if input.AllKeysReleased(keys) {
+			track.Release(p.elapsedTime)
+		}
+	}
+	// Update the tracks
+	for _, track := range p.Tracks {
+		track.Update(p.elapsedTime)
+		for _, hit := range track.NewHits() {
+			p.Score.AddHit(hit)
+		}
 	}
 	return nil, nil, nil
 }

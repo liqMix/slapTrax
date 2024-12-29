@@ -1,6 +1,7 @@
 package song
 
 import (
+	"fmt"
 	"math"
 	"sort"
 
@@ -39,15 +40,18 @@ func TrackNames() []TrackName {
 
 type Track struct {
 	Name          TrackName
-	Notes         []*Note
-	VisibleNotes  []*Note
-	activeStart   int64 // when the track was activated for a hit
-	activeEnd     int64 // when the track was deactivated for a hit
-	isHeld        bool
+	AllNotes      []*Note
+	ActiveNotes   []*Note
+	activeTs      int64 // when the track was last activated
+	releaseTs     int64 // when the track was last released
 	nextNoteIndex int
+
+	newHits []hit.HitRating
 }
 
-func NewTrack(name TrackName, notes []*Note) *Track {
+const minTs = math.MinInt64
+
+func NewTrack(name TrackName, notes []*Note, beatInterval int64) *Track {
 	// Reset the notes
 	for _, n := range notes {
 		n.Reset()
@@ -59,109 +63,142 @@ func NewTrack(name TrackName, notes []*Note) *Track {
 	})
 
 	return &Track{
-		Name:         name,
-		Notes:        notes,
-		VisibleNotes: make([]*Note, 0),
+		Name:        name,
+		AllNotes:    notes,
+		ActiveNotes: make([]*Note, 0),
+		newHits:     make([]hit.HitRating, 0),
+		activeTs:    minTs,
+		releaseTs:   minTs,
 	}
 }
 
 func (t *Track) Reset() {
-	t.VisibleNotes = make([]*Note, 0)
-	t.activeStart = 0
-	t.activeEnd = 0
+	t.ActiveNotes = make([]*Note, 0)
+	t.activeTs = math.MinInt64
+	t.releaseTs = math.MinInt64
 	t.nextNoteIndex = 0
-	t.isHeld = false
-	for _, n := range t.Notes {
+	for _, n := range t.AllNotes {
 		n.Reset()
 	}
 }
 
-func (t *Track) StartHit(currentTime int64) {
-	// If the track is already active, ignore
-	if t.activeStart > 0 || currentTime < 0 {
+func (t *Track) NewHits() []hit.HitRating {
+	return t.newHits
+}
+
+// not equal to int minimum 64 bit
+func (t *Track) IsActive() bool {
+	return t.activeTs > minTs
+}
+
+func (t *Track) Activate(currentTime int64) {
+	// If the track is already active or held
+	if t.IsActive() {
 		return
 	}
-	t.activeStart = currentTime + config.INPUT_OFFSET
-	t.activeEnd = 0
+	fmt.Println("Activating track ", t.Name, " at ", currentTime)
+	t.activeTs = currentTime + config.INPUT_OFFSET
+	t.releaseTs = minTs
 }
 
-func (t *Track) EndHit(currentTime int64) {
-	if t.activeStart > 0 {
-		t.activeStart = 0
-		t.activeEnd = currentTime + config.INPUT_OFFSET
+func (t *Track) Release(currentTime int64) {
+	if t.releaseTs > minTs {
+		return
 	}
+	t.releaseTs = currentTime + config.INPUT_OFFSET
+	t.activeTs = minTs
 }
 
-func (t *Track) Update(currentTime int64) *hit.HitRating {
-	var notes []*Note
-	var rating *hit.HitRating
+func (t *Track) Update(currentTime int64) {
+	// Reset the new hits
+	t.newHits = t.newHits[:0]
 
-	for _, n := range t.VisibleNotes {
+	// No notes to update
+	if len(t.ActiveNotes) == 0 && t.nextNoteIndex >= len(t.AllNotes) {
+		return
+	}
+
+	notes := make([]*Note, 0, len(t.ActiveNotes))
+
+	// Only update notes that are currently visible
+	for _, n := range t.ActiveNotes {
 		n.Update(currentTime)
 
-		// If the note is not hittable yet, keep it, no interaction yet
-		if n.Target < currentTime-hit.Window.Bad {
+		// Note is still approaching the hit window
+		windowStart := n.Target - hit.Window.Bad
+		if currentTime < windowStart {
 			notes = append(notes, n)
 			continue
 		}
 
-		// If the note has traveled too far (and it's not a hold note)
-		if n.Target > currentTime+hit.Window.Bad && n.TargetRelease == 0 {
-			// If the note has not been hit, mark it as missed
+		// Drop expired notes
+		windowEnd := n.Target + hit.Window.Bad
+		releaseWindowEnd := n.TargetRelease + hit.Window.Bad
+
+		if currentTime > windowEnd {
 			if !n.WasHit() {
-				n.Hit(currentTime)
+				rating := n.Hit(currentTime)
+				if rating != hit.Rating.None {
+					t.newHits = append(t.newHits, rating)
+				}
+			}
+			if !n.IsHoldNote() || currentTime > releaseWindowEnd {
+				continue // Drop
+			}
+		}
+
+		// Handle hold notes
+		if n.IsHoldNote() && n.WasHit() {
+			var hitRating hit.HitRating
+			// If player released or the hold window expired while holding
+			if t.releaseTs > minTs {
+				hitRating = n.Release(t.releaseTs)
+			} else if currentTime > releaseWindowEnd {
+				hitRating = n.Release(currentTime)
+			} else {
+				notes = append(notes, n) // Keep held or missed-hit hold notes
+			}
+			if hitRating != hit.Rating.None {
+				// TODO: determine handling release scores
+				// t.newHits = append(t.newHits, hitRating)
 			}
 			continue
 		}
 
-		// By this time we have a note (or held note) that is within the hit window
-		if t.isHeld {
-			// If we released or we're past the max hold, release the note
-			if t.activeEnd > 0 || n.TargetRelease > currentTime+hit.Window.Bad {
-				n.Release(currentTime)
-				t.isHeld = false
-				t.activeEnd = 0
+		// Process new hits
+		if !n.WasHit() {
+			if t.IsActive() {
+				hitRating := n.Hit(t.activeTs)
+				t.activeTs = minTs
+				if hitRating != hit.Rating.None {
+					t.newHits = append(t.newHits, hitRating)
+				}
+
+				// Begin holding the note
+				if n.IsHoldNote() {
+					notes = append(notes, n)
+				}
 				continue
 			}
-
-			// Keep holding
-			notes = append(notes, n)
-			continue
 		}
-
-		// If we have an active track
-		if t.activeStart > 0 {
-			timeDiff := int64(math.Abs(float64(n.Target - t.activeStart)))
-			hitRating := hit.GetHitRating(timeDiff)
-			n.Hit(currentTime)
-			rating = &hitRating
-
-			// If the note is a hold note, set the track as active and keep it in play
-			if n.TargetRelease > 0 {
-				t.isHeld = true
-				notes = append(notes, n)
-			}
-
-			// Reset the active start time
-			t.activeStart = 0
-			continue
-		}
-
 		notes = append(notes, n)
 	}
 
-	// Add notes to play when their travel time starts
-	for t.nextNoteIndex < len(t.Notes) {
-		note := t.Notes[t.nextNoteIndex]
-		if currentTime >= (note.Target - config.GetTravelTime()) {
+	// Add new approaching notes with single bounds check
+	spawnTime := currentTime + config.ActualTravelTimeInt64
+	if t.nextNoteIndex < len(t.AllNotes) {
+		for i := t.nextNoteIndex; i < len(t.AllNotes); i++ {
+			note := t.AllNotes[i]
+			if note.Target > spawnTime {
+				break
+			}
 			notes = append(notes, note)
-			t.nextNoteIndex++
-		} else {
-			// Since notes are ordered by start time, no need to check further
-			break
+			if t.Name == RightTop {
+				fmt.Println("Track ", t.Name, " note at ", note.Target)
+			}
+			t.nextNoteIndex = i + 1
 		}
 	}
 
-	t.VisibleNotes = notes
-	return rating
+	t.ActiveNotes = notes
 }

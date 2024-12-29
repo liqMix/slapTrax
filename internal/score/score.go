@@ -40,6 +40,9 @@ type Score struct {
 	Good    int
 	Bad     int
 	Miss    int
+
+	Combo    int
+	MaxCombo int
 }
 
 func NewScore(totalNotes int) *Score {
@@ -58,6 +61,14 @@ func (s *Score) AddHit(hitType hit.HitRating) {
 		s.Bad++
 	case hit.Rating.Miss:
 		s.Miss++
+	}
+	if hitType != hit.Rating.Miss {
+		s.Combo++
+		if s.Combo > s.MaxCombo {
+			s.MaxCombo = s.Combo
+		}
+	} else {
+		s.Combo = 0
 	}
 }
 

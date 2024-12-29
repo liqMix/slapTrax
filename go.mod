@@ -15,10 +15,10 @@ require (
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/solarlune/resound v0.3.0
 	github.com/tanema/gween v0.0.0-20221212145351-621cc8a459d1 // indirect
-	golang.org/x/image v0.20.0
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/image v0.23.0
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 )
 
 require (

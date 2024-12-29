@@ -120,7 +120,7 @@ func loadSong(folderName string) *Song {
 	if err != nil {
 		fmt.Println("Error loading album art: " + err.Error())
 	} else {
-		song.Art = *artImg
+		song.Art = artImg
 	}
 
 	// Identify the audio file
@@ -138,7 +138,7 @@ func loadSong(folderName string) *Song {
 	song.AudioPath = audioPath
 
 	// Load the charts
-	song.Charts = make(map[Difficulty]Chart)
+	song.Charts = make(map[Difficulty]*Chart)
 
 	// Find all  files in the song directory
 	// and load them as charts with the chart name as the difficulty.
@@ -168,14 +168,16 @@ func loadSong(folderName string) *Song {
 			}
 
 			chart, err := ParseChart(&song, chartFile)
-			if err != nil {
+			if err != nil || chart == nil {
 				fmt.Println("Error parsing chart file: " + err.Error())
 				continue
 			}
-			if chart != nil {
-				chart.Difficulty = difficulty
-				song.Charts[difficulty] = *chart
+			for _, track := range chart.Tracks {
+				fmt.Println(track.Name, " has ", len(track.AllNotes), " notes")
 			}
+
+			chart.Difficulty = difficulty
+			song.Charts[difficulty] = chart
 		}
 	}
 
@@ -243,12 +245,11 @@ func GetAll() []*Song {
 	return songList
 }
 
-func GetTestSong() *Song {
+func GetSongByTitle(title string) *Song {
 	for _, song := range songs {
-		fmt.Println(song.Title)
-		if song.Title == "another" {
+		if song.Title == title {
 			return &song
 		}
 	}
-	panic("No test song found")
+	return nil
 }

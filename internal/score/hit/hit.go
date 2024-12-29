@@ -1,5 +1,7 @@
 package hit
 
+import "math"
+
 // Rating is the score rating of a hit
 type HitRating string
 
@@ -8,6 +10,7 @@ type hitRating struct {
 	Good    HitRating
 	Bad     HitRating
 	Miss    HitRating
+	None    HitRating
 }
 
 // Window is the number of ms in which a note can be hit
@@ -47,11 +50,12 @@ var (
 )
 
 func GetHitRating(diff int64) HitRating {
-	if diff < Window.Perfect {
+	d := int64(math.Abs(float64(diff)))
+	if d < Window.Perfect {
 		return Rating.Perfect
-	} else if diff < Window.Good {
+	} else if d < Window.Good {
 		return Rating.Good
-	} else if diff < Window.Bad {
+	} else if d < Window.Bad {
 		return Rating.Bad
 	}
 	return Rating.Miss

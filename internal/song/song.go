@@ -27,10 +27,10 @@ type Song struct {
 	Version       string `yaml:"version"`
 	////
 
-	Art       ebiten.Image         // album art
-	AudioPath string               // path to the audio file
-	Checksum  Checksum             // calculated from folder contents
-	Charts    map[Difficulty]Chart // charts for the song
+	Art       *ebiten.Image         // album art
+	AudioPath string                // path to the audio file
+	Checksum  Checksum              // calculated from folder contents
+	Charts    map[Difficulty]*Chart // charts for the song
 
 	folderName string
 }
@@ -39,7 +39,7 @@ func (s *Song) String() string {
 	return s.Title + " - " + s.Artist
 }
 
-func (s *Song) GetChart(difficulty Difficulty) Chart {
+func (s *Song) GetChart(difficulty Difficulty) *Chart {
 	chart, ok := s.Charts[difficulty]
 	if !ok {
 		panic("No chart for difficulty")

@@ -7,8 +7,10 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/render"
 	"github.com/liqmix/ebiten-holiday-2024/internal/song"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
@@ -41,13 +43,13 @@ func getState(gs types.GameState, arg interface{}) *RenderState {
 		State:    state,
 		Renderer: render.GetRenderer(gs, state),
 	}
-
 }
+
 func NewGame() *Game {
 	return &Game{
 		// currentState: getState(types.GameStateTitle, nil),
 		currentState: getState(types.GameStatePlay, play.PlayArgs{
-			Song:       song.GetTestSong(),
+			Song:       song.GetSongByTitle("another"),
 			Difficulty: 7,
 		}),
 		stateStack: []*RenderState{},
@@ -75,6 +77,7 @@ func (g *Game) LayoutF(displayWidth, displayHeight float64) (float64, float64) {
 // TODO: some sort of time step
 func (g *Game) Update() error {
 	// audio.Update()
+	input.Update()
 
 	if g.currentState != nil {
 		nextState, arg, err := g.currentState.Update()
@@ -130,5 +133,14 @@ func (g *Game) DrawDebug(screen *ebiten.Image) {
 	}
 	for i, s := range debugPrints {
 		ebitenutil.DebugPrintAt(screen, s, offset, y+((i+1)*offset))
+	}
+
+	// Draw pressed keys
+	y = 100
+	offset = 20
+	pressed := inpututil.AppendPressedKeys([]ebiten.Key{})
+	ebitenutil.DebugPrintAt(screen, "Pressed keys:", offset, y)
+	for i, key := range pressed {
+		ebitenutil.DebugPrintAt(screen, key.String(), offset, y+((i+1)*offset))
 	}
 }
