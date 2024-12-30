@@ -53,12 +53,12 @@ func (r *Standard) drawNotes(screen *ebiten.Image) {
 
 		color := getNoteColor(track.Name)
 		for _, note := range track.ActiveNotes {
-			r.drawNote(screen, track.Name, note, laneConfig, color)
+			r.drawNote(screen, note, laneConfig, color)
 		}
 	}
 }
 
-func (r *Standard) drawNote(screen *ebiten.Image, trackName song.TrackName, note *song.Note, config *LaneConfig, noteColor color.RGBA) {
+func (r *Standard) drawNote(screen *ebiten.Image, note *song.Note, config *LaneConfig, noteColor color.RGBA) {
 	if note == nil || note.Progress < 0 || note.Progress > 1 {
 		return
 	}
