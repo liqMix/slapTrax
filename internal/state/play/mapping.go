@@ -3,8 +3,20 @@ package play
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/song"
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
+type PlayAction string
+
+const (
+	RestartSongAction PlayAction = types.L_STATE_PLAY_RESTART
+)
+
+var PlayActions = map[PlayAction][]ebiten.Key{
+	RestartSongAction: {
+		ebiten.KeyF5,
+	},
+}
 var TrackNameToKeys = map[song.TrackName][]ebiten.Key{
 	song.LeftBottom: {
 		ebiten.KeyControlLeft,
@@ -42,13 +54,13 @@ var TrackNameToKeys = map[song.TrackName][]ebiten.Key{
 		ebiten.Key6,
 		ebiten.Key7,
 
-		ebiten.KeyEscape,
-		ebiten.KeyF1,
-		ebiten.KeyF2,
-		ebiten.KeyF3,
-		ebiten.KeyF4,
-		ebiten.KeyF5,
-		ebiten.KeyF6,
+		// ebiten.KeyEscape,
+		// ebiten.KeyF1,
+		// ebiten.KeyF2,
+		// ebiten.KeyF3,
+		// ebiten.KeyF4,
+		// ebiten.KeyF5,
+		// ebiten.KeyF6,
 	},
 	song.RightTop: {
 		ebiten.KeyU,
@@ -66,12 +78,12 @@ var TrackNameToKeys = map[song.TrackName][]ebiten.Key{
 		ebiten.KeyEqual,
 		ebiten.KeyBackspace,
 
-		ebiten.KeyF7,
-		ebiten.KeyF8,
-		ebiten.KeyF9,
-		ebiten.KeyF10,
-		ebiten.KeyF11,
-		ebiten.KeyF12,
+		// ebiten.KeyF7,
+		// ebiten.KeyF8,
+		// ebiten.KeyF9,
+		// ebiten.KeyF10,
+		// ebiten.KeyF11,
+		// ebiten.KeyF12,
 	},
 	song.RightBottom: {
 		ebiten.KeyAltRight,

@@ -50,6 +50,15 @@ func NewScore(totalNotes int) *Score {
 		TotalNotes: totalNotes,
 	}
 }
+func (s *Score) Reset() {
+	s.Perfect = 0
+	s.Good = 0
+	s.Bad = 0
+	s.Miss = 0
+
+	s.Combo = 0
+	s.MaxCombo = 0
+}
 
 func (s *Score) AddHit(hitType hit.HitRating) {
 	switch hitType {

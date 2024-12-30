@@ -7,15 +7,18 @@ const (
 	L_DIFFICULTY_MEDIUM  = "difficulty.medium"
 	L_DIFFICULTY_HARD    = "difficulty.hard"
 	L_DIFFICULTY_UNKNOWN = "difficulty.unknown"
+	L_HIT_PERFECT        = "hit.perfect"
+	L_HIT_GOOD           = "hit.good"
+	L_HIT_BAD            = "hit.bad"
+	L_HIT_MISS           = "hit.miss"
 
+	// States
 	L_STATE_TITLE    = "state.greeting"
 	L_STATE_MENU     = "state.menu"
 	L_STATE_EDITOR   = "state.editor"
 	L_STATE_SETTINGS = "state.settings"
 	L_STATE_PROFILE  = "state.profile"
 	L_STATE_PLAY     = "state.play"
-
-	L_RENDER_PLAY_DEFAULT = "render.play.default"
 
 	// Settings
 	//// System/Graphics
@@ -40,10 +43,7 @@ const (
 
 	// States
 	//// Play
-	L_HIT_PERFECT = "hit.perfect"
-	L_HIT_GOOD    = "hit.good"
-	L_HIT_BAD     = "hit.bad"
-	L_HIT_MISS    = "hit.miss"
+	L_STATE_PLAY_RESTART = "state.play.restart"
 
 	// Themes
 	L_THEME_STANDARD   = "theme.standard"
@@ -65,7 +65,7 @@ var AllLocaleKeys = []string{
 	L_STATE_SETTINGS,
 	L_STATE_PROFILE,
 	L_STATE_PLAY,
-	L_RENDER_PLAY_DEFAULT,
+	L_STATE_PLAY_RESTART,
 	L_SETTINGS_GFX_FULLSCREEN,
 	L_SETTINGS_GFX_VSYNC,
 	L_SETTINGS_GFX_WIDTH,

@@ -61,6 +61,7 @@ func New(arg interface{}) *State {
 
 	// Get the song audio ready
 	audio.InitSong(playSong)
+
 	return &State{
 		Song:        playSong,
 		Difficulty:  difficulty,
@@ -92,12 +93,37 @@ func (p *State) inGracePeriod() bool {
 	return true
 }
 
+func (p *State) handleAction(action PlayAction) {
+	switch action {
+	case RestartSongAction:
+		// Stop the song
+		audio.StopSong()
+		audio.InitSong(p.Song)
+
+		// Reset the tracks
+		for _, track := range p.Tracks {
+			track.Reset()
+		}
+
+		// Reset the score
+		p.Score.Reset()
+		p.elapsedTime = 0
+		p.startTime = time.Now()
+		return
+	}
+}
+
 func (p *State) Update() (*types.GameState, interface{}, error) {
 	if !p.inGracePeriod() {
 		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + config.AUDIO_OFFSET
 	}
 
 	// Handle input
+	for action, keys := range PlayActions {
+		if input.AnyKeysJustPressed(keys) {
+			p.handleAction(action)
+		}
+	}
 	for _, track := range p.Tracks {
 		keys := TrackNameToKeys[track.Name]
 		if input.AnyKeysJustPressed(keys) {
