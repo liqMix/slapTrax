@@ -28,7 +28,7 @@ type UserSettings struct {
 }
 
 var DefaultSettings = UserSettings{
-	Theme:             types.ThemeDefault,
+	Theme:             types.ThemeStandard,
 	BGMVolume:         0.5,
 	SFXVolume:         0.5,
 	SongVolume:        0.5,

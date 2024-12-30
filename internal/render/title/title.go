@@ -16,7 +16,7 @@ func GetRenderer(s state.State, t types.Theme) TitleRenderer {
 	state := s.(*title.State)
 
 	switch t {
-	case types.ThemeDefault:
+	case types.ThemeStandard:
 		return Default{}.New(state)
 	default:
 		return Default{}.New(state)

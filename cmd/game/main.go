@@ -7,8 +7,9 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
 	"github.com/liqmix/ebiten-holiday-2024/internal/song"
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
@@ -17,13 +18,13 @@ func main() {
 	s := user.Settings()
 
 	// Ebiten junk
-	ebiten.SetWindowTitle(config.TITLE)
 	ebiten.SetWindowSize(s.RenderWidth, s.RenderHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetVsyncEnabled(true)
 
 	// Set locale
-	l.Change(config.DEFAULT_LOCALE)
+	locale.Change(config.DEFAULT_LOCALE)
+	ebiten.SetWindowTitle(locale.String(types.L_TITLE))
 
 	// Init audio
 	audio.InitAudioManager()

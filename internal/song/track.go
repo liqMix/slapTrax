@@ -38,6 +38,21 @@ func TrackNames() []TrackName {
 	}
 }
 
+var MainTracks = []TrackName{
+	LeftBottom,
+	LeftTop,
+	Center,
+	RightBottom,
+	RightTop,
+}
+
+var EdgeTracks = []TrackName{
+	EdgeTop,
+	EdgeTap1,
+	EdgeTap2,
+	EdgeTap3,
+}
+
 type Track struct {
 	Name          TrackName
 	AllNotes      []*Note

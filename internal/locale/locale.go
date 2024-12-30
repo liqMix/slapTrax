@@ -1,4 +1,4 @@
-package l
+package locale
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 	"github.com/tinne26/etxt/font"
 	"golang.org/x/image/font/sfnt"
@@ -104,9 +105,14 @@ func loadLocale(locale string) *Locale {
 }
 
 // Checks that the locale file has all keys,
-// just emits warnings if keys are missing
-func validateLocale(_ *Locale) {
-	// TODO: Implement
+// just emits warnings if keys are missing to help with development
+func validateLocale(locale *Locale) {
+	allKeys := types.AllLocaleKeys
+	for _, key := range allKeys {
+		if _, ok := locale.keyPairs[key]; !ok {
+			fmt.Printf("Missing key %s in locale %s\n", key, locale.LocaleCode)
+		}
+	}
 }
 
 func getLocale(locale string) *Locale {

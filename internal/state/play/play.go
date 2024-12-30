@@ -1,6 +1,7 @@
 package play
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
@@ -17,11 +18,11 @@ type PlayArgs struct {
 }
 
 type State struct {
-	Song       *song.Song
-	Difficulty song.Difficulty
-	Tracks     []*song.Track
-	Score      score.Score
-
+	Song        *song.Song
+	Difficulty  song.Difficulty
+	Tracks      []*song.Track
+	Score       score.Score
+	Chart       *song.Chart
 	startTime   time.Time
 	elapsedTime int64
 }
@@ -31,19 +32,37 @@ func New(arg interface{}) *State {
 	if !ok {
 		panic("Invalid play state args")
 	}
-	song := args.Song
+	playSong := args.Song
 	difficulty := args.Difficulty
-	chart, ok := song.Charts[difficulty]
+	chart, ok := playSong.Charts[difficulty]
 	if !ok {
 		panic("No chart for difficulty")
 	}
 
-	audio.InitSong(song)
+	tracks := chart.Tracks
 
+	// If we don't have edge tracks, remove them
+	if config.NO_EDGE_TRACKS || !chart.HasEdgeTracks() {
+		fmt.Println("Removing edge tracks")
+		newTracks := []*song.Track{}
+		for _, track := range chart.Tracks {
+			switch track.Name {
+			case song.EdgeTop, song.EdgeTap1, song.EdgeTap2, song.EdgeTap3:
+				continue
+			default:
+				newTracks = append(newTracks, track)
+			}
+		}
+		tracks = newTracks
+	}
+
+	// Get the song audio ready
+	audio.InitSong(playSong)
 	return &State{
-		Song:        song,
+		Song:        playSong,
 		Difficulty:  difficulty,
-		Tracks:      chart.Tracks,
+		Tracks:      tracks,
+		Chart:       chart,
 		elapsedTime: 0,
 		startTime:   time.Now(),
 	}
@@ -84,6 +103,7 @@ func (p *State) Update() (*types.GameState, interface{}, error) {
 			track.Release(p.elapsedTime)
 		}
 	}
+
 	// Update the tracks
 	for _, track := range p.Tracks {
 		track.Update(p.elapsedTime)

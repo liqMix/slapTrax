@@ -1,14 +1,8 @@
 package types
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/l"
-
 type Theme string
 
 const (
-	ThemeDefault    Theme = "theme.default"
-	ThemeLeftBehind Theme = "theme.leftbehind"
+	ThemeStandard   Theme = L_THEME_STANDARD
+	ThemeLeftBehind Theme = L_THEME_LEFTBEHIND
 )
-
-func (t Theme) String() string {
-	return l.String(string(t))
-}

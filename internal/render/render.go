@@ -24,5 +24,5 @@ func GetRenderer(gs types.GameState, s state.State) IRenderer {
 		return title.GetRenderer(s, t)
 	}
 
-	panic("No renderer found for game state" + gs.String())
+	panic("No renderer found for game state: " + gs)
 }

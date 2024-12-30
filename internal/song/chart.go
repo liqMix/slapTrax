@@ -6,29 +6,35 @@ import (
 	"errors"
 	"io"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
 type Difficulty int
 
 func (d Difficulty) String() string {
 	if d < 5 {
-		return l.String(l.DIFFICULTY_EASY)
+		return locale.String(types.L_DIFFICULTY_EASY)
 	}
 	if d < 8 {
-		return l.String(l.DIFFICULTY_MEDIUM)
+		return locale.String(types.L_DIFFICULTY_MEDIUM)
 	}
 	if d <= 10 {
-		return l.String(l.DIFFICULTY_HARD)
+		return locale.String(types.L_DIFFICULTY_HARD)
 	}
-	return l.String(l.DIFFICULTY_UNKNOWN)
+	return locale.String(types.L_UNKNOWN)
 }
 
 type Chart struct {
-	Difficulty Difficulty
-	TotalNotes int
-	Tracks     []*Track
+	Difficulty    Difficulty
+	TotalNotes    int
+	Tracks        []*Track
+	hasEdgeTracks bool
+}
+
+func (c *Chart) HasEdgeTracks() bool {
+	return c.hasEdgeTracks
 }
 
 const (
@@ -241,10 +247,22 @@ func ParseChart(song *Song, data []byte) (*Chart, error) {
 
 	// Create tracks from notes
 	beatInterval := int64(msPerTick * 4)
+	hasEdgeTracks := false
 	for _, name := range TrackNames() {
 		track := NewTrack(name, notes[name], beatInterval)
 		chart.Tracks = append(chart.Tracks, track)
 		chart.TotalNotes += len(notes[name])
+
+		if !hasEdgeTracks && (name == EdgeTop || name == EdgeTap1 || name == EdgeTap2 || name == EdgeTap3) {
+			if len(notes[name]) > 0 {
+				hasEdgeTracks = true
+			}
+		}
+	}
+	chart.hasEdgeTracks = hasEdgeTracks
+
+	if chart.TotalNotes == 0 {
+		return nil, errors.New("no notes found in chart")
 	}
 
 	// Can probably do some chart metadata (?) here since we have all info
