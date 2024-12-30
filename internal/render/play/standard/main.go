@@ -6,7 +6,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
 	play "github.com/liqmix/ebiten-holiday-2024/internal/state/play"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -30,7 +29,8 @@ type Standard struct {
 }
 
 func (r *Standard) Init(s *play.State) {
-	displayEdgeTracks := !config.NO_EDGE_TRACKS && s.Chart.HasEdgeTracks()
+	settings := user.Settings()
+	displayEdgeTracks := !settings.NoEdgeTracks && s.Chart.HasEdgeTracks()
 	SetLayout(displayEdgeTracks)
 
 	r.state = s
@@ -61,19 +61,19 @@ func (r *Standard) DrawScore(screen *ebiten.Image) {
 	y := 0.05 * float64(s.RenderHeight)
 
 	perfectText := fmt.Sprintf(locale.String(types.L_HIT_PERFECT)+": %d", score.Perfect)
-	ui.DrawTextAt(screen, perfectText, int(x), int(y), 1)
+	ui.DrawTextRightAt(screen, perfectText, int(x), int(y), 1)
 
 	y += 20
 	goodText := fmt.Sprintf(locale.String(types.L_HIT_GOOD)+": %d", score.Good)
-	ui.DrawTextAt(screen, goodText, int(x), int(y), 1)
+	ui.DrawTextRightAt(screen, goodText, int(x), int(y), 1)
 
 	y += 20
 	badText := fmt.Sprintf(locale.String(types.L_HIT_BAD)+": %d", score.Bad)
-	ui.DrawTextAt(screen, badText, int(x), int(y), 1)
+	ui.DrawTextRightAt(screen, badText, int(x), int(y), 1)
 
 	y += 20
 	missText := fmt.Sprintf(locale.String(types.L_HIT_MISS)+": %d", score.Miss)
-	ui.DrawTextAt(screen, missText, int(x), int(y), 1)
+	ui.DrawTextRightAt(screen, missText, int(x), int(y), 1)
 }
 
 func (r *Standard) DrawBackground(screen *ebiten.Image) {

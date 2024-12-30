@@ -10,6 +10,7 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/score"
 	"github.com/liqmix/ebiten-holiday-2024/internal/song"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 type PlayArgs struct {
@@ -41,8 +42,10 @@ func New(arg interface{}) *State {
 
 	tracks := chart.Tracks
 
+	s := user.Settings()
+
 	// If we don't have edge tracks, remove them
-	if config.NO_EDGE_TRACKS || !chart.HasEdgeTracks() {
+	if s.NoEdgeTracks || !chart.HasEdgeTracks() {
 		fmt.Println("Removing edge tracks")
 		newTracks := []*song.Track{}
 		for _, track := range chart.Tracks {

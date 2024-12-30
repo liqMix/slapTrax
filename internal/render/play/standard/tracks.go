@@ -125,7 +125,7 @@ func (r *Standard) drawMainTracks(screen *ebiten.Image) {
 	combo := r.state.Score.Combo
 	if combo > 0 {
 		comboText := fmt.Sprintf("%d", r.state.Score.Combo)
-		ui.DrawTextAt(screen, comboText, int(mainCenter.X*float64(s.RenderWidth)), int(mainCenter.Y*float64(s.RenderHeight)), 1)
+		ui.DrawTextCenterAt(screen, comboText, int(mainCenter.X*float64(s.RenderWidth)), int(mainCenter.Y*float64(s.RenderHeight)), 1)
 	}
 }
 

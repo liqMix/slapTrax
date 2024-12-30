@@ -22,7 +22,7 @@ func (r *Default) Draw(screen *ebiten.Image) {
 	centerX := s.RenderWidth / 2
 	centerY := s.RenderHeight / 2
 
-	ui.DrawTextAt(screen, r.state.Text, centerX, centerY, config.FONT_SCALE)
+	ui.DrawTextCenterAt(screen, r.state.Text, centerX, centerY, config.FONT_SCALE)
 	ui.DrawImageAt(screen, r.state.Flag, centerX, centerY-100, 5.0)
 
 }

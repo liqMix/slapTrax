@@ -25,6 +25,10 @@ type UserSettings struct {
 	SFXVolume         float64
 	SongVolume        float64
 	SongPreviewVolume float64
+
+	// Accessibility
+	NoHoldNotes  bool // If true, hold notes will not be used
+	NoEdgeTracks bool // If true, the edge tracks will not be used
 }
 
 var DefaultSettings = UserSettings{
@@ -33,7 +37,9 @@ var DefaultSettings = UserSettings{
 	SFXVolume:         0.5,
 	SongVolume:        0.5,
 	SongPreviewVolume: 0.5,
-	RenderWidth:       1280,
-	RenderHeight:      720,
+	RenderWidth:       640,
+	RenderHeight:      480,
 	NoteSpeed:         1.0,
+	NoEdgeTracks:      false,
+	NoHoldNotes:       true,
 }

@@ -35,9 +35,6 @@ const (
 	// GRACE_PERIOD int64   = 2000 // The amount of time before the song starts that the player can get ready.
 	TRAVEL_TIME int64   = 2500 // The amount of time it takes for a note to travel from it's spawn point to the hit zone.
 	NOTE_SPEED  float64 = 0.25 // The speed at which notes travel. total travel time = TRAVEL_TIME / NOTE_SPEED
-
-	// Accessibility
-	NO_EDGE_TRACKS bool = true // If true, the edge tracks will not be used.
 )
 
 var (

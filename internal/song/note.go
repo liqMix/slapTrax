@@ -6,6 +6,7 @@ import (
 
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/score/hit"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 type MarkerType int
@@ -35,6 +36,7 @@ func NewNote(target, targetRelease int64) *Note {
 		TargetRelease: targetRelease,
 	}
 }
+
 func NewMarker(target int64, markerType MarkerType) *Note {
 	return &Note{
 		Target:     target,
@@ -56,6 +58,11 @@ func (n *Note) Reset() {
 }
 
 func (n *Note) IsHoldNote() bool {
+	s := user.Settings()
+	if s.NoHoldNotes {
+		return false
+	}
+
 	return n.TargetRelease > 0
 }
 
