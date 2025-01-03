@@ -8,8 +8,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/ebiten-holiday-2024/internal/errors"
+	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 	"github.com/tinne26/etxt/font"
 	"golang.org/x/image/font/sfnt"
 	"gopkg.in/yaml.v2"
@@ -22,9 +23,9 @@ type Locale struct {
 	keyPairs   map[string]string
 }
 
-var currentLocale *Locale
 var availableLocales = readLocaleDir()
 var loadedLocales = make(map[string]*Locale)
+var currentLocale *Locale = loadLocale(config.DEFAULT_LOCALE)
 
 func readLocaleDir() []string {
 	localeDir, err := os.ReadDir(config.LOCALE_DIR)
@@ -40,6 +41,13 @@ func readLocaleDir() []string {
 	}
 
 	return locales
+}
+
+func CurrentLocale() string {
+	return currentLocale.LocaleCode
+}
+func Locales() []string {
+	return availableLocales
 }
 
 func loadLocale(locale string) *Locale {
@@ -128,17 +136,18 @@ func getLocale(locale string) *Locale {
 	return nil
 }
 
-func Change(locale string) {
+func Change(locale string) error {
 	if currentLocale != nil && currentLocale.LocaleCode == locale {
-		return
+		logger.Info("Locale already set to %s", locale)
+		return nil
 	}
 	newLocale := getLocale(locale)
 	if newLocale == nil {
-		return
+		return errors.Raise(errors.UNKNOWN_LOCALE, locale)
 	}
 
 	currentLocale = newLocale
-	ui.SetFont(currentLocale.font)
+	return nil
 }
 
 func String(key string) string {
@@ -156,4 +165,8 @@ func String(key string) string {
 
 func Flag() *ebiten.Image {
 	return &currentLocale.flag
+}
+
+func Font() *sfnt.Font {
+	return currentLocale.font
 }

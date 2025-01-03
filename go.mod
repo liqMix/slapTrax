@@ -5,6 +5,14 @@ go 1.22.4
 require github.com/kettek/gobl v0.3.1
 
 require (
+	github.com/ebitengine/debugui v0.0.0-20241116042544-7eae500d7fed // indirect
+	github.com/go-text/typesetting v0.2.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/hajimehoshi/bitmapfont/v3 v3.2.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.21 // indirect
+)
+
+require (
 	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
 	github.com/ebitengine/oto/v3 v3.3.2 // indirect

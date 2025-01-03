@@ -1,6 +1,9 @@
 locale: "English"
 title: "Ebiten Winter Game Jam 2024"
 
+# General
+exit: "Exit"
+
 # Difficulties
 difficulty.easy: "Easy"
 difficulty.medium: "Medium"
@@ -14,6 +17,7 @@ state.editor: "Editor"
 state.settings: "Settings"
 state.profile: "Profile"
 state.play: "Play"
+state.offset: "Adjust Offsets"
 
 # Render modes
 render.play.default: "Default"

@@ -1,46 +1,96 @@
 package ui
 
 import (
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/tinne26/etxt"
-	"golang.org/x/image/font/sfnt"
 )
 
 var text = initRenderer()
 
-const defaultAlign = etxt.Center
-const defaultScale = 1.0
+func TextHeight() float64 {
+	_, y := types.Window.RenderSize()
+	h := text.Measure(" ").Height().ToFloat64()
+	return h / float64(y)
+}
+
+func TextWidth(s string) float64 {
+	x, _ := types.Window.RenderSize()
+	w := text.Measure(s).Width().ToFloat64()
+	return w / float64(x)
+}
+
+type TextOptions struct {
+	Align etxt.Align
+	Scale float64
+	Color color.RGBA
+}
+
+var DefaultOptions = TextOptions{
+	Align: etxt.Center,
+	Scale: 1,
+	Color: types.White,
+}
 
 func initRenderer() *etxt.Renderer {
+	opts := &DefaultOptions
+
 	r := etxt.NewRenderer()
 	r.Utils().SetCache8MiB()
-
-	resetRenderer(r)
+	r.SetFont(locale.Font())
+	r.SetAlign(opts.Align)
+	r.SetScale(opts.Scale)
+	r.SetColor(opts.Color)
 	return r
 }
 
-func resetRenderer(t *etxt.Renderer) {
-	t.SetScale(defaultScale)
-	t.SetAlign(defaultAlign)
+func resetRenderer() {
+	setRenderer(&DefaultOptions)
 }
 
-func DrawTextCenterAt(screen *ebiten.Image, s string, x, y int, scale float64) {
-	text.SetScale(scale)
-	text.Draw(screen, s, x, y)
-
-	// Reset
-	resetRenderer(text)
+func setRenderer(opts *TextOptions) {
+	if opts == nil {
+		return
+	}
+	text.SetAlign(opts.Align)
+	text.SetScale(opts.Scale)
+	text.SetColor(opts.Color)
 }
 
-func DrawTextRightAt(screen *ebiten.Image, s string, x, y int, scale float64) {
-	text.SetScale(scale)
-	text.SetAlign(etxt.Right)
-	text.Draw(screen, s, x, y)
+func DrawTextAt(screen *ebiten.Image, txt string, center *Point, opts *TextOptions) {
+	if center == nil {
+		return
+	}
+	if opts == nil {
+		opts = &DefaultOptions
+	}
 
-	// Reset
-	resetRenderer(text)
+	x, y := center.ToRender()
+
+	setRenderer(opts)
+	text.Draw(screen, txt, int(x), int(y))
+	resetRenderer()
 }
 
-func SetFont(f *sfnt.Font) {
-	text.SetFont(f)
+func DrawTextBlockAt(screen *ebiten.Image, s []string, p *Point, opts *TextOptions) {
+	if p == nil || len(s) == 0 {
+		return
+	}
+	if opts == nil {
+		opts = &DefaultOptions
+	}
+
+	setRenderer(opts)
+
+	h := text.Measure(s[0]).IntHeight()
+
+	x, y := p.ToRender()
+	for i, line := range s {
+		text.Draw(screen, line, int(x), int(y)+h*i)
+	}
+
+	resetRenderer()
 }
