@@ -1,9 +1,9 @@
-package locale
+package assets
 
 import (
+	"embed"
 	"fmt"
-	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -16,6 +16,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+//go:embed locales/**/*
+var localeFS embed.FS
+
 type Locale struct {
 	LocaleCode string
 	font       *sfnt.Font
@@ -23,12 +26,17 @@ type Locale struct {
 	keyPairs   map[string]string
 }
 
-var availableLocales = readLocaleDir()
+var availableLocales []string
 var loadedLocales = make(map[string]*Locale)
-var currentLocale *Locale = loadLocale(config.DEFAULT_LOCALE)
+var currentLocale *Locale
+
+func InitLocales() {
+	availableLocales = readLocaleDir()
+	currentLocale = loadLocale(config.DEFAULT_LOCALE)
+}
 
 func readLocaleDir() []string {
-	localeDir, err := os.ReadDir(config.LOCALE_DIR)
+	localeDir, err := localeFS.ReadDir(config.LOCALE_DIR)
 	if err != nil {
 		return nil
 	}
@@ -36,6 +44,7 @@ func readLocaleDir() []string {
 	var locales []string
 	for _, entry := range localeDir {
 		if entry.IsDir() {
+			logger.Debug("Found locale %s", entry.Name())
 			locales = append(locales, entry.Name())
 		}
 	}
@@ -51,35 +60,35 @@ func Locales() []string {
 }
 
 func loadLocale(locale string) *Locale {
-	localePath := filepath.Join(config.LOCALE_DIR, locale)
-	if _, err := os.Stat(localePath); os.IsNotExist(err) {
+	localePath := path.Join(config.LOCALE_DIR, locale)
+	logger.Info("Loading locale %s", localePath)
+	if _, err := localeFS.ReadDir(localePath); err != nil {
+		logger.Error("Locale %s not found", locale)
 		return nil
 	}
 
 	// Load flag image
-	flagImg, _, err := ebitenutil.NewImageFromFile(filepath.Join(localePath, "flag.png"))
+	flagImg, _, err := ebitenutil.NewImageFromFileSystem(localeFS, path.Join(localePath, "flag.png"))
 	if err != nil {
 		return nil
 	}
-	// Resize flag image to 16 x 8
-	// flagImg = flagImg.SubImage(image.Rect(0, 0, 16, 8)).(*ebiten.Image)
 
 	// Load font by finding a .ttf in the locale directory
 	// it can be named anything, but it must be a .ttf
 	var localeFont *sfnt.Font
 	fontPath := ""
-	fontDir, err := os.ReadDir(localePath)
+	fontDir, err := localeFS.ReadDir(localePath)
 	if err != nil {
 		return nil
 	}
 	for _, entry := range fontDir {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".ttf" {
-			fontPath = filepath.Join(localePath, entry.Name())
+		if !entry.IsDir() && path.Ext(entry.Name()) == ".ttf" {
+			fontPath = path.Join(localePath, entry.Name())
 			break
 		}
 	}
 	if fontPath != "" {
-		bytes, err := os.ReadFile(fontPath)
+		bytes, err := localeFS.ReadFile(fontPath)
 		if err == nil {
 			f, _, err := font.ParseFromBytes(bytes)
 			if err == nil {
@@ -90,7 +99,7 @@ func loadLocale(locale string) *Locale {
 	}
 
 	// Load key pairs from JSON
-	data, err := os.ReadFile(filepath.Join(localePath, "strings.yaml"))
+	data, err := localeFS.ReadFile(path.Join(localePath, "strings.yaml"))
 	if err != nil {
 		return nil
 	}
@@ -136,7 +145,7 @@ func getLocale(locale string) *Locale {
 	return nil
 }
 
-func Change(locale string) error {
+func SetLocale(locale string) error {
 	if currentLocale != nil && currentLocale.LocaleCode == locale {
 		logger.Info("Locale already set to %s", locale)
 		return nil

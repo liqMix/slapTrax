@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -39,7 +39,7 @@ func NewPlayState(args *PlayArgs) *Play {
 	tracks := chart.Tracks
 
 	// Get the song audio ready
-	audio.InitSong(playSong)
+	assets.InitSong(playSong)
 	for _, track := range tracks {
 		track.Reset()
 	}
@@ -61,7 +61,7 @@ func NewPlayState(args *PlayArgs) *Play {
 // }
 
 func (p *Play) inGracePeriod() bool {
-	if audio.IsSongPlaying() {
+	if assets.IsSongPlaying() {
 		return false
 	}
 
@@ -70,7 +70,7 @@ func (p *Play) inGracePeriod() bool {
 
 	// Start the audio when the elapsed time is equal to the audio offset
 	if p.elapsedTime >= -200+user.S().Gameplay.AudioOffset {
-		audio.PlaySong()
+		assets.PlaySong()
 		return false
 	}
 	return true
@@ -80,8 +80,8 @@ func (p *Play) handleAction(action PlayAction) {
 	switch action {
 	case RestartAction:
 		// Stop the song
-		audio.StopSong()
-		audio.InitSong(p.Song)
+		assets.StopSong()
+		assets.InitSong(p.Song)
 
 		// Reset the tracks
 		for _, track := range p.Tracks {
@@ -94,7 +94,7 @@ func (p *Play) handleAction(action PlayAction) {
 		p.startTime = time.Now()
 		return
 	case PauseAction:
-		audio.PauseSong()
+		assets.PauseSong()
 		p.SetNextState(types.GameStatePause,
 			&PauseArgs{
 				song:       p.Song,
@@ -106,7 +106,7 @@ func (p *Play) handleAction(action PlayAction) {
 
 func (p *Play) Update() error {
 	if !p.inGracePeriod() {
-		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + user.S().Gameplay.AudioOffset
+		p.elapsedTime = int64(assets.CurrentSongPositionMS()) + user.S().Gameplay.AudioOffset
 	}
 
 	// Update the tracks

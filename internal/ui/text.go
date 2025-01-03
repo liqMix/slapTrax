@@ -4,12 +4,12 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/tinne26/etxt"
 )
 
-var text = initRenderer()
+var text *etxt.Renderer
 
 func TextHeight() float64 {
 	_, y := types.Window.RenderSize()
@@ -35,16 +35,16 @@ var DefaultOptions = TextOptions{
 	Color: types.White,
 }
 
-func initRenderer() *etxt.Renderer {
+func InitTextRenderer() {
 	opts := &DefaultOptions
 
 	r := etxt.NewRenderer()
 	r.Utils().SetCache8MiB()
-	r.SetFont(locale.Font())
+	r.SetFont(assets.Font())
 	r.SetAlign(opts.Align)
 	r.SetScale(opts.Scale)
 	r.SetColor(opts.Color)
-	return r
+	text = r
 }
 
 func resetRenderer() {

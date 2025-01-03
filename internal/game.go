@@ -8,7 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
@@ -107,7 +107,7 @@ func handleGlobalKeybinds() {
 }
 
 func (g *Game) Update() error {
-	audio.Update()
+	assets.Update()
 	input.Update()
 	handleGlobalKeybinds()
 

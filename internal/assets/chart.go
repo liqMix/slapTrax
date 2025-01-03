@@ -1,4 +1,4 @@
-package resource
+package assets
 
 import (
 	"bytes"
@@ -15,21 +15,6 @@ const (
 	noteOff = 0x80
 	noteOn  = 0x90
 )
-
-// // MIDI note numbers to track mapping
-// var noteToTrack = map[uint8]TrackName{
-// 	62: LeftTop,     // D5
-// 	60: LeftBottom,  // C5
-// 	57: Center,      // A4
-// 	55: RightBottom, // G4
-// 	53: RightTop,    // F4
-
-// 	// Edge taps
-// 	50: EdgeTop,  // D4
-// 	48: EdgeTap1, // C4
-// 	47: EdgeTap2, // B3
-// 	46: EdgeTap3, // A#3
-// }
 
 var noteToTrack = map[uint8]types.TrackName{
 	74: types.LeftTop,      // D6

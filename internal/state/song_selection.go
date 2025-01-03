@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/resource"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -90,7 +89,7 @@ func NewSongDetails() *SongDetails {
 	scale = 1.2
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_DIFFICULTIES))
+	e.SetText(assets.String(types.L_DIFFICULTIES))
 	e.SetScale(scale)
 	e.SetTextBold(true)
 	d.difficultyText = e
@@ -105,7 +104,7 @@ func NewSongDetails() *SongDetails {
 	// Chart Details
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_CHART))
+	e.SetText(assets.String(types.L_CHART))
 	e.SetScale(scale)
 	e.SetTextBold(true)
 	d.chartText = e
@@ -252,7 +251,7 @@ func (s *SongSelection) SelectSong(song *types.Song) {
 }
 
 func NewSongSelectionState() *SongSelection {
-	songs := resource.GetAllSongs()
+	songs := assets.GetAllSongs()
 	s := &SongSelection{songs: songs}
 
 	center := ui.Point{
@@ -280,14 +279,14 @@ func NewSongSelectionState() *SongSelection {
 	if len(songs) > 0 {
 		song := songs[0]
 		s.details.UpdateDetails(song)
-		audio.PlaySongPreview(song)
+		assets.PlaySongPreview(song)
 	}
 	return s
 }
 
 func (s *SongSelection) Update() error {
 	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
-		audio.StopAll()
+		assets.StopAll()
 		s.SetNextState(types.GameStateTitle, nil)
 	}
 
@@ -297,7 +296,7 @@ func (s *SongSelection) Update() error {
 		s.currentIdx = currentIdx
 		song := s.songs[s.currentIdx]
 		s.details.UpdateDetails(song)
-		audio.PlaySongPreview(song)
+		assets.PlaySongPreview(song)
 	}
 	s.details.Update()
 	return nil

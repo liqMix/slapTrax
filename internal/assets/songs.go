@@ -1,19 +1,25 @@
-package resource
+package assets
 
 import (
 	"crypto/sha256"
+	"embed"
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"gopkg.in/yaml.v2"
 )
+
+//go:embed songs/**/*.yaml songs/**/*.png songs/**/*.mid  songs/**/*.mp3
+var songFS embed.FS
 
 var songs = make(map[types.Checksum]types.Song)
 
@@ -30,7 +36,7 @@ func InitSongs() {
 }
 
 func readSongDir() []string {
-	songDir, err := os.ReadDir(config.SONG_DIR)
+	songDir, err := songFS.ReadDir(config.SONG_DIR)
 	if err != nil {
 		panic(err)
 	}
@@ -44,66 +50,42 @@ func readSongDir() []string {
 	return songs
 }
 
-// // Ensure we have the files we need in the song directory
-// func validateSongDir(folderName string) bool {
-// 	dirName := path.Join(config.SONG_DIR, folderName)
-// 	_, err := os.Stat(dirName)
-// 	if os.IsNotExist(err) {
-// 		fmt.Println("Song directory does not exist: " + dirName)
-// 		return false
-// 	}
+func findAudioFile(folderName string) (string, error) {
+	dirPath := path.Join(config.SONG_DIR, folderName)
+	entries, err := songFS.ReadDir(dirPath)
+	if err != nil {
+		return "", err
+	}
 
-// 	// metadata file
-// 	metaPath := path.Join(dirName, config.SONG_META_NAME)
-// 	_, err = os.Stat(metaPath)
-// 	if os.IsNotExist(err) {
-// 		fmt.Println("Song metadata file does not exist: " + metaPath)
-// 		return false
-// 	}
+	validExts := map[string]bool{
+		".wav": true,
+		".ogg": true,
+		".mp3": true,
+	}
 
-// 	// audio file (audio.wav/.ogg/.mp3)
-// 	songPath := path.Join(dirName, config.SONG_AUDIO_NAME)
-// 	_, err = os.Stat(songPath + ".wav")
-// 	if os.IsNotExist(err) {
-// 		_, err = os.Stat(songPath + ".ogg")
-// 		if os.IsNotExist(err) {
-// 			_, err = os.Stat(songPath + ".mp3")
-// 			if os.IsNotExist(err) {
-// 				fmt.Println("Song audio file does not exist: " + songPath)
-// 				return false
-// 			}
-// 		}
-// 	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
 
-// 	// at least one chart file (.midi with integer name)
-// 	chartDir, err := os.ReadDir(dirName)
-// 	if err != nil {
-// 		return false
-// 	}
-// 	for _, entry := range chartDir {
-// 		name := entry.Name()
-// 		if !entry.IsDir() && filepath.Ext(name) == ".midi" {
-// 			// check if integer directly
-// 			_, err := strconv.Atoi(name[:len(name)-5])
-// 			if err != nil {
-// 				fmt.Println("Invalid chart file name: " + name)
-// 				return false
-// 			}
-// 		}
-// 	}
+		name := entry.Name()
+		if !strings.HasPrefix(name, config.SONG_AUDIO_NAME+".") {
+			continue
+		}
 
-// 	// maybe no art is ok ?
-// 	// _, err = os.Stat(dirName + "/art.png")
-// 	// if os.IsNotExist(err) {
-// 	// 	return false
-// 	// }
-// 	return true
-// }
+		ext := filepath.Ext(name)
+		if validExts[ext] {
+			return path.Join(dirPath, name), nil
+		}
+	}
+
+	return "", fmt.Errorf("no valid audio file found")
+}
 
 func loadSong(folderName string) *types.Song {
 	// Load the song from the directory
 	songPath := path.Join(config.SONG_DIR, folderName)
-	songFile, err := os.ReadFile(path.Join(songPath, config.SONG_META_NAME))
+	songFile, err := songFS.ReadFile(path.Join(songPath, config.SONG_META_NAME))
 	if err != nil {
 		fmt.Println("Error reading song metadata file: " + err.Error())
 		return nil
@@ -116,8 +98,8 @@ func loadSong(folderName string) *types.Song {
 	}
 
 	// Load the album art
-	artPath := songPath + "/art.png"
-	artImg, _, err := ebitenutil.NewImageFromFile(artPath)
+	artPath := path.Join(songPath, "art.png")
+	artImg, _, err := ebitenutil.NewImageFromFileSystem(songFS, artPath)
 	if err != nil {
 		fmt.Println("Error loading album art: " + err.Error())
 	} else {
@@ -125,16 +107,10 @@ func loadSong(folderName string) *types.Song {
 	}
 
 	// Identify the audio file
-	audioPath := songPath + "/audio.wav"
-	if _, err := os.Stat(audioPath); os.IsNotExist(err) {
-		audioPath = songPath + "/audio.ogg"
-		if _, err := os.Stat(audioPath); os.IsNotExist(err) {
-			audioPath = songPath + "/audio.mp3"
-			if _, err := os.Stat(audioPath); os.IsNotExist(err) {
-				fmt.Println("No audio file found for song " + song.Title)
-				return nil
-			}
-		}
+	audioPath, err := findAudioFile(folderName)
+	if err != nil {
+		logger.Error("finding audio file for %s: %w", song.Title, err)
+		return nil
 	}
 	song.AudioPath = audioPath
 
@@ -144,7 +120,7 @@ func loadSong(folderName string) *types.Song {
 	// Find all  files in the song directory
 	// and load them as charts with the chart name as the difficulty.
 	// If not an integer, ignore it.
-	chartDir, err := os.ReadDir(songPath)
+	chartDir, err := songFS.ReadDir(songPath)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -162,7 +138,7 @@ func loadSong(folderName string) *types.Song {
 
 			difficulty := types.Difficulty(d)
 			chartPath := path.Join(songPath, name)
-			chartFile, err := os.ReadFile(chartPath)
+			chartFile, err := songFS.ReadFile(chartPath)
 			if err != nil {
 				fmt.Println("Error reading chart file: " + err.Error())
 				continue
@@ -188,28 +164,31 @@ func loadSong(folderName string) *types.Song {
 	}
 
 	// Calculate the checksum
-	song.Checksum = calculateChecksum(songPath)
+	song.Checksum, err = calculateChecksum(songPath)
+	if err != nil {
+		fmt.Println("Error calculating checksum: " + err.Error())
+		return nil
+	}
 	song.FolderName = folderName
 	return &song
 }
 
-func calculateChecksum(songPath string) types.Checksum {
-	// Create hash
+func calculateChecksum(songPath string) (types.Checksum, error) {
 	hasher := sha256.New()
 
-	// Get all files
+	// Get all files recursively from embed.FS
 	var files []string
-	err := filepath.Walk(songPath, func(path string, info os.FileInfo, err error) error {
+	err := fs.WalkDir(songFS, songPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
+		if !d.IsDir() {
 			files = append(files, path)
 		}
 		return nil
 	})
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("walking directory: %w", err)
 	}
 
 	// Sort for consistent ordering
@@ -217,15 +196,18 @@ func calculateChecksum(songPath string) types.Checksum {
 
 	// Hash each file's contents
 	for _, file := range files {
-		data, err := os.ReadFile(file)
+		data, err := songFS.ReadFile(file)
 		if err != nil {
-			return ""
+			return "", fmt.Errorf("reading file %s: %w", file, err)
 		}
+
+		// Write both filename and content to ensure unique hashes
+		// even if files are renamed
+		hasher.Write([]byte(path.Base(file)))
 		hasher.Write(data)
 	}
 
-	// Return hex string of hash
-	return types.Checksum(fmt.Sprintf("%x", hasher.Sum(nil)))
+	return types.Checksum(fmt.Sprintf("%x", hasher.Sum(nil))), nil
 }
 
 // Returns a song by checksum

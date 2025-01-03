@@ -2,7 +2,7 @@ package state
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
@@ -50,7 +50,7 @@ func NewDifficultySelectionState(args *DifficultySelectionArgs) *DifficultySelec
 		e.SetCenter(center)
 		e.SetText(diff.String())
 		e.SetTrigger(func() {
-			audio.StopAll()
+			assets.StopAll()
 			d.SetNextState(types.GameStatePlay, &PlayArgs{
 				Song:       args.song,
 				Difficulty: diff,

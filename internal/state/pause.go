@@ -2,7 +2,7 @@ package state
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
@@ -33,7 +33,7 @@ func NewPauseState(args *PauseArgs) *Pause {
 	// Resume
 	e := ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_BACK))
+	e.SetText(assets.String(types.L_BACK))
 	e.SetTrigger(func() {
 		p.SetNextState(types.GameStateBack, nil)
 	})
@@ -43,7 +43,7 @@ func NewPauseState(args *PauseArgs) *Pause {
 	// Settings
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_STATE_SETTINGS))
+	e.SetText(assets.String(types.L_STATE_SETTINGS))
 	e.SetTrigger(func() {
 		p.SetNextState(types.GameStateSettings, nil)
 	})
@@ -53,7 +53,7 @@ func NewPauseState(args *PauseArgs) *Pause {
 	// Restart
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_STATE_PLAY_RESTART))
+	e.SetText(assets.String(types.L_STATE_PLAY_RESTART))
 	e.SetTrigger(func() {
 		p.SetNextState(types.GameStatePlay, &PlayArgs{
 			Song:       args.song,
@@ -66,7 +66,7 @@ func NewPauseState(args *PauseArgs) *Pause {
 	// Quit
 	quit := ui.NewElement()
 	quit.SetCenter(center)
-	quit.SetText(locale.String(types.L_EXIT))
+	quit.SetText(assets.String(types.L_EXIT))
 	quit.SetTrigger(func() {
 		p.SetNextState(types.GameStateSongSelection, nil)
 	})

@@ -5,12 +5,12 @@ const (
 	// System
 	TITLE = "Ebiten Holiday Jam 2024"
 	// Assets
-	SONG_DIR        = "assets/songs"
+	SONG_DIR        = "songs"
 	SONG_META_NAME  = "meta.yaml"
 	SONG_AUDIO_NAME = "audio"
-	LOCALE_DIR      = "assets/locales"
-	SFX_DIR         = "assets/sfx"
-	BGM_DIR         = "assets/bgm"
+	LOCALE_DIR      = "locales"
+	SFX_DIR         = "sfx"
+	BGM_DIR         = "bgm"
 
 	// Locale
 	DEFAULT_LOCALE             = "en-us"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 	"github.com/tinne26/etxt"
@@ -23,10 +23,10 @@ func (r *Play) drawScore(screen *ebiten.Image) {
 		Scale: 1.0,
 		Color: types.White,
 	}
-	perfectText := fmt.Sprintf(locale.String(types.L_HIT_PERFECT)+": %d", score.Perfect)
-	goodText := fmt.Sprintf(locale.String(types.L_HIT_GOOD)+": %d", score.Good)
-	badText := fmt.Sprintf(locale.String(types.L_HIT_BAD)+": %d", score.Bad)
-	missText := fmt.Sprintf(locale.String(types.L_HIT_MISS)+": %d", score.Miss)
+	perfectText := fmt.Sprintf(assets.String(types.L_HIT_PERFECT)+": %d", score.Perfect)
+	goodText := fmt.Sprintf(assets.String(types.L_HIT_GOOD)+": %d", score.Good)
+	badText := fmt.Sprintf(assets.String(types.L_HIT_BAD)+": %d", score.Bad)
+	missText := fmt.Sprintf(assets.String(types.L_HIT_MISS)+": %d", score.Miss)
 
 	hitDiffText := fmt.Sprintf("Diff: %v", score.GetLastHitRecord())
 	ui.DrawTextBlockAt(screen, []string{

@@ -4,7 +4,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/tinne26/etxt"
 )
@@ -26,7 +26,7 @@ func NewElement() *Element {
 
 func (e *Element) SetText(text string) {
 	if text == "" {
-		text = locale.String(types.L_UNKNOWN)
+		text = assets.String(types.L_UNKNOWN)
 	}
 	e.text = text
 	w := TextWidth(text)
@@ -75,7 +75,7 @@ func (e *Element) SetScale(scale float64) {
 func (e *Element) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	t := e.text
 	if e.image == nil && len(e.text) == 0 {
-		t = locale.String(types.L_UNKNOWN)
+		t = assets.String(types.L_UNKNOWN)
 	}
 
 	center := e.GetCenter()

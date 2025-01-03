@@ -1,10 +1,10 @@
-package audio
+package assets
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
 	"io"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -17,10 +17,48 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 	"github.com/solarlune/resound"
 	"github.com/solarlune/resound/effects"
 )
+
+//go:embed sfx/*.mp3 songs/**/*.mp3
+var sfxFS embed.FS
+
+type BGMCode string
+
+const (
+	BGMIntro   BGMCode = "intro"
+	BGMMenu    BGMCode = "menu"
+	BGMResults BGMCode = "results"
+)
+
+func (b BGMCode) Path() string {
+	return path.Join(config.BGM_DIR, string(b)+".mp3")
+}
+
+type SFXCode string
+
+const (
+	SFXOffset           SFXCode = "offset"
+	SFXNoteHit          SFXCode = "hit"
+	SFXMoveSelectorHigh SFXCode = "moveSelectorHigh"
+	SFXMoveSelectorLow  SFXCode = "moveSelectorLow"
+	SFXSelect           SFXCode = "select"
+)
+
+func (s SFXCode) Path() string {
+	return path.Join(config.SFX_DIR, string(s)+".mp3")
+}
+
+func AllSFX() []SFXCode {
+	return []SFXCode{
+		SFXOffset,
+		SFXNoteHit,
+		SFXMoveSelectorHigh,
+		SFXMoveSelectorLow,
+		SFXSelect,
+	}
+}
 
 type songPreviewChannels struct {
 	current  *resound.DSPChannel
@@ -53,9 +91,10 @@ type preview struct {
 type audioMan struct {
 	cache    map[string][]byte
 	players  players
-	channels channels
+	channels *channels
 
 	songPreview *preview
+	volume      *Volume
 }
 
 type Volume struct {
@@ -68,20 +107,11 @@ var (
 	manager audioMan
 )
 
-func Settings() *user.Audio {
-	return &user.S().Audio
-}
-
-func InitAudioManager() {
+func InitAudioManager(v *Volume) {
 	logger.Info("Initializing audio manager...")
 	audio.NewContext(config.SAMPLE_RATE)
 	manager = audioMan{
-		channels: channels{
-			sfx:         newSfxChannel(),
-			bgm:         newMusicChannel(),
-			song:        newSongChannel(),
-			songPreview: newSongPreviewChannels(),
-		},
+		channels: newChannels(v),
 		players: players{
 			sfx: make([]*resound.Player, 0),
 			songPreview: &songPreviewPlayers{
@@ -89,6 +119,7 @@ func InitAudioManager() {
 				previous: nil,
 			},
 		},
+		volume: v,
 	}
 	logger.Debug("Loading sfx...")
 	for _, sfx := range AllSFX() {
@@ -100,65 +131,36 @@ func InitAudioManager() {
 	}
 }
 
-func newSfxChannel() *resound.DSPChannel {
-	sfxChannel := resound.NewDSPChannel()
+func newChannels(v *Volume) *channels {
+	sfx := resound.NewDSPChannel()
+	bgm := resound.NewDSPChannel()
+	song := resound.NewDSPChannel()
+	previewPrev := resound.NewDSPChannel()
+	previewCurrent := resound.NewDSPChannel()
 
-	// sfx effects
-	sfxChannel.AddEffect("volume", effects.NewVolume().SetStrength(Settings().SFXVolume))
-	return sfxChannel
-}
+	sfx.AddEffect("volume", effects.NewVolume().SetStrength(v.Sfx))
+	bgm.AddEffect("volume", effects.NewVolume().SetStrength(v.Bgm))
+	song.AddEffect("volume", effects.NewVolume().SetStrength(v.Song))
+	previewPrev.AddEffect("volume", effects.NewVolume().SetStrength(v.Song))
+	previewCurrent.AddEffect("volume", effects.NewVolume().SetStrength(v.Song))
 
-func newMusicChannel() *resound.DSPChannel {
-	musicChannel := resound.NewDSPChannel()
-
-	// music effects
-	musicChannel.AddEffect("volume", effects.NewVolume().SetStrength(Settings().BGMVolume))
-	return musicChannel
-}
-
-func newSongChannel() *resound.DSPChannel {
-	songChannel := resound.NewDSPChannel()
-
-	// song effects
-	songChannel.AddEffect("volume", effects.NewVolume().SetStrength(Settings().SongVolume))
-	return songChannel
-}
-
-func newSongPreviewChannels() *songPreviewChannels {
-	previous := resound.NewDSPChannel()
-	previous.AddEffect("volume", effects.NewVolume().SetStrength(Settings().SongVolume))
-
-	current := resound.NewDSPChannel()
-	current.AddEffect("volume", effects.NewVolume().SetStrength(Settings().SongVolume))
-
-	// song preview effects
-	return &songPreviewChannels{
-		current:  current,
-		previous: previous,
+	return &channels{
+		sfx:  sfx,
+		bgm:  bgm,
+		song: song,
+		songPreview: &songPreviewChannels{
+			current:  previewCurrent,
+			previous: previewPrev,
+		},
 	}
 }
-
-// // Finds a file with the given name and any extension
-// func findAudioPath(parentPath string, name string) (string, error) {
-// 	// Find the first file with the given name
-// 	files, err := os.ReadDir(parentPath)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	for _, file := range files {
-// 		if strings.HasPrefix(file.Name(), name) {
-// 			return path.Join(parentPath, file.Name()), nil
-// 		}
-// 	}
-// 	return "", fmt.Errorf("file not found: %s", name)
-// }
 
 // Just read the file into memory for now
 func readAudio(path string) ([]byte, error) {
 	if a, ok := cache.GetAudio(path); ok {
 		return a, nil
 	}
-	data, err := os.ReadFile(path)
+	data, err := sfxFS.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -281,8 +283,7 @@ func PlaySongPreview(s *types.Song) {
 	player.SetDSPChannel(manager.channels.songPreview.current)
 	manager.players.songPreview.current = player
 	player.SetPosition(time.Duration(startPosition) * time.Millisecond)
-	fadeCurrentPreview(-1, Settings().SongVolume)
-	fmt.Println(Settings().SongVolume)
+	fadeCurrentPreview(-1, manager.volume.Song)
 	manager.songPreview = &preview{
 		start: startPosition,
 		end:   endPosition,
@@ -298,16 +299,22 @@ func getVolumeEffect(c *resound.DSPChannel) *effects.Volume {
 	}
 }
 
-func SetAudio() {
-	volume := Settings()
+func SetVolume(v *Volume) {
+	manager.volume = v
 	if manager.channels.bgm != nil {
-		getVolumeEffect(manager.channels.bgm).SetStrength(volume.BGMVolume)
+		getVolumeEffect(manager.channels.bgm).SetStrength(v.Bgm)
 	}
 	if manager.channels.song != nil {
-		getVolumeEffect(manager.channels.song).SetStrength(volume.SongVolume)
+		getVolumeEffect(manager.channels.song).SetStrength(v.Song)
 	}
 	if manager.channels.sfx != nil {
-		getVolumeEffect(manager.channels.sfx).SetStrength(volume.SFXVolume)
+		getVolumeEffect(manager.channels.sfx).SetStrength(v.Sfx)
+	}
+	if manager.channels.songPreview.current != nil {
+		getVolumeEffect(manager.channels.songPreview.current).SetStrength(v.Song)
+	}
+	if manager.channels.songPreview.previous != nil {
+		getVolumeEffect(manager.channels.songPreview.previous).SetStrength(v.Song)
 	}
 }
 
@@ -420,9 +427,9 @@ func updateSongPreview() {
 	if position >= preview.end {
 		preview.restarting = false
 		current.SetPosition(time.Duration(preview.start) * time.Millisecond)
-		fadeCurrentPreview(0, Settings().SongVolume)
+		fadeCurrentPreview(0, manager.volume.Song)
 	} else if position >= fadeEnd && !preview.restarting {
-		fadeCurrentPreview(Settings().SongVolume, 0)
+		fadeCurrentPreview(manager.volume.Song, 0)
 		preview.restarting = true
 	}
 }

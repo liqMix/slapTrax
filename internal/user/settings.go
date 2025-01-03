@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
@@ -51,7 +51,7 @@ type Gameplay struct {
 }
 
 func (g *Gameplay) Apply() {
-	locale.Change(g.Locale)
+	assets.SetLocale(g.Locale)
 }
 
 // Accessibility contains settings for game accessibility features

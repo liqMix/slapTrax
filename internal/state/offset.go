@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/timing"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -226,8 +226,8 @@ func (s *Offset) Update() error {
 		s.playedCenterTick = false
 		s.timeStep.Reset(progress)
 	} else if math.Abs(progress-0.5) < centerThreshold && !s.playedCenterTick {
-		audio.StopAll()
-		audio.PlaySFXWithOffset(audio.SFXOffset, offsetCenter+s.AudioOffset)
+		assets.StopAll()
+		assets.PlaySFXWithOffset(assets.SFXOffset, offsetCenter+s.AudioOffset)
 		s.playedCenterTick = true
 	}
 
@@ -313,7 +313,7 @@ func (s *Offset) saveAndExit() error {
 
 func (s *Offset) exit() error {
 	input.K.ClearWatchedKeys()
-	audio.StopAll()
+	assets.StopAll()
 	s.SetNextState(types.GameStateBack, nil)
 	return nil
 }

@@ -1,5 +1,7 @@
 package user
 
+import "github.com/liqmix/ebiten-holiday-2024/internal/assets"
+
 type User struct {
 	Name     string
 	Settings *UserSettings
@@ -23,4 +25,12 @@ func Init() {
 
 func S() *UserSettings {
 	return u.Settings
+}
+
+func Volume() *assets.Volume {
+	return &assets.Volume{
+		Bgm:  u.Settings.Audio.BGMVolume,
+		Sfx:  u.Settings.Audio.SFXVolume,
+		Song: u.Settings.Audio.SongVolume,
+	}
 }

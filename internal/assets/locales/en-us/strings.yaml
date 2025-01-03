@@ -1,0 +1,56 @@
+locale: "English"
+title: "Ebiten Winter Game Jam 2024"
+
+# General
+exit: "Exit"
+
+# Difficulties
+difficulty.easy: "Easy"
+difficulty.medium: "Medium"
+difficulty.hard: "Hard"
+difficulty.unknown: "Unknown"
+
+# States
+state.greeting: "Welcome"
+state.menu: "Menu"
+state.editor: "Editor"
+state.settings: "Settings"
+state.profile: "Profile"
+state.play: "Play"
+state.offset: "Adjust Offsets"
+
+# Render modes
+render.play.default: "Default"
+
+# Graphics Settings
+settings.gfx.fullscreen: "Fullscreen"
+settings.gfx.vsync: "VSync"
+settings.gfx.width: "Window Width"
+settings.gfx.height: "Window Height"
+settings.gfx.renderw: "Render Width"
+settings.gfx.renderh: "Render Height"
+
+# Game Settings
+settings.game.theme: "Theme"
+settings.game.audiooffset: "Audio Offset"
+settings.game.inputoffset: "Input Offset"
+settings.game.notespeed: "Note Speed"
+
+# Audio Settings
+settings.audio.bgmvolume: "BGM Volume"
+settings.audio.sfxvolume: "SFX Volume"
+settings.audio.songvolume: "Song Volume"
+settings.audio.songpreviewvolume: "Preview Volume"
+
+# Hit Judgments
+hit.perfect: "PERFECT"
+hit.good: "GOOD"
+hit.bad: "BAD"
+hit.miss: "MISS"
+
+# Themes
+theme.standard: "Standard"
+theme.leftbehind: "Left Behind"
+
+# Other
+unknown: "???"

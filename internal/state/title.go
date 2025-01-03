@@ -2,8 +2,8 @@ package state
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/locale"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
@@ -28,7 +28,7 @@ func NewTitleState() *Title {
 	// Play
 	e := ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_STATE_PLAY))
+	e.SetText(assets.String(types.L_STATE_PLAY))
 	e.SetTrigger(func() {
 		state.SetNextState(types.GameStateSongSelection, nil)
 	})
@@ -38,7 +38,7 @@ func NewTitleState() *Title {
 	// Settings
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_STATE_SETTINGS))
+	e.SetText(assets.String(types.L_STATE_SETTINGS))
 	e.SetTrigger(func() {
 		state.NextState = types.GameStateSettings
 	})
@@ -48,7 +48,7 @@ func NewTitleState() *Title {
 	// Offset
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_STATE_OFFSET))
+	e.SetText(assets.String(types.L_STATE_OFFSET))
 	e.SetTrigger(func() {
 		state.NextState = types.GameStateOffset
 	})
@@ -58,7 +58,7 @@ func NewTitleState() *Title {
 	// Exit
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(locale.String(types.L_EXIT))
+	e.SetText(assets.String(types.L_EXIT))
 	e.SetTrigger(func() {
 		panic("lol, lmao")
 	})
