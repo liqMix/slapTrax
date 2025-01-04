@@ -31,6 +31,10 @@ func (p Point) ToRender() (float64, float64) {
 	x, y := types.Window.RenderSize()
 	return p.X * float64(x), p.Y * float64(y)
 }
+func (p Point) ToRenderInt() (int, int) {
+	x, y := p.ToRender()
+	return int(x), int(y)
+}
 
 func (p Point) ToRender32() (float32, float32) {
 	x, y := p.ToRender()
@@ -62,6 +66,9 @@ func GetVectorPath(points []*Point) *VectorPath {
 	path := VectorPath{}
 	path.MoveTo(points[0].ToRender32())
 	for i := 1; i < len(points); i++ {
+		if points[i] == nil {
+			continue
+		}
 		path.LineTo(points[i].ToRender32())
 	}
 	return &path
@@ -106,4 +113,84 @@ func GetDashedPaths(start *Point, end *Point) []*VectorPath {
 		paths = append(paths, GetVectorPath([]*Point{dashStart, dashEnd}))
 	}
 	return paths
+}
+
+// Vector collection for rendering multiple paths in one draw call// Vector collection for rendering multiple paths in one draw call
+type VectorCollection struct {
+	vertices []ebiten.Vertex
+	indices  []uint16
+	vertIdx  int // Using shorter names for frequently accessed counters
+	idxIdx   int
+}
+
+const (
+	initSize   = 1024
+	growFactor = 2
+)
+
+func NewVectorCollection() *VectorCollection {
+	return &VectorCollection{
+		vertices: make([]ebiten.Vertex, initSize),
+		indices:  make([]uint16, initSize),
+	}
+}
+
+func (vc *VectorCollection) growVerts(needed int) {
+	newCap := cap(vc.vertices)
+	for newCap < vc.vertIdx+needed {
+		newCap *= growFactor
+	}
+	newSlice := make([]ebiten.Vertex, newCap)
+	copy(newSlice, vc.vertices[:vc.vertIdx])
+	vc.vertices = newSlice
+}
+
+func (vc *VectorCollection) growIndices(needed int) {
+	newCap := cap(vc.indices)
+	for newCap < vc.idxIdx+needed {
+		newCap *= growFactor
+	}
+	newSlice := make([]uint16, newCap)
+	copy(newSlice, vc.indices[:vc.idxIdx])
+	vc.indices = newSlice
+}
+
+func (vc *VectorCollection) Add(verts []ebiten.Vertex, inds []uint16) {
+	vlen, ilen := len(verts), len(inds)
+	if vlen == 0 || ilen == 0 {
+		return
+	}
+
+	// Check capacity and grow if needed
+	if vc.vertIdx+vlen > cap(vc.vertices) {
+		vc.growVerts(vlen)
+	}
+	if vc.idxIdx+ilen > cap(vc.indices) {
+		vc.growIndices(ilen)
+	}
+
+	// Direct slice copying
+	offset := uint16(vc.vertIdx)
+	copy(vc.vertices[vc.vertIdx:], verts)
+
+	// Manual loop is faster than range for small slices
+	dst := vc.indices[vc.idxIdx:]
+	for i := 0; i < ilen; i++ {
+		dst[i] = inds[i] + offset
+	}
+
+	vc.vertIdx += vlen
+	vc.idxIdx += ilen
+}
+
+func (vc *VectorCollection) Draw(img *ebiten.Image) {
+	if vc.vertIdx == 0 {
+		return
+	}
+	img.DrawTriangles(vc.vertices[:vc.vertIdx], vc.indices[:vc.idxIdx], BaseTriImg, nil)
+}
+
+func (vc *VectorCollection) Clear() {
+	vc.vertIdx = 0
+	vc.idxIdx = 0
 }

@@ -10,6 +10,12 @@ import (
 	"github.com/tinne26/etxt"
 )
 
+// var (
+// 	fadeOutHitMs       = int64(500)
+// 	lastDisplayedHitMs int64
+// 	prevHit            *types.HitRecord
+// )
+
 func (r *Play) drawScore(screen *ebiten.Image) {
 	score := r.state.Score
 
@@ -55,4 +61,30 @@ func (r *Play) drawScore(screen *ebiten.Image) {
 		)
 	}
 
+	// Draw the last hit text
+	lastHit := r.state.Score.GetLastHitRecord()
+	if lastHit != nil {
+		// currentMs := r.state.CurrentTime()
+
+		// if lastHit != prevHit {
+		// 	lastDisplayedHitMs = currentMs
+		// }
+		// opacity := 1.0 - float64(currentMs-lastDisplayedHitMs)/float64(fadeOutHitMs)
+		hitType := lastHit.HitType
+		c := hitType.Color()
+		// c.A = uint8(opacity * 255)
+		ui.DrawTextAt(
+			screen,
+			hitType.String(),
+			&ui.Point{
+				X: headerCenterPoint.X,
+				Y: headerCenterPoint.Y + 0.05,
+			},
+			&ui.TextOptions{
+				Align: etxt.Center,
+				Scale: 1.0,
+				Color: c,
+			},
+		)
+	}
 }

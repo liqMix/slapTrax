@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -25,7 +26,7 @@ type Play struct {
 	Chart       *types.Chart
 	startTime   time.Time
 	elapsedTime int64
-	TravelTime  float64
+	TravelTime  int64
 }
 
 func NewPlayState(args *PlayArgs) *Play {
@@ -43,6 +44,8 @@ func NewPlayState(args *PlayArgs) *Play {
 	for _, track := range tracks {
 		track.Reset()
 	}
+
+	// set the grace period to be 4 quarter notes
 	return &Play{
 		Song:        playSong,
 		Difficulty:  difficulty,
@@ -51,7 +54,7 @@ func NewPlayState(args *PlayArgs) *Play {
 		Score:       types.NewScore(chart.TotalNotes),
 		elapsedTime: 0,
 		startTime:   time.Now(),
-		TravelTime:  float64(config.TRAVEL_TIME) / user.S().Gameplay.NoteSpeed,
+		TravelTime:  int64(float64(config.TRAVEL_TIME) / user.S().Gameplay.NoteSpeed),
 	}
 }
 
@@ -60,16 +63,32 @@ func NewPlayState(args *PlayArgs) *Play {
 // 	return input.K.AreAny(keys, input.Held)
 // }
 
+var (
+	playedStartingTick = false
+)
+
 func (p *Play) inGracePeriod() bool {
 	if assets.IsSongPlaying() {
 		return false
 	}
 
 	// Update elapsed time
-	p.elapsedTime = time.Since(p.startTime).Milliseconds() - int64(p.TravelTime)/2
+	quarter := p.Song.GetQuarterNoteInterval()
+	p.elapsedTime = time.Since(p.startTime).Milliseconds() - (quarter * 4) - 1000
+	// Play the starting tick for every quarter note
+	tickTime := p.elapsedTime % quarter
+	if tickTime > -25 {
+		if !playedStartingTick {
+			fmt.Println(tickTime, quarter, p.elapsedTime)
+			assets.PlaySFX(assets.SFXHat)
+			playedStartingTick = true
+		}
+	} else {
+		playedStartingTick = false
+	}
 
 	// Start the audio when the elapsed time is equal to the audio offset
-	if p.elapsedTime >= -200+user.S().Gameplay.AudioOffset {
+	if p.elapsedTime >= config.INHERENT_OFFSET+user.S().Gameplay.AudioOffset {
 		assets.PlaySong()
 		return false
 	}
@@ -153,8 +172,9 @@ func (p *Play) updateTrackInput(t *types.Track) {
 	}
 }
 
-func (p *Play) updateTrack(t *types.Track, currentTime int64, travelTime float64, score *types.Score) {
+func (p *Play) updateTrack(t *types.Track, currentTime int64, travelTime int64, score *types.Score) {
 	p.updateTrackInput(t)
+
 	// Reset the new hits
 	notes := make([]*types.Note, 0, len(t.ActiveNotes))
 

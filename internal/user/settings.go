@@ -44,7 +44,6 @@ func (a *Audio) Apply() {}
 // Gameplay contains core game mechanics settings
 type Gameplay struct {
 	Locale      string
-	Theme       types.Theme
 	AudioOffset int64   // Milliseconds ahead of notes (negative = earlier)
 	InputOffset int64   // Milliseconds ahead of notes (negative = earlier)
 	NoteSpeed   float64 // Travel speed multiplier (0.1-2.0)
@@ -56,8 +55,7 @@ func (g *Gameplay) Apply() {
 
 // Accessibility contains settings for game accessibility features
 type Accessibility struct {
-	NoHoldNotes  bool
-	NoEdgeTracks bool
+	NoHoldNotes bool
 }
 
 // UserSettings contains all customizable properties for a user's game experience

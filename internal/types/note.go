@@ -23,8 +23,9 @@ type Note struct {
 	HitTime     int64 // ms the note was hit
 	ReleaseTime int64 // ms the note was released
 
-	Progress   float64    // the note's progress towards the target down the track
-	MarkerType MarkerType // Allows for special markers to be in the track ?
+	Progress        float64    // the note's progress towards the target down the track
+	ReleaseProgress float64    // the note releases's progress
+	MarkerType      MarkerType // Allows for special markers to be in the track ?
 
 	HitRating HitType // The rating of the hit
 
@@ -135,6 +136,13 @@ func (n *Note) InWindow(start, end int64) bool {
 
 // Updates note's progress towards the target
 // 0 = not started, 1 = at target
-func (n *Note) Update(currentTime int64, travelTime float64) {
-	n.Progress = math.Max(0, 1-(float64(n.Target-currentTime)/travelTime))
+func (n *Note) Update(currentTime int64, travelTime int64) {
+	n.Progress = GetTrackProgress(n.Target, currentTime, travelTime)
+	if n.IsHoldNote() {
+		n.ReleaseProgress = GetTrackProgress(n.TargetRelease, currentTime, travelTime)
+	}
+}
+
+func GetTrackProgress(targetTime, currentTime, travelTime int64) float64 {
+	return math.Max(0, 1-float64(targetTime-currentTime)/float64(travelTime))
 }

@@ -154,3 +154,7 @@ func (s *Song) GetSongLinks() *SongLinks {
 		CharterLink: s.ChartedByLink,
 	}
 }
+
+func (s *Song) GetQuarterNoteInterval() int64 {
+	return int64(600000 / s.BPM / 4)
+}

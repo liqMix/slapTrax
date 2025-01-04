@@ -1,6 +1,7 @@
 package types
 
 import (
+	"image/color"
 	"math"
 )
 
@@ -72,6 +73,18 @@ func (r HitType) Value() int {
 		return 0
 	}
 	return 0
+}
+
+func (r HitType) Color() color.RGBA {
+	switch r {
+	case Perfect:
+		return Green
+	case Good:
+		return Yellow
+	case Bad:
+		return Red
+	}
+	return White
 }
 
 // Loosen the window for early hits

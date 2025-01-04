@@ -20,6 +20,7 @@ const (
 	FONT_SCALE = 2.5
 
 	// Audio
+	GRACE_PERIOD                = 4000
 	SAMPLE_RATE                 = 48000
 	INHERENT_OFFSET             = -200
 	SONG_PREVIEW_LENGTH         = 20000

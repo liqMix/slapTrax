@@ -11,10 +11,9 @@ import (
 )
 
 var (
-	// Moved line to horizontal position
 	linePosition = ui.Point{
 		X: 0.5,
-		Y: 0.65, // Moved down to make room for text
+		Y: 0.65,
 	}
 	lineLength = 0.75
 	lineThick  = float32(3)
@@ -24,10 +23,9 @@ var (
 	noteThick = float32(10)
 	noteColor = types.Yellow
 
-	// Adjusted text positions for horizontal layout
 	textPosition = ui.Point{
 		X: 0.5,
-		Y: 0.25, // Moved to top
+		Y: 0.25,
 	}
 	textOptions = ui.TextOptions{
 		Align: etxt.Center,
@@ -36,7 +34,7 @@ var (
 	}
 	offsetDisplayPosition = ui.Point{
 		X: 0.5,
-		Y: 0.85, // Moved to bottom
+		Y: 0.85,
 	}
 )
 
@@ -60,7 +58,7 @@ func (o *Offset) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 
 func (o *Offset) static(img *ebiten.Image) {
 	center := ui.Point{X: 0.5, Y: 0.5}
-	size := ui.Point{X: 0.9, Y: 0.75} // Wider panel for horizontal layout
+	size := ui.Point{X: 0.9, Y: 0.75}
 	ui.DrawFilledRect(img, &center, &size, types.Gray)
 	size.X -= 0.025
 	size.Y -= 0.025
@@ -78,9 +76,7 @@ func (o *Offset) static(img *ebiten.Image) {
 }
 
 func (o *Offset) drawNote(img *ebiten.Image) {
-	// Calculate note position based on progress horizontally
 	lineStart := linePosition.X - lineLength/2
-	// thickRm := ui.PointFromRender(float64(noteThick), float64(noteThick)).X
 
 	noteX := lineStart + (lineLength * o.state.NoteProgress)
 

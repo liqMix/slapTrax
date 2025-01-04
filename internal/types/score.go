@@ -77,6 +77,7 @@ func NewScore(totalNotes int) *Score {
 		TotalNotes: totalNotes,
 	}
 }
+
 func (s *Score) Reset() {
 	s.Perfect = 0
 	s.Good = 0

@@ -2,7 +2,6 @@ package user
 
 import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
 // DefaultSettings defines the initial state for new user settings
@@ -22,16 +21,14 @@ var DefaultSettings = UserSettings{
 	},
 	Gameplay: Gameplay{
 		Locale:      config.DEFAULT_LOCALE,
-		Theme:       types.ThemeStandard,
 		AudioOffset: -30,
 		InputOffset: 25,
 		// AudioOffset: -235,
 		// InputOffset: 35,
-		NoteSpeed: 0.25,
+		NoteSpeed: 0.1,
 	},
 	Accessibility: Accessibility{
-		NoHoldNotes:  true,
-		NoEdgeTracks: false,
+		NoHoldNotes: true,
 	},
 }
 

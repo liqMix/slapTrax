@@ -39,11 +39,12 @@ func (b BGMCode) Path() string {
 type SFXCode string
 
 const (
-	SFXOffset           SFXCode = "offset"
-	SFXNoteHit          SFXCode = "hit"
-	SFXMoveSelectorHigh SFXCode = "moveSelectorHigh"
-	SFXMoveSelectorLow  SFXCode = "moveSelectorLow"
-	SFXSelect           SFXCode = "select"
+	SFXOffset     SFXCode = "offset"
+	SFXHat        SFXCode = "hat"
+	SFXSelectUp   SFXCode = "selectup"
+	SFXSelectDown SFXCode = "selectdown"
+	// SFXNoteHit          SFXCode = "hit"
+	// SFXSelect     SFXCode = "select"
 )
 
 func (s SFXCode) Path() string {
@@ -53,10 +54,9 @@ func (s SFXCode) Path() string {
 func AllSFX() []SFXCode {
 	return []SFXCode{
 		SFXOffset,
-		SFXNoteHit,
-		SFXMoveSelectorHigh,
-		SFXMoveSelectorLow,
-		SFXSelect,
+		SFXHat,
+		SFXSelectUp,
+		SFXSelectDown,
 	}
 }
 

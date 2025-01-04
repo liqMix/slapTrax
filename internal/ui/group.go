@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 )
 
@@ -108,10 +109,12 @@ func (g *UIGroup) Update() {
 	// Move through buttons with arrow keys
 	if input.K.Is(downKey, input.JustPressed) {
 		if g.currentIdx < len(g.items)-1 {
+			assets.PlaySFX(assets.SFXSelectDown)
 			g.Hover(g.currentIdx + 1)
 		}
 	} else if input.K.Is(upKey, input.JustPressed) {
 		if g.currentIdx > 0 {
+			assets.PlaySFX(assets.SFXSelectUp)
 			g.Hover(g.currentIdx - 1)
 		}
 	} else if input.K.Is(ebiten.KeyEnter, input.JustPressed) {

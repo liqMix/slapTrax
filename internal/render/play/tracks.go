@@ -18,8 +18,8 @@ var (
 )
 
 func (r *Play) renderTracks(screen *ebiten.Image) {
-	for _, track := range types.MainTracks {
-		pts := GetNotePoints(track)
+	for _, track := range types.TrackNames() {
+		pts := notePoints[track]
 		r.renderLaneBackground(screen, pts)
 	}
 
