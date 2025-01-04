@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -51,6 +52,10 @@ type Game struct {
 	stateStack   []*RenderState
 	stackImages  []*ebiten.Image
 	currentState *RenderState
+
+	// debug
+	updateTimes []time.Duration
+	drawTimes   []time.Duration
 }
 
 func getState(gs types.GameState, arg interface{}) *RenderState {
@@ -107,6 +112,7 @@ func handleGlobalKeybinds() {
 }
 
 func (g *Game) Update() error {
+	start := time.Now()
 	assets.Update()
 	input.Update()
 	handleGlobalKeybinds()
@@ -154,6 +160,11 @@ func (g *Game) Update() error {
 			}
 		}
 	}
+
+	g.updateTimes = append(g.updateTimes, time.Since(start))
+	if len(g.updateTimes) > 60 {
+		g.updateTimes = g.updateTimes[1:]
+	}
 	return nil
 }
 
@@ -169,6 +180,7 @@ func (g *Game) GetCanvasImage() *ebiten.Image {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	start := time.Now()
 	screen.Clear()
 	screen.Fill(color.Black)
 
@@ -190,6 +202,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.DrawDebug(canvas)
 	}
 	screen.DrawImage(canvas, op)
+
+	g.drawTimes = append(g.drawTimes, time.Since(start))
+	if len(g.drawTimes) > 60 {
+		g.drawTimes = g.drawTimes[1:]
+	}
 }
 
 var clicks = 0
@@ -233,6 +250,25 @@ func (g *Game) DrawDebug(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Normalized Pos: %.2f, %.2f", nX, nY), offset, y)
 
 	y += offset * 2
+
+	// Draw average update and draw times
+	avgUpdate := time.Duration(0)
+	avgDraw := time.Duration(0)
+	for _, t := range g.updateTimes {
+		avgUpdate += t
+	}
+	for _, t := range g.drawTimes {
+		avgDraw += t
+	}
+	if (len(g.updateTimes) != 0) && (len(g.drawTimes) != 0) {
+		avgUpdate /= time.Duration(len(g.updateTimes))
+		avgDraw /= time.Duration(len(g.drawTimes))
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Avg Update: %s", avgUpdate), offset, y)
+		y += offset
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Avg Draw: %s", avgDraw), offset, y)
+		y += offset * 2
+
+	}
 
 	// Draw pressed keys
 	pressed := inpututil.AppendPressedKeys([]ebiten.Key{})
