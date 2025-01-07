@@ -1,18 +1,21 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
+	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 )
 
 type UIGroup struct {
 	Component
 
-	items      []Interactable
-	current    Interactable
-	currentIdx int
-	horizontal bool
+	items          []Interactable
+	current        Interactable
+	currentIdx     int
+	horizontal     bool
+	triggerOnHover bool
 }
 
 func NewUIGroup() *UIGroup {
@@ -24,51 +27,9 @@ func NewUIGroup() *UIGroup {
 
 func (g *UIGroup) Add(i Interactable) {
 	g.items = append(g.items, i)
-	if g.current == nil {
-		g.Hover(0)
+	if g.current == nil && !i.IsDisabled() {
+		g.Hover(len(g.items) - 1)
 	}
-	g.updateLayout()
-}
-
-func (g *UIGroup) updateLayout() {
-	// Update size to fit all items
-	size := Point{}
-	minPoint := Point{}
-	maxPoint := Point{}
-	for _, item := range g.items {
-		itemSize := item.GetSize()
-		itemCenter := item.GetCenter()
-		if itemSize == nil || itemCenter == nil {
-			continue
-		}
-
-		top := itemCenter.Y - itemSize.Y/2
-		bottom := itemCenter.Y + itemSize.Y/2
-		left := itemCenter.X - itemSize.X/2
-		right := itemCenter.X + itemSize.X/2
-
-		if top < minPoint.Y {
-			minPoint.Y = top
-		}
-		if bottom > maxPoint.Y {
-			maxPoint.Y = bottom
-		}
-		if left < minPoint.X {
-			minPoint.X = left
-		}
-		if right > maxPoint.X {
-			maxPoint.X = right
-		}
-	}
-
-	size.X = maxPoint.X - minPoint.X
-	size.Y = maxPoint.Y - minPoint.Y
-	g.SetSize(size)
-
-	g.SetCenter(Point{
-		X: minPoint.X + size.X/2,
-		Y: minPoint.Y + size.Y/2,
-	})
 }
 
 func (g *UIGroup) SetDisabled(d bool) {
@@ -82,6 +43,14 @@ func (g *UIGroup) SetHorizontal() {
 	g.horizontal = true
 }
 
+func (g *UIGroup) SetVertical() {
+	g.horizontal = false
+}
+
+func (g *UIGroup) SetTriggerOnHover(t bool) {
+	g.triggerOnHover = t
+}
+
 func (g *UIGroup) Hover(idx int) {
 	if g.IsDisabled() || idx < 0 || idx >= len(g.items) {
 		return
@@ -93,32 +62,80 @@ func (g *UIGroup) Hover(idx int) {
 	g.currentIdx = idx
 	g.current = g.items[idx]
 	g.current.SetHovered(true)
+	if g.triggerOnHover {
+		g.current.Trigger()
+	}
+}
+
+// Find next not disabled item until the end of the list
+func (g *UIGroup) getNext() int {
+	for i := g.currentIdx + 1; i < len(g.items); i++ {
+		if !g.items[i].IsDisabled() {
+			return i
+		}
+	}
+	return g.currentIdx
+}
+
+func (g *UIGroup) getPrev() int {
+	for i := g.currentIdx - 1; i >= 0; i-- {
+		if !g.items[i].IsDisabled() {
+			return i
+		}
+	}
+	return g.currentIdx
 }
 
 func (g *UIGroup) Update() {
 	if g.IsDisabled() {
 		return
 	}
+
 	downKey := ebiten.KeyArrowDown
 	upKey := ebiten.KeyArrowUp
 	if g.horizontal {
-		downKey = ebiten.KeyArrowLeft
-		upKey = ebiten.KeyArrowRight
+		downKey = ebiten.KeyArrowRight
+		upKey = ebiten.KeyArrowLeft
 	}
+
+	sfxCode := audio.SFXNone
 
 	// Move through buttons with arrow keys
 	if input.K.Is(downKey, input.JustPressed) {
 		if g.currentIdx < len(g.items)-1 {
-			assets.PlaySFX(assets.SFXSelectDown)
-			g.Hover(g.currentIdx + 1)
+			next := g.getNext()
+			if next == g.currentIdx {
+				return
+			}
+			g.Hover(next)
+			if g.horizontal {
+				sfxCode = audio.SFXSelectLeft
+			} else {
+				sfxCode = audio.SFXSelectDown
+			}
 		}
 	} else if input.K.Is(upKey, input.JustPressed) {
 		if g.currentIdx > 0 {
-			assets.PlaySFX(assets.SFXSelectUp)
-			g.Hover(g.currentIdx - 1)
+			prev := g.getPrev()
+			if prev == g.currentIdx {
+				return
+			}
+			g.Hover(prev)
+			if g.horizontal {
+				sfxCode = audio.SFXSelectRight
+			} else {
+				sfxCode = audio.SFXSelectUp
+			}
 		}
 	} else if input.K.Is(ebiten.KeyEnter, input.JustPressed) {
-		g.current.Trigger()
+		if g.current != nil {
+			fmt.Println("trigger")
+			g.current.Trigger()
+		}
+	}
+
+	if sfxCode != audio.SFXNone {
+		audio.PlaySFX(sfxCode)
 	}
 
 	for i, item := range g.items {

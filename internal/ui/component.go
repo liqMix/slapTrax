@@ -2,7 +2,6 @@ package ui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
 type Interactable interface {
@@ -15,11 +14,20 @@ type Interactable interface {
 	GetSize() *Point
 	SetSize(Point)
 
+	GetText() string
+	SetText(string)
+
 	IsHovered() bool
 	SetHovered(bool)
 
 	IsDisabled() bool
 	SetDisabled(bool)
+
+	IsHidden() bool
+	SetHidden(bool)
+
+	GetOpacity() float64
+	SetOpacity(float64)
 
 	IsPaneled() bool
 	SetPaneled(bool)
@@ -33,8 +41,10 @@ type Component struct {
 	size   *Point
 
 	disabled bool
+	hidden   bool
 	hovered  bool
 	paneled  bool
+	opacity  float64
 	trigger  func()
 }
 
@@ -54,24 +64,32 @@ func (c *Component) Trigger() {
 func (c *Component) SetDisabled(d bool) { c.disabled = d }
 func (c *Component) IsDisabled() bool   { return c.disabled }
 
+func (c *Component) SetHidden(h bool) {
+	c.hidden = h
+	c.disabled = h
+}
+func (c *Component) IsHidden() bool { return c.hidden }
+
 func (c *Component) SetHovered(h bool) { c.hovered = h }
 func (c *Component) IsHovered() bool   { return c.hovered }
 
 func (c *Component) SetPaneled(p bool) { c.paneled = p }
 func (c *Component) IsPaneled() bool   { return c.paneled }
 
+func (c *Component) SetOpacity(o float64) { c.opacity = o }
+func (c *Component) GetOpacity() float64  { return c.opacity }
+
 func (c *Component) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	if c.hidden || c.size == nil || c.center == nil {
+		return
+	}
+
 	if c.paneled {
 		// Panel
-		border := 0.02
 		size := c.GetSize()
 		center := c.GetCenter()
-		borderSize := &Point{
-			X: size.X + border*2,
-			Y: size.Y + border*2,
-		}
-		DrawFilledRect(screen, center, borderSize, types.Gray)
-		DrawFilledRect(screen, center, size, types.Black)
+		DrawNoteThemedRect(screen, center, size)
 	}
 }
+
 func (c *Component) Update() {}

@@ -1,13 +1,13 @@
 package state
 
 import (
-	"fmt"
+	"sort"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
+	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
-	"github.com/liqmix/ebiten-holiday-2024/internal/resource"
+	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
@@ -38,265 +38,118 @@ var artSize = 0.2
 var detailsTop = ui.Point{X: 0.25, Y: 0.27}
 var detailsCenter = ui.Point{X: 0.25, Y: 0.50}
 
-func NewSongDetails() *SongDetails {
-	d := &SongDetails{}
-	center := ui.Point{
-		X: detailsTop.X,
-		Y: detailsTop.Y,
-	}
-	offset := float64(ui.TextHeight()) * 1.2
-
-	// Art
-	e := ui.NewElement()
-	e.SetCenter(center)
-	e.SetSize(ui.Point{X: artSize, Y: artSize})
-	d.art = e
-	center.Y += artSize/2 + offset
-
-	// Track Details
-	scale := 1.5
-	b := ui.NewButton()
-	b.SetCenter(center)
-	b.SetScale(scale)
-	b.SetTextBold(true)
-	d.title = b
-	center.Y += offset
-
-	scale = 1.2
-	b = ui.NewButton()
-	b.SetCenter(center)
-	b.SetScale(scale)
-	d.artist = b
-	center.Y += offset
-
-	b = ui.NewButton()
-	b.SetCenter(center)
-	b.SetScale(scale)
-	d.album = b
-	center.Y += offset
-
-	scale = 1.0
-	e = ui.NewElement()
-	e.SetCenter(center)
-	d.year = e
-	center.Y += offset
-
-	d.bpm = ui.NewElement()
-	d.bpm.SetCenter(center)
-	center.Y += offset * 2
-
-	// Difficulties
-	scale = 1.2
-	e = ui.NewElement()
-	e.SetCenter(center)
-	e.SetText(assets.String(types.L_DIFFICULTIES))
-	e.SetScale(scale)
-	e.SetTextBold(true)
-	d.difficultyText = e
-	center.Y += offset * scale
-
-	d.difficultyCenter = &ui.Point{
-		X: center.X,
-		Y: center.Y,
-	}
-	center.Y += offset * 2
-
-	// Chart Details
-	e = ui.NewElement()
-	e.SetCenter(center)
-	e.SetText(assets.String(types.L_CHART))
-	e.SetScale(scale)
-	e.SetTextBold(true)
-	d.chartText = e
-	center.Y += offset
-
-	e = ui.NewElement()
-	e.SetCenter(center)
-	center.Y += offset
-	d.version = e
-
-	b = ui.NewButton()
-	b.SetCenter(center)
-	center.Y += offset * 2
-	d.charter = b
-
-	center.Y += offset
-
-	height := center.Y - detailsTop.Y + offset
-	d.panelSize = &ui.Point{
-		X: artSize,
-		Y: height,
-	}
-	return d
-}
-
-func (s *SongDetails) UpdateDetails(song *types.Song) {
-	if song == nil {
-		logger.Debug("Invalid song details update - song is nil")
-		return
-	}
-	s.title.SetText(song.Title)
-	s.artist.SetText(song.Artist)
-	s.album.SetText(song.Album)
-	s.charter.SetText(song.ChartedBy)
-
-	links := song.GetSongLinks()
-	if links != nil {
-		s.title.SetTrigger(func() {
-			resource.OpenURL(song.TitleLink)
-		})
-
-		s.artist.SetTrigger(func() {
-			resource.OpenURL(song.ArtistLink)
-		})
-
-		s.album.SetTrigger(func() {
-			resource.OpenURL(song.AlbumLink)
-		})
-		if links.CharterLink != "" {
-			s.charter.SetTrigger(func() {
-				resource.OpenURL(links.CharterLink)
-			})
-		} else {
-			s.charter.SetTrigger(nil)
-		}
-	} else {
-		s.title.SetTrigger(nil)
-		s.artist.SetTrigger(nil)
-		s.album.SetTrigger(nil)
-		s.charter.SetTrigger(nil)
-	}
-
-	s.art.SetImage(song.Art)
-	s.bpm.SetText(fmt.Sprintf("%d BPM", song.BPM))
-	s.version.SetText(song.Version)
-	s.year.SetText(fmt.Sprintf("%d", song.Year))
-
-	difficulties := song.GetDifficulties()
-	s.difficulties = make([]*ui.Element, 0, len(difficulties))
-	spacing := 0.025
-	center := ui.Point{
-		X: s.difficultyCenter.X,
-		Y: s.difficultyCenter.Y,
-	}
-
-	totalWidth := 0.0
-	// Calculate total width of all text
-	for _, d := range difficulties {
-		diffS := d.String()
-		totalWidth += float64(ui.TextWidth(diffS))
-	}
-	// Add spacing between elements
-	totalWidth += spacing * float64(len(difficulties)-1)
-
-	// Start from leftmost position
-	center.X = center.X - (totalWidth / 2)
-
-	for _, diff := range difficulties {
-		d := ui.NewElement()
-		diffWidth := float64(ui.TextWidth(diff.String()))
-		center.X += diffWidth / 2
-		// Center each element at its position
-		d.SetCenter(center)
-		d.SetText(diff.String())
-		d.SetTextColor(diff.Color())
-		s.difficulties = append(s.difficulties, d)
-
-		// Move to next position
-		center.X += diffWidth + spacing
-	}
-}
-
-func (s *SongDetails) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	ui.DrawFilledRect(screen, &detailsCenter, s.panelSize, types.Gray)
-	s.art.Draw(screen, opts)
-	s.title.Draw(screen, opts)
-	s.artist.Draw(screen, opts)
-	s.album.Draw(screen, opts)
-	s.year.Draw(screen, opts)
-	s.bpm.Draw(screen, opts)
-	s.chartText.Draw(screen, opts)
-	s.version.Draw(screen, opts)
-	s.charter.Draw(screen, opts)
-	s.difficultyText.Draw(screen, opts)
-	for _, d := range s.difficulties {
-		d.Draw(screen, opts)
-	}
-}
-func (s *SongDetails) Update() {
-	s.title.Update()
-	s.artist.Update()
-	s.album.Update()
-	s.charter.Update()
-}
-
 type SongSelection struct {
 	types.BaseGameState
 
-	songs      []*types.Song
-	details    *SongDetails
-	currentIdx int
-	songList   *ui.UIGroup
+	options  []*SongOption
+	details  *SongDetails
+	songList *ui.SongSelector
+
+	currentIdx       int
+	uiIdxToOptionIdx map[int]int
 }
 
-func (s *SongSelection) SelectSong(song *types.Song) {
-	if song == nil {
-		logger.Debug("Invalid song selection - song is nil")
-		return
-	}
-
-	s.SetNextState(types.GameStateDifficultySelection, &DifficultySelectionArgs{
-		song: song,
-	})
+type SongOption struct {
+	song       *types.Song
+	difficulty types.Difficulty
 }
 
 func NewSongSelectionState() *SongSelection {
-	songs := assets.GetAllSongs()
-	s := &SongSelection{songs: songs}
+	allSongs := types.GetAllSongs()
+	songs := make([]*SongOption, 0)
+	for _, song := range allSongs {
+		for _, diff := range song.GetDifficulties() {
+			songs = append(songs, &SongOption{
+				song:       song,
+				difficulty: diff,
+			})
+		}
+	}
+
+	//orde by difficulty,
+	//then by song title
+	difficulties := map[types.Difficulty]int{}
+	for _, o := range songs {
+		difficulties[o.difficulty]++
+	}
+	sortedD := make([]types.Difficulty, 0, len(difficulties))
+	for d := range difficulties {
+		sortedD = append(sortedD, d)
+	}
+	sort.Slice(sortedD, func(i, j int) bool {
+		return sortedD[i] < sortedD[j]
+	})
+	sort.Slice(songs, func(i, j int) bool {
+		if songs[i].difficulty != songs[j].difficulty {
+			return songs[i].difficulty < songs[j].difficulty
+		}
+		return songs[i].song.Title < songs[j].song.Title
+	})
+
+	s := &SongSelection{options: songs}
 
 	center := ui.Point{
 		X: 0.75,
-		Y: 0.25,
+		Y: 0.5,
 	}
-	offset := float64(ui.TextHeight() * 2)
 
-	songElements := ui.NewUIGroup()
-	for _, song := range songs {
+	songElements := ui.NewSongSelector()
+	songElements.SetCenter(center)
+
+	uiIdx := 0
+	s.uiIdxToOptionIdx = make(map[int]int)
+	for _, d := range sortedD {
+		count := difficulties[d]
 		e := ui.NewElement()
-		e.SetCenter(center)
-		e.SetText(song.Title)
-		e.SetTrigger(func() {
-			s.SelectSong(song)
-		})
+		e.SetText(l.String(d.String()) + " (" + (strconv.Itoa(count) + ")"))
+		e.SetDisabled(true)
+		e.SetScale(1.2)
 		songElements.Add(e)
-		center.Y += offset
+		uiIdx++
+
+		for i, o := range s.options {
+			if o.difficulty != d {
+				continue
+			}
+			e := ui.NewElement()
+			e.SetText(o.song.Title)
+			e.SetTrigger(func() {
+				s.SetNextState(types.GameStatePlay, &PlayArgs{
+					Song:       o.song,
+					Difficulty: o.difficulty,
+				})
+			})
+			songElements.Add(e)
+			s.uiIdxToOptionIdx[uiIdx] = i
+			uiIdx++
+		}
 	}
 	s.songList = songElements
-	s.currentIdx = 0
 
 	details := NewSongDetails()
 	s.details = details
-	if len(songs) > 0 {
-		song := songs[0]
+	if len(s.options) > 0 {
+		song := s.options[0].song
 		s.details.UpdateDetails(song)
-		assets.PlaySongPreview(song)
+		audio.PlaySongPreview(song)
 	}
 	return s
 }
 
 func (s *SongSelection) Update() error {
 	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
-		assets.StopAll()
+		audio.StopAll()
 		s.SetNextState(types.GameStateTitle, nil)
 	}
 
 	s.songList.Update()
-	currentIdx := s.songList.GetIndex()
-	if currentIdx != s.currentIdx {
-		s.currentIdx = currentIdx
-		song := s.songs[s.currentIdx]
+	idx := s.songList.GetIndex()
+	if idx != s.currentIdx {
+		s.currentIdx = idx
+		optionIdx := s.uiIdxToOptionIdx[s.currentIdx]
+		song := s.options[optionIdx].song
 		s.details.UpdateDetails(song)
-		assets.PlaySongPreview(song)
+		audio.PlaySongPreview(song)
 	}
 	s.details.Update()
 	return nil

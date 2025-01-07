@@ -2,15 +2,11 @@ package assets
 
 import (
 	"embed"
-	"fmt"
 	"path"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
-	"github.com/liqmix/ebiten-holiday-2024/internal/errors"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/tinne26/etxt/font"
 	"golang.org/x/image/font/sfnt"
 	"gopkg.in/yaml.v2"
@@ -19,6 +15,14 @@ import (
 //go:embed locales/**/*
 var localeFS embed.FS
 
+const (
+	DefaultLocaleCode = "en-us"
+
+	localesDir     = "locales"
+	fontExt        = ".ttf"
+	localeFilename = "strings.yaml"
+)
+
 type Locale struct {
 	LocaleCode string
 	font       *sfnt.Font
@@ -26,17 +30,40 @@ type Locale struct {
 	keyPairs   map[string]string
 }
 
-var availableLocales []string
-var loadedLocales = make(map[string]*Locale)
-var currentLocale *Locale
+func (l *Locale) GetString(key string) (string, bool) {
+	val, ok := l.keyPairs[key]
+	if ok {
+		return val, true
+	}
 
-func InitLocales() {
-	availableLocales = readLocaleDir()
-	currentLocale = loadLocale(config.DEFAULT_LOCALE)
+	return "", false
+}
+
+var loadedLocales = make(map[string]*Locale)
+var defaultLocale *Locale
+var currentLocale *Locale
+var availableLocales []string
+
+func InitLocales(startingLocale string) {
+	readLocaleDir()
+	defaultL, err := loadLocale(DefaultLocaleCode)
+	if err != nil {
+		logger.Fatal("Failed to load default locale %s", DefaultLocaleCode)
+	}
+
+	defaultLocale = defaultL
+	currentLocale = defaultLocale
+
+	startL, err := loadLocale(startingLocale)
+	if err != nil {
+		logger.Error("Failed to load starting locale %s", startingLocale)
+	} else {
+		currentLocale = startL
+	}
 }
 
 func readLocaleDir() []string {
-	localeDir, err := localeFS.ReadDir(config.LOCALE_DIR)
+	localeDir, err := localeFS.ReadDir(localesDir)
 	if err != nil {
 		return nil
 	}
@@ -49,28 +76,29 @@ func readLocaleDir() []string {
 		}
 	}
 
+	availableLocales = locales
 	return locales
 }
 
 func CurrentLocale() string {
 	return currentLocale.LocaleCode
 }
+
 func Locales() []string {
 	return availableLocales
 }
 
-func loadLocale(locale string) *Locale {
-	localePath := path.Join(config.LOCALE_DIR, locale)
+func loadLocale(locale string) (*Locale, error) {
+	localePath := path.Join(localesDir, locale)
 	logger.Info("Loading locale %s", localePath)
 	if _, err := localeFS.ReadDir(localePath); err != nil {
-		logger.Error("Locale %s not found", locale)
-		return nil
+		return nil, err
 	}
 
 	// Load flag image
 	flagImg, _, err := ebitenutil.NewImageFromFileSystem(localeFS, path.Join(localePath, "flag.png"))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// Load font by finding a .ttf in the locale directory
@@ -79,10 +107,10 @@ func loadLocale(locale string) *Locale {
 	fontPath := ""
 	fontDir, err := localeFS.ReadDir(localePath)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	for _, entry := range fontDir {
-		if !entry.IsDir() && path.Ext(entry.Name()) == ".ttf" {
+		if !entry.IsDir() && path.Ext(entry.Name()) == fontExt {
 			fontPath = path.Join(localePath, entry.Name())
 			break
 		}
@@ -99,14 +127,14 @@ func loadLocale(locale string) *Locale {
 	}
 
 	// Load key pairs from JSON
-	data, err := localeFS.ReadFile(path.Join(localePath, "strings.yaml"))
+	data, err := localeFS.ReadFile(path.Join(localePath, localeFilename))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	var keyPairs map[string]string
 	if err := yaml.Unmarshal(data, &keyPairs); err != nil {
-		return nil
+		return nil, err
 	}
 
 	l := &Locale{
@@ -118,58 +146,64 @@ func loadLocale(locale string) *Locale {
 	validateLocale(l)
 
 	loadedLocales[locale] = l
-	return l
+	return l, nil
 }
 
 // Checks that the locale file has all keys,
 // just emits warnings if keys are missing to help with development
 func validateLocale(locale *Locale) {
-	allKeys := types.AllLocaleKeys
+	if locale == nil || locale.LocaleCode == DefaultLocaleCode {
+		return
+	}
+
+	logger.Info("Validating locale %s", locale.LocaleCode)
+	allKeys := defaultLocale.keyPairs
 	for _, key := range allKeys {
 		if _, ok := locale.keyPairs[key]; !ok {
-			fmt.Printf("Missing key %s in locale %s\n", key, locale.LocaleCode)
+			logger.Warn("\tMissing key %s in locale %s\n", key, locale.LocaleCode)
 		}
 	}
 }
 
-func getLocale(locale string) *Locale {
-	for _, l := range availableLocales {
-		if l == locale {
-			if _, ok := loadedLocales[locale]; !ok {
-				loadedLocales[locale] = loadLocale(locale)
-			}
-			return loadedLocales[locale]
-		}
-	}
-	fmt.Println("Locale not found")
-	return nil
-}
-
-func SetLocale(locale string) error {
-	if currentLocale != nil && currentLocale.LocaleCode == locale {
-		logger.Info("Locale already set to %s", locale)
+func SetLocale(l string) error {
+	if currentLocale.LocaleCode == l {
+		logger.Warn("Locale already set to %s", l)
 		return nil
 	}
-	newLocale := getLocale(locale)
-	if newLocale == nil {
-		return errors.Raise(errors.UNKNOWN_LOCALE, locale)
+
+	var err error
+	locale, ok := loadedLocales[l]
+	if !ok {
+		locale, err = loadLocale(l)
+		if err != nil {
+			return err
+		}
+		loadedLocales[l] = locale
 	}
 
-	currentLocale = newLocale
+	currentLocale = locale
+	ebiten.SetWindowTitle(GetLocaleString("title"))
 	return nil
 }
 
-func String(key string) string {
-	if val, ok := currentLocale.keyPairs[key]; ok {
-		return val
-	}
-	if config.FALLBACK_TO_DEFAULT_LOCALE {
-		if val, ok := loadedLocales[config.DEFAULT_LOCALE].keyPairs[key]; ok {
-			return val
+func GetLocaleString(key string) string {
+	var val string
+	var ok bool
+	val, ok = currentLocale.GetString(key)
+	if !ok {
+		val, ok = defaultLocale.GetString(key)
+		if !ok {
+			val = key
 		}
-		return key
 	}
-	return key
+	return val
+}
+
+func GetDefaultLocaleString(key string) (string, *sfnt.Font) {
+	if val, ok := defaultLocale.GetString(key); ok {
+		return val, defaultLocale.font
+	}
+	return "", defaultLocale.font
 }
 
 func Flag() *ebiten.Image {

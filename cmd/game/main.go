@@ -6,24 +6,34 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal"
 	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
+	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 func main() {
-	user.Init()
-	assets.InitLocales()
-	assets.SetLocale(user.S().Gameplay.Locale)
+	err := user.Init()
+	if err != nil {
+		logger.Warn("Failed to initialize user: %v", err)
+	}
+	display.InitWindow()
+	assets.Init(
+		assets.AssetInit{
+			Locale: user.S.Locale,
+		})
+	audio.InitAudioManager(&audio.Volume{
+		BGM:  user.S.BGMVolume,
+		SFX:  user.S.SFXVolume,
+		Song: user.S.SongVolume,
+	})
 
-	ebiten.SetWindowSize(user.S().Graphics.ScreenSizeX, user.S().Graphics.ScreenSizeY)
-	ebiten.SetWindowTitle(assets.String(types.L_TITLE))
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetWindowSize(user.S.ScreenWidth, user.S.ScreenHeight)
+	ebiten.SetFullscreen(user.S.Fullscreen)
+	ebiten.SetWindowTitle(l.String(l.TITLE))
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
-
-	assets.InitAudioManager(user.Volume())
-	assets.InitSongs()
-	ui.InitTextRenderer()
 
 	// Do the game
 	game := internal.NewGame()

@@ -1,102 +1,157 @@
 package user
 
 import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"encoding/json"
+	"fmt"
+	"os"
 )
 
-// Graphics contains all display and rendering related settings
-type Graphics struct {
-	Fullscreen   bool
-	VSync        bool
-	ScreenSizeX  int
-	ScreenSizeY  int
-	RenderWidth  int
-	RenderHeight int
+const settingsFilename = "settings.json"
+
+// Settings contains all customizable properties
+type Settings struct {
+	Locale              string  `json:"locale"`
+	Version             string  `json:"version"`
+	Fullscreen          bool    `json:"fullscreen"`
+	ScreenWidth         int     `json:"screenWidth"`
+	ScreenHeight        int     `json:"screenHeight"`
+	RenderWidth         int     `json:"renderWidth"`
+	RenderHeight        int     `json:"renderHeight"`
+	FixedRenderScale    bool    `json:"fixedRenderScale"`
+	BGMVolume           float64 `json:"bgmVolume"`
+	SFXVolume           float64 `json:"sfxVolume"`
+	SongVolume          float64 `json:"songVolume"`
+	LaneSpeed           float64 `json:"laneSpeed"`
+	AudioOffset         int64   `json:"audioOffset"`
+	InputOffset         int64   `json:"inputOffset"`
+	WaveringLane        bool    `json:"waveringLane"`
+	NoteColorTheme      string  `json:"noteColorTheme"`
+	CenterNoteColor     string  `json:"centerNoteColor"`
+	CornerNoteColor     string  `json:"cornerNoteColor"`
+	DisableHoldNotes    bool    `json:"disableHoldNotes"`
+	DisableHitEffects   bool    `json:"disableHitEffects"`
+	DisableLaneEffects  bool    `json:"disableLaneEffects"`
+	PromptedOffsetCheck bool    `json:"promptedOffsetCheck"`
 }
 
-// func (g *Graphics) SetScreenSize(width, height int) {
-// 	g.ScreenSizeX = width
-// 	g.ScreenSizeY = height
-// }
+// Default values
+func NewSettings() *Settings {
+	return &Settings{
 
-// func (g *Graphics) ScreenSize() (int, int) {
-// 	return g.ScreenSizeX, g.ScreenSizeY
-// }
-
-func (g *Graphics) Apply() {
-	// ebiten.SetFullscreen(g.Fullscreen)
-	// ebiten.SetVsyncEnabled(g.VSync)
-	// ebiten.SetWindowSize(g.ScreenSizeX, g.ScreenSizeY)
-	// cache.ClearImageCache()
+		Locale:              "en-us",
+		Version:             "0.0.1",
+		Fullscreen:          false,
+		ScreenWidth:         1280,
+		ScreenHeight:        720,
+		RenderWidth:         1280,
+		RenderHeight:        720,
+		FixedRenderScale:    false,
+		BGMVolume:           0.7,
+		SFXVolume:           0.7,
+		SongVolume:          0.7,
+		LaneSpeed:           1.0,
+		AudioOffset:         0,
+		InputOffset:         0,
+		WaveringLane:        false,
+		NoteColorTheme:      "note.color.default",
+		CenterNoteColor:     "#e6e600ff",
+		CornerNoteColor:     "#e68200ff",
+		DisableHoldNotes:    false,
+		DisableHitEffects:   false,
+		DisableLaneEffects:  false,
+		PromptedOffsetCheck: false,
+	}
 }
 
-// Audio contains all volume related settings
-type Audio struct {
-	BGMVolume         float64 // 0.0-1.0
-	SFXVolume         float64 // 0.0-1.0
-	SongVolume        float64 // 0.0-1.0
-	SongPreviewVolume float64 // 0.0-1.0
+func (s *Settings) Save() error {
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal settings: %w", err)
+	}
+
+	return os.WriteFile(settingsFilename, data, 0644)
 }
 
-func (a *Audio) Apply() {}
+func LoadSettings() (*Settings, error) {
+	data, err := os.ReadFile(settingsFilename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read settings file: %w", err)
+	}
 
-// Gameplay contains core game mechanics settings
-type Gameplay struct {
-	Locale      string
-	AudioOffset int64   // Milliseconds ahead of notes (negative = earlier)
-	InputOffset int64   // Milliseconds ahead of notes (negative = earlier)
-	NoteSpeed   float64 // Travel speed multiplier (0.1-2.0)
+	settings := NewSettings()
+	if err := json.Unmarshal(data, settings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
+	}
+
+	return settings, nil
 }
 
-func (g *Gameplay) Apply() {
-	assets.SetLocale(g.Locale)
-}
+func (s *Settings) MergeFrom(other *Settings) {
+	if other == nil {
+		return
+	}
 
-// Accessibility contains settings for game accessibility features
-type Accessibility struct {
-	NoHoldNotes bool
-}
-
-// UserSettings contains all customizable properties for a user's game experience
-type UserSettings struct {
-	Graphics      Graphics
-	Audio         Audio
-	Gameplay      Gameplay
-	Accessibility Accessibility
-}
-
-// Setting keys for localization and UI mapping
-const (
-	SettingsGraphicsFullscreen = types.L_SETTINGS_GFX_FULLSCREEN
-	SettingsGraphicsVSync      = types.L_SETTINGS_GFX_VSYNC
-	SettingsGraphicsScreen     = types.L_SETTINGS_GFX_SCREENSIZE
-	SettingsGraphicsRender     = types.L_SETTINGS_GFX_RENDERSIZE
-
-	SettingsGameLocale      = types.L_SETTINGS_GAME_LOCALE
-	SettingsGameTheme       = types.L_SETTINGS_GAME_THEME
-	SettingsGameAudioOffset = types.L_SETTINGS_GAME_AUDIOOFFSET
-	SettingsGameInputOffset = types.L_SETTINGS_GAME_INPUTOFFSET
-	SettingsGameNoteSpeed   = types.L_SETTINGS_GAME_NOTESPEED
-
-	SettingsAudioBGM     = types.L_SETTINGS_AUDIO_BGMVOLUME
-	SettingsAudioSFX     = types.L_SETTINGS_AUDIO_SFXVOLUME
-	SettingsAudioSong    = types.L_SETTINGS_AUDIO_SONGVOLUME
-	SettingsAudioPreview = types.L_SETTINGS_AUDIO_SONGPREVIEWVOLUME
-
-	SettingsAccessHoldNotes  = types.L_SETTINGS_ACCESS_NOHOLDNOTES
-	SettingsAccessEdgeTracks = types.L_SETTINGS_ACCESS_NOEDGETRACKS
-)
-
-// Updates application with user settings
-func (s *UserSettings) Apply() {
-	s.Graphics.Apply()
-	s.Audio.Apply()
-	s.Gameplay.Apply()
-}
-
-// Copy creates a deep copy of UserSettings
-func (s *UserSettings) Copy() *UserSettings {
-	copy := *s
-	return &copy
+	if other.Locale != "" {
+		s.Locale = other.Locale
+	}
+	if other.Version != "" {
+		s.Version = other.Version
+	}
+	if other.Fullscreen {
+		s.Fullscreen = other.Fullscreen
+	}
+	if other.ScreenWidth > 0 {
+		s.ScreenWidth = other.ScreenWidth
+	}
+	if other.ScreenHeight > 0 {
+		s.ScreenHeight = other.ScreenHeight
+	}
+	if other.RenderWidth > 0 {
+		s.RenderWidth = other.RenderWidth
+	}
+	if other.RenderHeight > 0 {
+		s.RenderHeight = other.RenderHeight
+	}
+	if other.FixedRenderScale {
+		s.FixedRenderScale = other.FixedRenderScale
+	}
+	if other.BGMVolume > 0 {
+		s.BGMVolume = other.BGMVolume
+	}
+	if other.SFXVolume > 0 {
+		s.SFXVolume = other.SFXVolume
+	}
+	if other.SongVolume > 0 {
+		s.SongVolume = other.SongVolume
+	}
+	if other.LaneSpeed > 0 {
+		s.LaneSpeed = other.LaneSpeed
+	}
+	if other.AudioOffset != 0 {
+		s.AudioOffset = other.AudioOffset
+	}
+	if other.InputOffset != 0 {
+		s.InputOffset = other.InputOffset
+	}
+	if other.WaveringLane {
+		s.WaveringLane = other.WaveringLane
+	}
+	if other.NoteColorTheme != "" {
+		s.NoteColorTheme = other.NoteColorTheme
+	}
+	if other.CenterNoteColor != "" {
+		s.CenterNoteColor = other.CenterNoteColor
+	}
+	if other.CornerNoteColor != "" {
+		s.CornerNoteColor = other.CornerNoteColor
+	}
+	if other.DisableHoldNotes {
+		s.DisableHoldNotes = other.DisableHoldNotes
+	}
+	if other.DisableHitEffects {
+		s.DisableHitEffects = other.DisableHitEffects
+	}
+	if other.DisableLaneEffects {
+		s.DisableLaneEffects = other.DisableLaneEffects
+	}
 }

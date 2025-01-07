@@ -1,18 +1,23 @@
 package types
 
+import "github.com/liqmix/ebiten-holiday-2024/internal/l"
+
 type GameState string
 
 const (
 	GameStateNone                GameState = ""
-	GameStateTitle               GameState = L_STATE_TITLE
-	GameStatePlay                GameState = L_STATE_PLAY
-	GameStateEditor              GameState = L_STATE_EDITOR
-	GameStateOffset              GameState = L_STATE_OFFSET
-	GameStatePause               GameState = L_STATE_PLAY_PAUSE
-	GameStateSettings            GameState = L_STATE_SETTINGS
-	GameStateSongSelection       GameState = L_STATE_SONG_SELECTION
-	GameStateDifficultySelection GameState = L_STATE_DIFFICULTY_SELECTION
-	GameStateBack                GameState = L_BACK
+	GameStateTitle               GameState = l.STATE_TITLE
+	GameStatePlay                GameState = l.STATE_PLAY
+	GameStateEditor              GameState = l.STATE_EDITOR
+	GameStateOffset              GameState = l.STATE_OFFSET
+	GameStatePause               GameState = l.STATE_PLAY_PAUSE
+	GameStateSettings            GameState = l.STATE_SETTINGS
+	GameStateSongSelection       GameState = l.STATE_SONG_SELECTION
+	GameStateDifficultySelection GameState = l.STATE_DIFFICULTY_SELECTION
+	GameStateResult              GameState = l.STATE_RESULT
+	GameStateLogin               GameState = l.STATE_LOGIN
+	GameStateModal               GameState = "modal"
+	GameStateBack                GameState = l.BACK
 )
 
 func (gs GameState) String() string {

@@ -65,6 +65,19 @@ func (k *keyboard) update() {
 	}
 }
 
+func (k *keyboard) Get(s Status) []ebiten.Key {
+	var keys []ebiten.Key
+	for i := 0; i < numWords; i++ {
+		for j := 0; j < bitsPerWord; j++ {
+			key := ebiten.Key(i*bitsPerWord + j)
+			if k.Is(key, s) {
+				keys = append(keys, key)
+			}
+		}
+	}
+	return keys
+}
+
 func (k *keyboard) Is(key ebiten.Key, s Status) bool {
 	wordIdx, bitOff := getBitPosition(key)
 	if wordIdx >= numWords {

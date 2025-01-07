@@ -19,6 +19,7 @@ type Button struct {
 	Element
 
 	pressed       bool
+	underlined    bool
 	underlinePath *VectorPath
 }
 
@@ -26,6 +27,10 @@ func NewButton() *Button {
 	return &Button{
 		Element: *NewElement(),
 	}
+}
+
+func (c *Button) SetUnderlined(underlined bool) {
+	c.underlined = underlined
 }
 
 func (c *Button) Update() {
@@ -44,10 +49,9 @@ func (c *Button) Update() {
 }
 
 func (c *Button) Check(kind UICheckKind) bool {
-	if c.disabled || kind == UICheckNone {
+	if c.disabled || kind == UICheckNone || c.center == nil || c.size == nil {
 		return false
 	}
-
 	cX, cY := c.center.ToRender()
 	w, h := c.size.ToRender()
 	x, y := cX-w/2, cY-h/2
@@ -66,6 +70,10 @@ func (c *Button) Check(kind UICheckKind) bool {
 }
 
 func (c *Button) updateUnderlinePath() {
+	if !c.underlined {
+		c.underlinePath = nil
+		return
+	}
 	text := c.GetText()
 	if text == "" {
 		c.underlinePath = nil
@@ -119,7 +127,7 @@ func (c *Button) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 			} else if c.pressed {
 				color = types.Orange
 			}
-			c.underlinePath.Draw(screen, 1.0, color)
+			c.underlinePath.Draw(screen, 1.0, color.C())
 		}
 	}
 }

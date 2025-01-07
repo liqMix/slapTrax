@@ -2,7 +2,7 @@ package input
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 )
 
 type mouse struct {
@@ -59,7 +59,7 @@ func (m *mouse) update() {
 	m.sX, m.sY = ebiten.CursorPosition()
 
 	// Canvas position
-	m.cX, m.cY = types.Window.CanvasPosition(float64(m.sX), float64(m.sY))
+	m.cX, m.cY = display.Window.CanvasPosition(float64(m.sX), float64(m.sY))
 
 	// Buttons
 	leftP := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)

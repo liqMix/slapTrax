@@ -2,96 +2,77 @@ package play
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
-
-// type Animation struct {
-// 	startTime int64
-// }
-
-// func (a *Animation) Draw() float32 {
-// 	return 0
-// }
 
 // The default renderer for the play state.
 type Play struct {
-	types.BaseRenderer
+	display.BaseRenderer
 	state            *state.Play
 	vectorCache      *VectorCache
 	vectorCollection *ui.VectorCollection
-	// animations map[string]*Animation
+
+	hitRecordIdx int
 }
 
 func NewPlayRender(s state.State) *Play {
-	p := &Play{state: s.(*state.Play)}
-	p.vectorCache = NewVectorCache()
-	p.vectorCollection = ui.NewVectorCollection()
+	display.ResetCaches()
 
+	p := &Play{
+		state: s.(*state.Play),
+	}
+	p.vectorCache = NewVectorCache()
+	display.AttachCache(p.vectorCache)
+	p.vectorCollection = ui.NewVectorCollection()
 	p.BaseRenderer.Init(p.static)
+
 	return p
 }
 
 func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	r.BaseRenderer.Draw(screen, opts)
 	r.drawMeasureMarkers(screen)
+	// if user.S.FullScreenLane {
+	// 	OscillateWindowOffset(r.state.CurrentTime())
+	// }
 
+	// Track vemctors
 	for _, track := range r.state.Tracks {
-		width := judgementWidth
-		if track.IsPressed() {
-			width *= 2
+		r.addNotePath(track)
+		r.addJudgementPath(track)
+		if !user.S.DisableLaneEffects {
+			r.addTrackPath(track)
+			r.addTrackEffects(track)
 		}
-		cachedPath := r.vectorCache.GetJudgementLinePath(track.Name, track.IsPressed())
-		r.vectorCollection.Add(cachedPath.vertices, cachedPath.indices)
 	}
 
-	for _, track := range r.state.Tracks {
-		if len(track.ActiveNotes) == 0 {
-			continue
-		}
-		for _, note := range track.ActiveNotes {
-			// drawNote(screen, note, pts, color)
-			path := r.vectorCache.GetNotePath(track.Name, note)
-			if path != nil {
-				r.vectorCollection.Add(path.vertices, path.indices)
-			}
-		}
+	if !user.S.DisableHitEffects {
+		r.addHitEffects()
 	}
 	r.vectorCollection.Draw(screen)
 
-	r.drawEffects(screen)
-	// pos := &ui.Point{
-	// 	X: playCenterX,
-	// 	Y: playCenterY,
-	// }
-	// size := &ui.Point{
-	// 	X: centerComboSize.X,
-	// 	Y: centerComboSize.Y,
-	// }
-	// ui.DrawBorderedFilledRect(screen, pos, size, types.Black, types.White, 0.075)
-	r.drawScore(screen)
+	// Effects and score
+	r.drawScore(screen, opts)
 
 	r.vectorCollection.Clear()
 }
 
 // These are static items we only need to render once
-func (r *Play) static(img *ebiten.Image) {
-	r.renderBackground(img)
-	r.renderProfile(img)
-	r.renderSongInfo(img)
-	r.renderTracks(img)
+func (r *Play) static(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	r.renderBackground(img, opts)
+	r.renderProfile(img, opts)
+	r.renderSongInfo(img, opts)
+}
+
+func (r *Play) renderBackground(img *ebiten.Image, _ *ebiten.DrawImageOptions) {
+	// TODO: actually make some sort of background?
+	img.Fill(types.Black.C())
 }
 
 // TODO: later after tracks and notes
-func (r *Play) renderProfile(img *ebiten.Image) *ebiten.Image {
-	return img
-}
-func (r *Play) renderSongInfo(img *ebiten.Image) *ebiten.Image {
-	return img
-}
-
-func (r *Play) renderBackground(img *ebiten.Image) {
-	// TODO: actually make some sort of background?
-	img.Fill(types.Black)
-}
+func (r *Play) renderProfile(img *ebiten.Image, opts *ebiten.DrawImageOptions)  {}
+func (r *Play) renderSongInfo(img *ebiten.Image, opts *ebiten.DrawImageOptions) {}

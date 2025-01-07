@@ -1,4 +1,4 @@
-package assets
+package types
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
 const (
@@ -16,23 +15,27 @@ const (
 	noteOn  = 0x90
 )
 
-var noteToTrack = map[uint8]types.TrackName{
-	74: types.LeftTop,      // D6
-	73: types.LeftBottom,   // C#6
-	72: types.CenterTop,    // C6
-	71: types.CenterBottom, // B5
-	70: types.RightTop,     // A#5
-	69: types.RightBottom,  // A5
+var noteToTrack = map[uint8]TrackName{
+	74: TrackLeftTop,      // D6
+	73: TrackLeftBottom,   // C#6
+	72: TrackCenterTop,    // C6
+	71: TrackCenterBottom, // B5
+	70: TrackRightTop,     // A#5
+	69: TrackRightBottom,  // A5
 }
 
-// Parse the chart file into a set of tracks and associated notes
-func ParseChart(song *types.Song, data []byte) (*types.Chart, error) {
+type Chart struct {
+	TotalNotes int
+	Tracks     []*Track
+}
+
+func NewChart(song *Song, data []byte) (*Chart, error) {
 	logger.Debug("Parsing chart for %s", song.Title)
-	chart := &types.Chart{}
-	chart.Tracks = make([]*types.Track, 0)
-	notes := make(map[types.TrackName][]*types.Note)
-	for _, name := range types.TrackNames() {
-		notes[name] = []*types.Note{}
+	chart := &Chart{}
+	chart.Tracks = make([]*Track, 0)
+	notes := make(map[TrackName][]*Note)
+	for _, name := range TrackNames() {
+		notes[name] = []*Note{}
 	}
 
 	reader := bytes.NewReader(data)
@@ -61,14 +64,13 @@ func ParseChart(song *types.Song, data []byte) (*types.Chart, error) {
 	msPerTick := (60000.0 / float64(song.BPM)) / ticksPerQuarter
 
 	// A note must be held for at least this duration to be considered a hold note
-	// - 1/32 note at song.BPM
-	MIN_HOLD_DURATION := int64(msPerTick * 4)
+	minHoldDuration := int64(msPerTick * (ticksPerQuarter / 2))
 
 	// Vars to track current state
 	var currentTs int64 = 0
 	var running uint8 = 0
 
-	activeTracks := make(map[types.TrackName]int64)
+	activeTracks := make(map[TrackName]int64)
 
 	for trackNum := uint16(0); trackNum < headerChunk.Tracks; trackNum++ {
 		var trackHeader struct {
@@ -186,11 +188,11 @@ func ParseChart(song *types.Song, data []byte) (*types.Chart, error) {
 					} else {
 						// Otherwise end the note (if it's active)
 						if active, ok := activeTracks[trackName]; ok {
-							duration := currentTs - active
-							if duration <= MIN_HOLD_DURATION {
-								duration = 0
+							release := currentTs
+							if (currentTs - active) <= minHoldDuration {
+								release = 0
 							}
-							notes[trackName] = append(notes[trackName], types.NewNote(trackName, active, currentTs))
+							notes[trackName] = append(notes[trackName], NewNote(trackName, active, release))
 							delete(activeTracks, trackName)
 						}
 					}
@@ -206,10 +208,10 @@ func ParseChart(song *types.Song, data []byte) (*types.Chart, error) {
 	// End any remaining notes
 	for trackName, target := range activeTracks {
 		release := currentTs
-		if (currentTs - target) <= MIN_HOLD_DURATION {
+		if (currentTs - target) <= minHoldDuration {
 			release = 0
 		}
-		notes[trackName] = append(notes[trackName], types.NewNote(trackName, target, release))
+		notes[trackName] = append(notes[trackName], NewNote(trackName, target, release))
 	}
 
 	// Iterate through all tracks and identify notes that have the same start time.
@@ -231,8 +233,8 @@ func ParseChart(song *types.Song, data []byte) (*types.Chart, error) {
 
 	// Create tracks from notes
 	beatInterval := int64(msPerTick * 4)
-	for _, name := range types.TrackNames() {
-		track := types.NewTrack(name, notes[name], beatInterval)
+	for _, name := range TrackNames() {
+		track := NewTrack(name, notes[name], beatInterval)
 		chart.Tracks = append(chart.Tracks, track)
 		chart.TotalNotes += len(notes[name])
 	}

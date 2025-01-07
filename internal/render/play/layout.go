@@ -1,6 +1,7 @@
 package play
 
 import (
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
 
@@ -24,11 +25,9 @@ var (
 		X: headerLeft + (headerWidth / 2),
 		Y: headerTop + (headerHeight / 2),
 	}
-	// lil space
-	spacing = 0.1
 
 	// Play Area
-	playWidth  = maxX * 0.7
+	playWidth  = maxX * 0.75
 	playHeight = 0.6
 	playBottom = maxY - windowOffset
 	playLeft   = centerX - (playWidth / 2)
@@ -46,23 +45,21 @@ var (
 		Y: playHeight * 0.05,
 	}
 
-	//Notes
+	// Notes
 	noteLength            = playWidth * 0.25
+	noteWidth             = float32(40)
+	noteComboRatio        = float32(1.5)
+	noteMaxAlpha          = uint8(255)
 	centerNoteLengthRatio = 0.5
-	noteWidth             = float32(20)
-	fadeInThreshold       = SmoothProgress(0.75)
-	fadeOutThreshold      = SmoothProgress(0.8)
-	fadeRange             = fadeOutThreshold - fadeInThreshold
-	maxAlpha              = uint8(255)
-	minT                  = 0.01 // Small value for vanishing point calculation
 
-	// TrackNotes
-	// trackSpacing = 0.0
+	fadeInThreshold  = SmoothProgress(0.75)
+	fadeOutThreshold = SmoothProgress(0.8)
+	fadeRange        = fadeOutThreshold - fadeInThreshold
+	minT             = 0.01 // Small value for vanishing point calculation
 
-	// trackHeight          = 1.0
-	cornerNoteCurve     = 0.7
-	judgementLineLength = playWidth * 0.25
-	judgementWidth      = noteWidth
+	// Judgement
+	judgementWidth        = noteWidth / 8
+	judgementPressedRatio = float32(3.0)
 
 	// Vecs
 	markerTopLeft = &ui.Point{
@@ -81,30 +78,74 @@ var (
 		X: playRight,
 		Y: playBottom,
 	}
-
+	markerWidth         = float32(8)
+	beatMarkerAlpha     = uint8(100)
 	notePoints          = notePts(noteLength)
-	judgementLinePoints = notePts(judgementLineLength)
 	measureMarkerPoints = []*ui.Point{
 		markerTopLeft,
 		markerTopRight,
 		markerBottomRight,
 		markerBottomLeft,
 	}
+
+	// hit brightness
+	// hitBrightnessScale = float32(0.05)
+	// comboBrightness    = float32(0.3)
 )
 
+func getNoteWidth() float32 {
+	renderWidth, _ := display.Window.RenderSize()
+
+	// scale note width based on render width
+	// default defined for 1280
+	return noteWidth * (float32(renderWidth) / 1280)
+}
+
+func getJudgementWidth() float32 {
+	noteWidth := getNoteWidth()
+	return noteWidth / 8
+}
+func fullscreenLayout() {
+	playWidth = 1.0
+	playHeight = 1.0
+	playBottom = 1.0
+	playLeft = 0.0
+	playTop = 0.0
+	playRight = 1.0
+
+	playCenterX = playLeft + (playWidth / 2)
+	playCenterY = playTop + (playHeight / 2)
+	playCenterPoint = ui.Point{
+		X: playCenterX,
+		Y: playCenterY,
+	}
+
+	judgementWidth = noteWidth
+	judgementPressedRatio = float32(2.0)
+}
+
 func SmoothProgress(progress float64) float32 {
+	if progress >= 1 {
+		return 1
+	} else if progress <= 0 {
+		return 0
+	}
 	return float32(minT / (minT + (1-minT)*(1-progress)))
 }
 
-func GetFadeAlpha(progress float32) uint8 {
+func GetFadeAlpha(progress float32, max uint8) uint8 {
 	if progress < fadeInThreshold {
 		return 0
 	}
 	if progress > fadeOutThreshold {
-		return maxAlpha
+		return max
 	}
 	fadeProgress := (progress - fadeInThreshold) / fadeRange
-	return uint8(float32(maxAlpha) * fadeProgress)
+	return uint8(float32(max) * fadeProgress)
+}
+
+func GetNoteFadeAlpha(progress float32) uint8 {
+	return GetFadeAlpha(progress, noteMaxAlpha)
 }
 
 func notePts(length float64) [][]*ui.Point {

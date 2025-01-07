@@ -6,7 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 )
 
 // Create a 1x1 white image as the base texture
@@ -23,27 +23,42 @@ type Point struct {
 	X, Y float64
 }
 
-func (p Point) V() (float64, float64) {
+func (p *Point) Copy() *Point {
+	return &Point{X: p.X, Y: p.Y}
+}
+
+func (p *Point) Translate(dx, dy float64) {
+	p.X += dx
+	p.Y += dy
+}
+func (p *Point) TranslateX(dx float64) {
+	p.X += dx
+}
+func (p *Point) TranslateY(dy float64) {
+	p.Y += dy
+}
+
+func (p *Point) V() (float64, float64) {
 	return p.X, p.Y
 }
 
-func (p Point) ToRender() (float64, float64) {
-	x, y := types.Window.RenderSize()
+func (p *Point) ToRender() (float64, float64) {
+	x, y := display.Window.RenderSize()
 	return p.X * float64(x), p.Y * float64(y)
 }
-func (p Point) ToRenderInt() (int, int) {
+func (p *Point) ToRenderInt() (int, int) {
 	x, y := p.ToRender()
 	return int(x), int(y)
 }
 
-func (p Point) ToRender32() (float32, float32) {
+func (p *Point) ToRender32() (float32, float32) {
 	x, y := p.ToRender()
 	return float32(x), float32(y)
 }
 
-func PointFromRender(x, y float64) Point {
-	rx, ry := types.Window.RenderSize()
-	return Point{x / float64(rx), y / float64(ry)}
+func PointFromRender(x, y float64) *Point {
+	rx, ry := display.Window.RenderSize()
+	return &Point{x / float64(rx), y / float64(ry)}
 }
 
 type VectorPath struct {
@@ -119,7 +134,7 @@ func GetDashedPaths(start *Point, end *Point) []*VectorPath {
 type VectorCollection struct {
 	vertices []ebiten.Vertex
 	indices  []uint16
-	vertIdx  int // Using shorter names for frequently accessed counters
+	vertIdx  int
 	idxIdx   int
 }
 

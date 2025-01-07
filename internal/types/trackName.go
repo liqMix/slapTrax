@@ -4,89 +4,83 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 type TrackName int
 
 // Order is critical here
 const (
-	LeftBottom TrackName = iota
-	LeftTop
-	CenterBottom
-	CenterTop
-	RightBottom
-	RightTop
+	TrackLeftBottom TrackName = iota
+	TrackLeftTop
+	TrackCenterBottom
+	TrackCenterTop
+	TrackRightBottom
+	TrackRightTop
 )
 
 func TrackNames() []TrackName {
 	return []TrackName{
-		LeftBottom,
-		LeftTop,
-		RightBottom,
-		RightTop,
-		CenterBottom,
-		CenterTop,
+		TrackLeftBottom,
+		TrackLeftTop,
+		TrackRightBottom,
+		TrackRightTop,
+		TrackCenterBottom,
+		TrackCenterTop,
 	}
 }
 
 func (t TrackName) String() string {
 	switch t {
-	case LeftBottom:
+	case TrackLeftBottom:
 		return "LeftBottom"
-	case LeftTop:
+	case TrackLeftTop:
 		return "LeftTop"
-	case RightBottom:
+	case TrackRightBottom:
 		return "RightBottom"
-	case RightTop:
+	case TrackRightTop:
 		return "RightTop"
-	case CenterBottom:
+	case TrackCenterBottom:
 		return "CenterBottom"
-	case CenterTop:
+	case TrackCenterTop:
 		return "CenterTop"
 	}
 	return "Unknown"
 }
 
 func (t TrackName) NoteColor() color.RGBA {
-	switch t {
-	case LeftBottom:
-		return Orange
-	case LeftTop:
-		return Orange
-	case RightBottom:
-		return Orange
-	case RightTop:
-		return Orange
-	case CenterBottom:
-		return Yellow
-	case CenterTop:
-		return Yellow
-	}
-	return White
+	return TrackTypeFromName(t).Color()
 }
 
-// Hmm..
-// func (t TrackName) NotePairColor() color.RGBA {
-// 	switch t {
-// 	case LeftBottom:
-// 		return Blue
-// 	case LeftTop:
-// 		return Blue
-// 	case RightBottom:
-// 		return Blue
-// 	case RightTop:
-// 		return Blue
-// 	case CenterBottom:
-// 		return LightBlue
-// 	case CenterTop:
-// 		return LightBlue
-// 	}
-// 	return White
-// }
+type TrackType int
+
+const (
+	TrackTypeCenter TrackType = iota
+	TrackTypeCorner
+)
+
+func TrackTypeFromName(n TrackName) TrackType {
+	switch n {
+	case TrackCenterBottom, TrackCenterTop:
+		return TrackTypeCenter
+	}
+	return TrackTypeCorner
+}
+
+func (t TrackType) Color() color.RGBA {
+	theme := NoteColorTheme(user.S.NoteColorTheme)
+	switch t {
+	case TrackTypeCenter:
+		return theme.CenterColor()
+	case TrackTypeCorner:
+		return theme.CornerColor()
+	}
+	return White.C()
+}
 
 // This one has larger center tracks
 var TrackNameToKeys = map[TrackName][]ebiten.Key{
-	LeftBottom: {
+	TrackLeftBottom: {
 		ebiten.KeyControlLeft,
 		ebiten.KeyMetaLeft,
 		ebiten.KeyAltLeft,
@@ -101,7 +95,7 @@ var TrackNameToKeys = map[TrackName][]ebiten.Key{
 		ebiten.KeyS,
 		ebiten.KeyD,
 	},
-	LeftTop: {
+	TrackLeftTop: {
 		ebiten.KeyTab,
 		ebiten.KeyQ,
 		ebiten.KeyW,
@@ -114,7 +108,7 @@ var TrackNameToKeys = map[TrackName][]ebiten.Key{
 		ebiten.Key3,
 		ebiten.Key4,
 	},
-	CenterTop: {
+	TrackCenterTop: {
 		ebiten.KeyT,
 		ebiten.KeyY,
 		ebiten.KeyU,
@@ -135,7 +129,7 @@ var TrackNameToKeys = map[TrackName][]ebiten.Key{
 		ebiten.KeyEqual,
 		ebiten.KeyBackspace,
 	},
-	CenterBottom: {
+	TrackCenterBottom: {
 		ebiten.KeySpace,
 
 		ebiten.KeyAltRight,
@@ -162,7 +156,7 @@ var TrackNameToKeys = map[TrackName][]ebiten.Key{
 		ebiten.KeyEnter,
 	},
 
-	RightTop: {
+	TrackRightTop: {
 		ebiten.KeyInsert,
 		ebiten.KeyDelete,
 		ebiten.KeyHome,
@@ -171,7 +165,7 @@ var TrackNameToKeys = map[TrackName][]ebiten.Key{
 		ebiten.KeyPageDown,
 	},
 
-	RightBottom: {
+	TrackRightBottom: {
 		ebiten.KeyArrowLeft,
 		ebiten.KeyArrowDown,
 		ebiten.KeyArrowRight,

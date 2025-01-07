@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 	"image/color"
+
+	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 )
 
 type Difficulty int
@@ -13,26 +15,25 @@ func (d Difficulty) String() string {
 
 func (d Difficulty) Level() string {
 	if d < 5 {
-		return L_DIFFICULTY_EASY
+		return l.DIFFICULTY_EASY
 	}
 	if d < 8 {
-		return L_DIFFICULTY_MEDIUM
+		return l.DIFFICULTY_MEDIUM
 	}
 	if d <= 10 {
-		return L_DIFFICULTY_HARD
+		return l.DIFFICULTY_HARD
 	}
-	return L_UNKNOWN
+	return l.UNKNOWN
 }
 
 func (d Difficulty) Color() color.RGBA {
+	color := White
 	if d < 5 {
-		return Green
+		color = Green
+	} else if d < 8 {
+		color = Yellow
+	} else if d <= 10 {
+		color = Red
 	}
-	if d < 8 {
-		return Yellow
-	}
-	if d <= 10 {
-		return Red
-	}
-	return White
+	return color.C()
 }

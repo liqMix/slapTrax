@@ -3,44 +3,21 @@ title: "Ebiten Winter Game Jam 2024"
 
 # General
 exit: "Exit"
+back: "Back"
+save: "Save"
+cancel: "Cancel"
+off: "Off"
+on: "On"
+chart: "Chart"
+difficulties: "Difficulties"
+corner: "Corner"
+center: "Center"
 
 # Difficulties
 difficulty.easy: "Easy"
 difficulty.medium: "Medium"
 difficulty.hard: "Hard"
-difficulty.unknown: "Unknown"
-
-# States
-state.greeting: "Welcome"
-state.menu: "Menu"
-state.editor: "Editor"
-state.settings: "Settings"
-state.profile: "Profile"
-state.play: "Play"
-state.offset: "Adjust Offsets"
-
-# Render modes
-render.play.default: "Default"
-
-# Graphics Settings
-settings.gfx.fullscreen: "Fullscreen"
-settings.gfx.vsync: "VSync"
-settings.gfx.width: "Window Width"
-settings.gfx.height: "Window Height"
-settings.gfx.renderw: "Render Width"
-settings.gfx.renderh: "Render Height"
-
-# Game Settings
-settings.game.theme: "Theme"
-settings.game.audiooffset: "Audio Offset"
-settings.game.inputoffset: "Input Offset"
-settings.game.notespeed: "Note Speed"
-
-# Audio Settings
-settings.audio.bgmvolume: "BGM Volume"
-settings.audio.sfxvolume: "SFX Volume"
-settings.audio.songvolume: "Song Volume"
-settings.audio.songpreviewvolume: "Preview Volume"
+difficulty.unknown: "????"
 
 # Hit Judgments
 hit.perfect: "PERFECT"
@@ -48,9 +25,91 @@ hit.good: "GOOD"
 hit.bad: "BAD"
 hit.miss: "MISS"
 
+# Song Information
+song.artist: "Artist"
+song.album: "Album"
+
+# States
+state.greeting: "Welcome"
+state.editor: "Editor"
+state.settings: "Settings"
+state.profile: "Profile"
+state.play: "Play"
+state.offset: "Adjust Offsets"
+state.song.selection: "Select Song"
+state.difficulty.selection: "Select Difficulty"
+state.login: "Login"
+state.result: "Results"
+
+# Login
+login.text.offline: "Offline Mode"
+login.text.online: "Online Mode"
+login.save.local: "Save Locally"
+login.guest: "Play as Guest"
+login.login: "Login"
+login.username: "Username"
+login.password: "Password"
+
+# Graphics Settings
+settings.gfx: "Graphics"
+settings.gfx.fullscreen: "Fullscreen"
+settings.gfx.fixedrender: "Fixed Render Size"
+settings.gfx.vsync: "VSync"
+settings.gfx.screensize: "Screen Size"
+settings.gfx.rendersize: "Render Size"
+settings.gfx.notecolor: "Note Colors"
+
+# Render Sizes
+rendersize.tiny: "Tiny"
+rendersize.small: "Small"
+rendersize.medium: "Medium"
+rendersize.large: "Large"
+rendersize.max: "Maximum"
+
+# Game Settings
+settings.game: "Game"
+settings.game.locale: "Language"
+settings.game.theme: "Theme"
+settings.game.audiooffset: "Audio Offset"
+settings.game.inputoffset: "Input Offset"
+settings.game.lanespeed: "Speed"
+
+# Audio Settings
+settings.audio: "Audio"
+settings.audio.bgmvolume: "BGM Volume"
+settings.audio.sfxvolume: "SFX Volume"
+settings.audio.songvolume: "Song Volume"
+settings.audio.songpreviewvolume: "Preview Volume"
+
+# Accessibility Settings
+settings.access: "Accessibility"
+settings.access.noholdnotes: "Disable Hold Notes"
+settings.access.nohiteffect: "Disable Hit Effects"
+settings.access.nolaneeffect: "Disable Lane Effects"
+
+# Dialogs
+dialog.checkoffsets: "It looks like you haven't set your offsets yet.\nThis is important for the game to work correctly.\nIf your inputs seem to be off, please adjust them in the settings."
+
+# Play State
+state.play.restart: "Restart"
+state.play.pause: "Pause"
+
 # Themes
 theme.standard: "Standard"
 theme.leftbehind: "Left Behind"
+
+# Colors
+color.white: "White"
+color.black: "Black"
+
+# Note Colors
+note.color.default: "Default"
+note.color.mono: "Monochrome"
+note.color.dusk: "Dusk"
+note.color.dawn: "Dawn"
+note.color.aurora: "Aurora"
+note.color.custom: "Custom"
+note.color.hamburger: "Hamburger"
 
 # Other
 unknown: "???"

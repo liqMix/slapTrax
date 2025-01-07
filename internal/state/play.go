@@ -1,11 +1,10 @@
 package state
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
+	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -19,20 +18,23 @@ type PlayArgs struct {
 
 type Play struct {
 	types.BaseGameState
-	Song        *types.Song
-	Difficulty  types.Difficulty
-	Tracks      []*types.Track
-	Score       *types.Score
-	Chart       *types.Chart
+	Song       *types.Song
+	Difficulty types.Difficulty
+	Tracks     []*types.Track
+	Score      *types.Score
+	Chart      *types.Chart
+
 	startTime   time.Time
 	elapsedTime int64
-	TravelTime  int64
+	countTicks  []int64
 }
 
+const travelTime float64 = 10000
+
 func NewPlayState(args *PlayArgs) *Play {
-	playSong := args.Song
+	song := args.Song
 	difficulty := args.Difficulty
-	chart, ok := playSong.Charts[difficulty]
+	chart, ok := song.Charts[difficulty]
 	if !ok {
 		panic("No chart for difficulty")
 	}
@@ -40,56 +42,77 @@ func NewPlayState(args *PlayArgs) *Play {
 	tracks := chart.Tracks
 
 	// Get the song audio ready
-	assets.InitSong(playSong)
+	audio.StopAll()
+	audio.InitSong(song)
 	for _, track := range tracks {
 		track.Reset()
 	}
 
 	// set the grace period to be 4 quarter notes
-	return &Play{
-		Song:        playSong,
+	p := &Play{
+		Song:        song,
 		Difficulty:  difficulty,
 		Tracks:      tracks,
 		Chart:       chart,
-		Score:       types.NewScore(chart.TotalNotes),
+		Score:       types.NewScore(song, difficulty),
 		elapsedTime: 0,
 		startTime:   time.Now(),
-		TravelTime:  int64(float64(config.TRAVEL_TIME) / user.S().Gameplay.NoteSpeed),
+		countTicks:  song.GetCountdownTicks(false),
 	}
+	return p
 }
 
-// func (p *Play) IsTrackPressed(trackName song.TrackName) bool {
-// 	keys := TrackNameToKeys[trackName]
-// 	return input.K.AreAny(keys, input.Held)
-// }
+func (p *Play) GetTravelTime() int64 {
+	return int64(travelTime / user.S.LaneSpeed)
+}
 
-var (
-	playedStartingTick = false
-)
+func (p *Play) restart() {
+	audio.StopAll()
+	p.SetNextState(types.GameStatePlay, &PlayArgs{
+		Song:       p.Song,
+		Difficulty: p.Difficulty,
+	})
+}
+
+func (p *Play) CurrentTime() int64 {
+	return p.elapsedTime
+}
+
+func (p *Play) MaxTrackTime() int64 {
+	return p.elapsedTime + p.GetTravelTime()
+}
+
+func (p *Play) getGracePeriod() int64 {
+	if currentPos := audio.CurrentSongPositionMS(); currentPos < 0 {
+		return p.Song.GetBeatInterval() * 8
+	}
+	return p.Song.GetBeatInterval() * 4
+}
+
+func (p *Play) getOffsetTime() int64 {
+	return user.S.AudioOffset + config.INHERENT_OFFSET
+}
 
 func (p *Play) inGracePeriod() bool {
-	if assets.IsSongPlaying() {
-		return false
+	// Account for offets
+	offsetStartTime := p.getOffsetTime()
+
+	// Determine the grace period
+	gracePeriod := offsetStartTime + p.getGracePeriod()
+
+	// Determine current time based off grace period,
+	// will be negative until the song starts
+	p.elapsedTime = time.Since(p.startTime).Milliseconds() - gracePeriod
+
+	// Play the starting ticks
+	if len(p.countTicks) > 1 && p.elapsedTime >= (p.countTicks[0]+offsetStartTime) {
+		audio.PlaySFX(audio.SFXHat)
+		p.countTicks = p.countTicks[1:]
 	}
 
-	// Update elapsed time
-	quarter := p.Song.GetQuarterNoteInterval()
-	p.elapsedTime = time.Since(p.startTime).Milliseconds() - (quarter * 4) - 1000
-	// Play the starting tick for every quarter note
-	tickTime := p.elapsedTime % quarter
-	if tickTime > -25 {
-		if !playedStartingTick {
-			fmt.Println(tickTime, quarter, p.elapsedTime)
-			assets.PlaySFX(assets.SFXHat)
-			playedStartingTick = true
-		}
-	} else {
-		playedStartingTick = false
-	}
-
-	// Start the audio when the elapsed time is equal to the audio offset
-	if p.elapsedTime >= config.INHERENT_OFFSET+user.S().Gameplay.AudioOffset {
-		assets.PlaySong()
+	// Start the audio when the elapsed time is equal to the offset start time
+	if p.elapsedTime >= offsetStartTime {
+		audio.PlaySong()
 		return false
 	}
 	return true
@@ -98,39 +121,48 @@ func (p *Play) inGracePeriod() bool {
 func (p *Play) handleAction(action PlayAction) {
 	switch action {
 	case RestartAction:
-		// Stop the song
-		assets.StopSong()
-		assets.InitSong(p.Song)
-
-		// Reset the tracks
-		for _, track := range p.Tracks {
-			track.Reset()
-		}
-
-		// Reset the score
-		p.Score.Reset()
-		p.elapsedTime = 0
-		p.startTime = time.Now()
-		return
+		p.restart()
 	case PauseAction:
-		assets.PauseSong()
+		audio.PauseSong()
 		p.SetNextState(types.GameStatePause,
 			&PauseArgs{
 				song:       p.Song,
 				difficulty: p.Difficulty,
+
+				cb: func() {
+					offsetTime := p.getOffsetTime()
+					p.countTicks = p.Song.GetCountdownTicks(true)
+					p.startTime = time.Now()
+					audio.SetSongPositionMS(int(p.elapsedTime + offsetTime))
+				},
 			})
 		return
 	}
 }
 
 func (p *Play) Update() error {
-	if !p.inGracePeriod() {
-		p.elapsedTime = int64(assets.CurrentSongPositionMS()) + user.S().Gameplay.AudioOffset
+	if !audio.IsSongPlaying() {
+		if !p.inGracePeriod() {
+			stillPlaying := false
+			for _, track := range p.Tracks {
+				if track.HasMoreNotes() {
+					stillPlaying = true
+					break
+				}
+			}
+			if !stillPlaying {
+				p.SetNextState(types.GameStateResult, &ResultStateArgs{
+					Score: p.Score,
+				})
+			}
+		}
+	} else {
+		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + user.S.AudioOffset
 	}
 
 	// Update the tracks
 	for _, track := range p.Tracks {
-		p.updateTrack(track, p.elapsedTime, p.TravelTime, p.Score)
+		p.updateTrack(track, p.elapsedTime, p.Score)
 	}
 
 	// Handle input
@@ -140,129 +172,7 @@ func (p *Play) Update() error {
 		}
 	}
 
-	// for _, track := range p.Tracks {
-	// 	keys := TrackNameToKeys[track.Name]
-	// 	if input.K.AreAny(keys, input.JustPressed) {
-	// 		track.Activate(p.elapsedTime)
-	// 	} else if input.K.AreAll(keys, input.None) {
-	// 		track.Release(p.elapsedTime)
-	// 	}
-	// }
-
 	return nil
-}
-
-func (p *Play) CurrentTime() int64 {
-	return p.elapsedTime
-}
-
-func (p *Play) updateTrackInput(t *types.Track) {
-	if !t.Active && !t.StaleActive {
-		if input.K.AreAny(types.TrackNameToKeys[t.Name], input.JustPressed) {
-			t.Active = true
-			return
-		}
-	}
-
-	if t.StaleActive || t.Active {
-		if !input.K.AreAny(types.TrackNameToKeys[t.Name], input.Held) {
-			t.Active = false
-			t.StaleActive = false
-		}
-	}
-}
-
-func (p *Play) updateTrack(t *types.Track, currentTime int64, travelTime int64, score *types.Score) {
-	p.updateTrackInput(t)
-
-	// Reset the new hits
-	notes := make([]*types.Note, 0, len(t.ActiveNotes))
-
-	// Only update notes that are currently visible
-	for _, n := range t.ActiveNotes {
-		n.Update(currentTime, travelTime)
-
-		// Active Track
-		if t.Active {
-			if n.WasHit() && !n.IsHoldNote() {
-				continue
-			}
-
-			if !t.StaleActive {
-				if n.Hit(currentTime+user.S().Gameplay.InputOffset, score) {
-					t.StaleActive = true
-					if n.IsHoldNote() {
-						notes = append(notes, n)
-					}
-					continue
-				}
-			}
-
-		} else {
-			// not active track
-			if n.IsHoldNote() && n.WasHit() {
-				if n.WasReleased() {
-					continue
-				}
-
-				n.Release(currentTime + user.S().Gameplay.InputOffset)
-				continue
-			}
-		}
-
-		// Note not yet reached the out of bounds window
-		windowEnd := n.Target + types.LatestWindow
-		releaseWindowEnd := n.TargetRelease + types.LatestWindow
-		if currentTime < windowEnd || (n.IsHoldNote() && currentTime < releaseWindowEnd) {
-			notes = append(notes, n)
-			continue
-		}
-
-		// Drop expired notes
-		n.Miss(score)
-
-		// // Handle hold notes
-		// if n.IsHoldNote() && n.WasHit() {
-		// 	// If player released or the hold window expired while holding
-		// 	// if t.releaseTs > minTs {
-		// 	// 	n.Release(t.releaseTs)
-		// 	// } else if currentTime > releaseWindowEnd {
-		// 	// 	n.Release(currentTime)
-		// 	// } else {
-		// 	// 	notes = append(notes, n) // Keep held or missed-hit hold notes
-		// 	// }
-		// 	// if hitRating != None {
-		// 	// TODO: determine handling release scores
-		// 	// t.newHits = append(t.newHits, hitRating)
-		// 	// }
-		// 	continue
-		// }
-	}
-
-	// Add new approaching notes
-	spawnTime := currentTime + int64(travelTime*2)
-	if t.NextNoteIndex < len(t.AllNotes) {
-		for i := t.NextNoteIndex; i < len(t.AllNotes); i++ {
-			note := t.AllNotes[i]
-			if note.Target > spawnTime {
-				break
-			}
-			notes = append(notes, note)
-			t.NextNoteIndex = i + 1
-		}
-	}
-
-	t.ActiveNotes = notes
-
-	// dont stay active if no notes in window
-	if t.Active && !t.StaleActive {
-		for _, n := range t.ActiveNotes {
-			if n.InWindow(currentTime-types.EarliestWindow, currentTime+types.LatestWindow) {
-				return
-			}
-		}
-		t.StaleActive = true
-	}
 }
 
 func (p *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {}

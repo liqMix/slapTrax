@@ -1,8 +1,6 @@
 package play
 
 import (
-	"image/color"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -10,25 +8,36 @@ import (
 )
 
 func (r *Play) drawMeasureMarkers(screen *ebiten.Image) {
-	// Add marker every quarter note
-	interval := r.state.Song.GetQuarterNoteInterval()
 	currentTime := r.state.CurrentTime()
-	currentMeasure := currentTime / interval
+	beatInterval := r.state.Song.GetBeatInterval()
+	measureInterval := beatInterval * 4
 	color := types.Gray
 
-	var i int64
-	for i = 0; i < 8; i++ { // Show next 8 markers
-		measureTime := (currentMeasure + i) * interval
-		progress := types.GetTrackProgress(measureTime, currentTime, r.state.TravelTime)
+	// Draw beat markers
+	for i := int64(0); i < 8; i++ {
+		beatTime := ((currentTime / beatInterval) + i) * beatInterval
+		color.A = beatMarkerAlpha
+		progress := types.GetTrackProgress(beatTime, currentTime, r.state.GetTravelTime())
+		drawMarker(screen, progress, measureMarkerPoints, color)
+	}
+
+	// Draw measure markers
+	for i := int64(0); i < 2; i++ {
+		measureTime := ((currentTime / measureInterval) + i) * measureInterval
+		color.A = beatMarkerAlpha * 2
+		progress := types.GetTrackProgress(measureTime, currentTime, r.state.GetTravelTime())
 		drawMarker(screen, progress, measureMarkerPoints, color)
 	}
 }
 
 // Draw marker across all main tracks using a semi-transparent color
-func drawMarker(screen *ebiten.Image, p float64, vec []*ui.Point, color color.RGBA) {
-	// Calculate the constant screen-space velocity progress
+func drawMarker(screen *ebiten.Image, p float64, vec []*ui.Point, color types.GameColor) {
+	if p < 0 || p > 1 {
+		return
+	}
 	progress := SmoothProgress(p)
-	color.A = GetFadeAlpha(progress)
+
+	color.A = GetFadeAlpha(progress, color.A)
 
 	// Skip rendering if fully transparent
 	if color.A == 0 {
@@ -52,13 +61,13 @@ func drawMarker(screen *ebiten.Image, p float64, vec []*ui.Point, color color.RG
 	}
 	markerPath.Close()
 
-	var width float32 = 8 * progress
+	var width float32 = markerWidth * progress
 
 	vs, is := markerPath.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
 		Width: width,
 	})
 
-	ui.ColorVertices(vs, color)
+	ui.ColorVertices(vs, color.C())
 	screen.DrawTriangles(vs, is, ui.BaseTriImg, nil)
 
 }

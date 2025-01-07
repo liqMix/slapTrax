@@ -12,6 +12,7 @@ var (
 	Info           = l.Info
 	Warn           = l.Warn
 	Error          = l.Error
+	Fatal          = l.Fatal
 	GetMessages    = l.GetMessages
 	IsDebugEnabled = l.IsDebugEnabled
 	ToggleDebug    = l.ToggleDebug
@@ -24,6 +25,7 @@ const (
 	logLevelWarn  logLevel = "WARN"
 	logLevelError logLevel = "ERROR"
 	logLevelInfo  logLevel = "INFO"
+	logLevelFatal logLevel = "FATAL"
 )
 
 func (l logLevel) terminalColor() string {
@@ -33,6 +35,10 @@ func (l logLevel) terminalColor() string {
 	case logLevelWarn:
 		return "\033[1;33m"
 	case logLevelError:
+		return "\033[1;31m"
+	case logLevelInfo:
+		return "\033[1;32m"
+	case logLevelFatal:
 		return "\033[1;31m"
 	default:
 		return "\033[0m"
@@ -115,6 +121,13 @@ func (l *logger) UserMessage(s string, args ...interface{}) {
 func (l *logger) Error(s string, args ...interface{}) {
 	message := fmt.Sprintf(s, args...)
 	l.emit(&Message{Level: logLevelError, Message: message})
+}
+
+// Fatal logs fatal messages and exits the program
+func (l *logger) Fatal(s string, args ...interface{}) {
+	message := fmt.Sprintf(s, args...)
+	l.emit(&Message{Level: logLevelFatal, Message: message})
+	panic(message)
 }
 
 // SetDebug enables or disables debug logging

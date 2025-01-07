@@ -2,8 +2,9 @@ package play
 
 import (
 	"image/color"
+	"math"
 
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
@@ -17,111 +18,95 @@ var (
 	}
 )
 
-func (r *Play) renderTracks(screen *ebiten.Image) {
-	for _, track := range types.TrackNames() {
-		pts := notePoints[track]
-		r.renderLaneBackground(screen, pts)
+func (r *Play) addJudgementPath(track *types.Track) {
+	width := judgementWidth
+	if track.IsPressed() {
+		width *= 2
+	}
+	cachedPath := r.vectorCache.GetJudgementLinePath(track.Name, track.IsPressed())
+	r.vectorCollection.Add(cachedPath.vertices, cachedPath.indices)
+}
+
+func CreateJudgementPath(track types.TrackName, pressed bool) *CachedPath {
+	return CreateNotePath(track, 1, &NotePathOpts{
+		lineWidth:       judgementWidth,
+		largeWidthRatio: judgementPressedRatio,
+		isLarge:         pressed,
+		color:           track.NoteColor(),
+		alpha:           GetNoteFadeAlpha(1),
+		solo:            true,
+	})
+}
+
+func (r *Play) addTrackPath(track *types.Track) {
+	notePoints := notePoints[track.Name]
+	centerX, centerY := playCenterPoint.ToRender32()
+
+	// Create two paths - one for each side of the lane
+	trackPath := vector.Path{}
+
+	// Get starting point dimensions
+	startX, startY := notePoints[0].ToRender32()
+	width := float32(5) // Adjust this for lane width
+
+	// Calculate perpendicular vector for width
+	dx := startX - centerX
+	dy := startY - centerY
+	length := float32(math.Sqrt(float64(dx*dx + dy*dy)))
+	normalX := -dy / length * width
+	normalY := dx / length * width
+
+	// Start with the right edge
+	trackPath.MoveTo(centerX+(startX-centerX)+normalX, centerY+(startY-centerY)+normalY)
+
+	// Add right edge line segments
+	for i := 1; i < len(notePoints); i++ {
+		if notePoints[i] == nil {
+			continue
+		}
+		x, y := notePoints[i].ToRender32()
+		dx = x - centerX
+		dy = y - centerY
+		length = float32(math.Sqrt(float64(dx*dx + dy*dy)))
+		normalX = -dy / length * width
+		normalY = dx / length * width
+
+		trackPath.LineTo(centerX+(x-centerX)+normalX, centerY+(y-centerY)+normalY)
 	}
 
-	// Then draw the area for combo / hit display
-	// It's a box with rounded corners at the very center of main tracks
-	// It will obscure some of the vanishing point lines
+	// Move to center point
+	trackPath.LineTo(centerX, centerY)
 
-	// // Actual box
-	// border := 0.05
-	// pos.X += border / 2
-	// pos.Y += border / 2
-	// size.X -= border
-	// size.Y -= border
-	// ui.DrawFilledRect(screen, pos, size, types.Black)
+	// Now add the left edge in reverse order
+	for i := len(notePoints) - 1; i >= 0; i-- {
+		if notePoints[i] == nil {
+			continue
+		}
+		x, y := notePoints[i].ToRender32()
+		dx = x - centerX
+		dy = y - centerY
+		length = float32(math.Sqrt(float64(dx*dx + dy*dy)))
+		normalX = -dy / length * width
+		normalY = dx / length * width
+
+		trackPath.LineTo(centerX+(x-centerX)-normalX, centerY+(y-centerY)-normalY)
+	}
+
+	// Close the path
+	trackPath.Close()
+
+	// Generate vertices and indices for filling
+	vs, is := trackPath.AppendVerticesAndIndicesForFilling(nil, nil)
+
+	// Set color with transparency
+	color := track.Name.NoteColor()
+	if track.IsPressed() {
+		color.A = 25
+	} else {
+		color.A = 5
+	}
+	ui.ColorVertices(vs, color)
+
+	// Add the path to the vector collection
+	r.vectorCollection.Add(vs, is)
 }
-
-func (r *Play) renderLaneBackground(img *ebiten.Image, points []*ui.Point) {
-	// vc := ui.NewVectorCollection()
-
-	// left := points[0]
-	// center := points[1]
-	// right := points[2]
-
-	// // Draw the guide lines to vanishing point
-	// guideLineLeft := getVectorPath([]Point{
-	// 	left,
-	// 	vanishingPoint,
-	// }, 0)
-
-	// guideLineRight := getVectorPath([]Point{
-	// 	right,
-	// 	vanishingPoint,
-	// }, 0)
-
-	// vs, is = guideLineLeft.AppendVerticesAndIndicesForStroke(nil, nil, &opts)
-	// colorVertices(vs, guideColor)
-	// img.DrawTriangles(vs, is, baseImg, nil)
-
-	// vs, is = guideLineRight.AppendVerticesAndIndicesForStroke(vs, is, &opts)
-	// colorVertices(vs, guideColor)
-	// img.DrawTriangles(vs, is, baseImg, nil)
-	// pathWidth, _ := ui.Point{
-	// 	X: 0.001,
-	// 	Y: 0,
-	// }.ToRender32()
-	// guidePaths := ui.GetDashedPaths(
-	// 	center,
-	// 	&playCenterPoint,
-	// )
-	// for _, guidePath := range guidePaths {
-	// 	guidePath.Draw(img, pathWidth, guideColor)
-	// }
-}
-
-// func (r *Play) renderEdgeTracks(screen *ebiten.Image) {
-// 	// Draw the top track
-// 	r.renderLaneBackground(screen, &LaneConfig{
-// 		CurveAmount:    0,
-// 		VanishingPoint: edgeCenter,
-// 		Left: ui.Point{
-// 			X: edgeCenter.X,
-// 			Y: edgeTop,
-// 		},
-// 		Center: ui.Point{
-// 			X: edgeLeft,
-// 			Y: edgeTop,
-// 		},
-// 		Right: ui.Point{
-// 			X: edgeLeft,
-// 			Y: edgeCenter.Y,
-// 		},
-// 	})
-// 	r.renderLaneBackground(screen, &LaneConfig{
-// 		CurveAmount:    0,
-// 		VanishingPoint: edgeCenter,
-// 		Left: ui.Point{
-// 			X: edgeRight,
-// 			Y: edgeCenter.Y,
-// 		},
-// 		Center: ui.Point{
-// 			X: edgeRight,
-// 			Y: edgeTop,
-// 		},
-// 		Right: ui.Point{
-// 			X: edgeCenter.X,
-// 			Y: edgeTop,
-// 		},
-// 	})
-
-// 	// Draw the bottom track
-// 	r.renderLaneBackground(screen, laneConfigs[types.EdgeTap1])
-// 	r.renderLaneBackground(screen, laneConfigs[types.EdgeTap2])
-// 	r.renderLaneBackground(screen, laneConfigs[types.EdgeTap3])
-
-// 	r.drawJudgementLine(screen, types.EdgeTap1)
-// 	r.drawJudgementLine(screen, types.EdgeTap2)
-// 	r.drawJudgementLine(screen, types.EdgeTap3)
-// }
-
-// func (r *Play) renderTracks(screen *ebiten.Image) {
-// 	r.renderMainTracks(screen)
-// 	if !r.hideEdgeTracks {
-// 		r.renderEdgeTracks(screen)
-// 	}
-// }

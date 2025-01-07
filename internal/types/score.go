@@ -57,7 +57,14 @@ var scoreThresholds map[SongRating]int = map[SongRating]int{
 	RatingF:   0,
 }
 
+// type ScoreRecord struct {
+// 	songChecksum string
+// 	score        *Score
+// }
+
 type Score struct {
+	Song       *Song
+	Difficulty Difficulty
 	TotalNotes int
 
 	Rating  SongRating
@@ -72,10 +79,18 @@ type Score struct {
 	HitRecords []*HitRecord
 }
 
-func NewScore(totalNotes int) *Score {
-	return &Score{
+var score *Score
+
+func NewScore(song *Song, difficulty Difficulty) *Score {
+	chart := song.Charts[difficulty]
+	totalNotes := chart.TotalNotes
+	score = &Score{
+		Song:       song,
+		Difficulty: difficulty,
 		TotalNotes: totalNotes,
+		HitRecords: make([]*HitRecord, 0, totalNotes),
 	}
+	return score
 }
 
 func (s *Score) Reset() {
@@ -95,13 +110,13 @@ func (s *Score) GetLastHitRecord() *HitRecord {
 	return s.HitRecords[len(s.HitRecords)-1]
 }
 
-func (s *Score) AddHit(h *HitRecord) {
-	hitType := h.HitType
+func AddHit(h *HitRecord) {
+	s := score
+	hitType := h.HitRating
 	if hitType == None || hitType == Miss {
 		return
 	}
 	s.HitRecords = append(s.HitRecords, h)
-
 	switch hitType {
 	case Perfect:
 		s.Perfect++
@@ -117,11 +132,11 @@ func (s *Score) AddHit(h *HitRecord) {
 }
 
 func (s *Score) AddMiss(n *Note) {
-	s.HitRecords = append(s.HitRecords, &HitRecord{
-		Note:    n,
-		Diff:    0,
-		HitType: Miss,
-	})
+	record := &HitRecord{
+		Note:      n,
+		HitRating: Miss,
+	}
+	s.HitRecords = append(s.HitRecords, record)
 	s.Miss++
 	s.Combo = 0
 }

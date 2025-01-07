@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
@@ -17,11 +18,11 @@ var (
 	}
 	lineLength = 0.75
 	lineThick  = float32(3)
-	lineColor  = types.Gray
+	lineColor  = types.Gray.C()
 
 	noteWidth = 0.1
 	noteThick = float32(10)
-	noteColor = types.Yellow
+	noteColor = types.Yellow.C()
 
 	textPosition = ui.Point{
 		X: 0.5,
@@ -29,7 +30,7 @@ var (
 	}
 	textOptions = ui.TextOptions{
 		Align: etxt.Center,
-		Color: types.White,
+		Color: types.White.C(),
 		Scale: 1.0,
 	}
 	offsetDisplayPosition = ui.Point{
@@ -39,7 +40,7 @@ var (
 )
 
 type Offset struct {
-	types.BaseRenderer
+	display.BaseRenderer
 	state *state.Offset
 }
 
@@ -52,17 +53,16 @@ func NewOffsetRender(s state.State) *Offset {
 
 func (o *Offset) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	o.BaseRenderer.Draw(screen, opts)
-
-	o.drawNote(screen)
+	o.drawNote(screen, opts)
 }
 
-func (o *Offset) static(img *ebiten.Image) {
+func (o *Offset) static(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	center := ui.Point{X: 0.5, Y: 0.5}
 	size := ui.Point{X: 0.9, Y: 0.75}
-	ui.DrawFilledRect(img, &center, &size, types.Gray)
+	ui.DrawFilledRect(img, &center, &size, types.Gray.C())
 	size.X -= 0.025
 	size.Y -= 0.025
-	ui.DrawFilledRect(img, &center, &size, types.Black)
+	ui.DrawFilledRect(img, &center, &size, types.Black.C())
 
 	o.drawLine(img)
 
@@ -72,10 +72,11 @@ func (o *Offset) static(img *ebiten.Image) {
 		"Up/Down: Audio Offset | Left/Right: Input Offset | Space: Test Hit\nA: Autoset Audio Offset | I: Autoset Input Offset | Enter: Save | Esc: Exit",
 		&textPosition,
 		&textOptions,
+		opts,
 	)
 }
 
-func (o *Offset) drawNote(img *ebiten.Image) {
+func (o *Offset) drawNote(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	lineStart := linePosition.X - lineLength/2
 
 	noteX := lineStart + (lineLength * o.state.NoteProgress)
@@ -87,9 +88,9 @@ func (o *Offset) drawNote(img *ebiten.Image) {
 	})
 
 	if o.state.NoteProgress >= 0.49 && o.state.NoteProgress <= 0.51 {
-		noteColor = types.Green
+		noteColor = types.Green.C()
 	} else {
-		noteColor = types.Yellow
+		noteColor = ui.CenterTrackColor()
 	}
 	note.Draw(img, noteThick, noteColor)
 
@@ -105,6 +106,7 @@ func (o *Offset) drawNote(img *ebiten.Image) {
 		offsetText,
 		&offsetDisplayPosition,
 		&textOptions,
+		opts,
 	)
 
 	// Draw auto/manual indicator
@@ -116,15 +118,16 @@ func (o *Offset) drawNote(img *ebiten.Image) {
 			key = "I"
 		}
 		autoText = fmt.Sprintf("AUTO (Press %s to toggle)", key)
-		textOptions.Color = types.Red
+		textOptions.Color = types.Red.C()
 	} else {
-		textOptions.Color = types.White
+		textOptions.Color = types.White.C()
 	}
 	ui.DrawTextAt(
 		img,
 		autoText,
 		&autoPosition,
 		&textOptions,
+		opts,
 	)
 }
 
@@ -156,7 +159,7 @@ func (o *Offset) drawLine(img *ebiten.Image) {
 
 	// Draw all lines
 	line.Draw(img, lineThick, lineColor)
-	leftHitLine.Draw(img, noteThick, lineColor)
+	leftHitLine.Draw(img, noteThick, ui.CornerTrackColor())
 	centerHitLine.Draw(img, noteThick, lineColor)
-	rightHitLine.Draw(img, noteThick, lineColor)
+	rightHitLine.Draw(img, noteThick, ui.CornerTrackColor())
 }

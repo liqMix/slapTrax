@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
+	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/timing"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
@@ -26,8 +25,8 @@ const (
 
 	// Weights for different timing windows
 	perfectWeight = 1.0
-	greatWeight   = 0.8
-	goodWeight    = 0.5
+	goodWeight    = 0.8
+	badWeight     = 0.5
 )
 
 type Offset struct {
@@ -49,9 +48,6 @@ type Offset struct {
 	InputOffset  int64
 	HitDiff      int64
 	hitDiffs     []weightedHit
-
-	timeStep       *timing.FixedStep[float64]
-	lastUpdateTime time.Time
 }
 
 // weightedHit stores hit timing data with its weight for adjustment
@@ -62,14 +58,12 @@ type weightedHit struct {
 }
 
 func NewOffsetState() *Offset {
-	s := user.S()
-
-	input.K.WatchKeys([]ebiten.Key{
-		ebiten.KeyArrowUp, ebiten.KeyArrowDown, ebiten.KeyArrowLeft, ebiten.KeyArrowRight,
-	})
-
-	aOffset := int64(s.Gameplay.AudioOffset)
-	iOffset := int64(s.Gameplay.InputOffset)
+	if !user.S.PromptedOffsetCheck {
+		user.S.PromptedOffsetCheck = true
+		user.Save()
+	}
+	aOffset := int64(user.S.AudioOffset)
+	iOffset := int64(user.S.InputOffset)
 
 	now := time.Now()
 	state := &Offset{
@@ -80,37 +74,24 @@ func NewOffsetState() *Offset {
 		travelTime:      2000,
 		NoteProgress:    0.5,
 		startTime:       now,
-		lastUpdateTime:  now,
 		hitDiffs:        make([]weightedHit, 0, maxHitDiffs),
 	}
-
-	// Create fixed timestep handler with improved progress calculation
-	state.timeStep = timing.NewFixedStep(updateRate, maxSteps, state.NoteProgress,
-		func(progress float64) float64 {
-			now := time.Now()
-			elapsedMs := float64(now.Sub(state.startTime).Nanoseconds()) / float64(time.Millisecond)
-
-			if state.backwards {
-				return 1.0 - (elapsedMs / float64(state.travelTime))
-			}
-			return elapsedMs / float64(state.travelTime)
-		})
 
 	return state
 }
 
 // getHitWeight returns a weight based on timing accuracy
 func getHitWeight(diff int64) float64 {
-	absDiff := math.Abs(float64(diff))
-	switch {
-	case absDiff < 30:
+	hitRating := types.GetHitRating(diff)
+	switch hitRating {
+	case types.Perfect:
 		return perfectWeight
-	case absDiff < 60:
-		return greatWeight
-	case absDiff < hitWindowMs/2:
+	case types.Good:
+		return goodWeight
+	case types.Bad:
 		return goodWeight
 	default:
-		return 0.0 // Hit too far off
+		return 0
 	}
 }
 
@@ -212,11 +193,10 @@ func (s *Offset) autoAdjustOffset() int64 {
 
 func (s *Offset) Update() error {
 	now := time.Now()
-	// frameTime := now.Sub(s.lastUpdateTime)
-	s.lastUpdateTime = now
-
-	// Get interpolated progress with improved timing
-	progress, _ := s.timeStep.Update()
+	progress := float64(now.Sub(s.startTime).Milliseconds()) / float64(s.travelTime)
+	if s.backwards {
+		progress = 1 - progress
+	}
 
 	// Check bounds and handle wraparound
 	if progress <= 0 || progress >= 1 {
@@ -224,10 +204,9 @@ func (s *Offset) Update() error {
 		s.backwards = progress > 0
 		s.startTime = now
 		s.playedCenterTick = false
-		s.timeStep.Reset(progress)
 	} else if math.Abs(progress-0.5) < centerThreshold && !s.playedCenterTick {
-		assets.StopAll()
-		assets.PlaySFXWithOffset(assets.SFXOffset, offsetCenter+s.AudioOffset)
+		audio.StopAll()
+		audio.PlaySFXWithOffset(audio.SFXOffset, offsetCenter+s.AudioOffset)
 		s.playedCenterTick = true
 	}
 
@@ -306,14 +285,13 @@ func (s *Offset) resetOffsets() {
 }
 
 func (s *Offset) saveAndExit() error {
-	user.S().Gameplay.AudioOffset = s.AudioOffset
-	user.S().Gameplay.InputOffset = s.InputOffset
+	user.S.AudioOffset = s.AudioOffset
+	user.S.InputOffset = s.InputOffset
 	return s.exit()
 }
 
 func (s *Offset) exit() error {
-	input.K.ClearWatchedKeys()
-	assets.StopAll()
+	audio.StopAll()
 	s.SetNextState(types.GameStateBack, nil)
 	return nil
 }

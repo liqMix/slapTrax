@@ -1,15 +1,180 @@
 package types
 
-import "image/color"
+import (
+	"fmt"
+	"image/color"
+
+	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+)
+
+func ColorFromHex(hex string) color.RGBA {
+	defaultC := White.C()
+
+	var c color.RGBA = color.RGBA{}
+	c.A = 0xff
+	if hex[0] != '#' {
+		logger.Error("Invalid format: %s", hex)
+		return defaultC
+	}
+
+	hex = hex[1:]
+	switch len(hex) {
+	case 6:
+		_, err := fmt.Sscanf(hex, "%02x%02x%02x", &c.R, &c.G, &c.B)
+		if err != nil {
+			logger.Error("Invalid hex: %s", hex)
+			return defaultC
+		}
+		return c
+	case 8:
+		_, err := fmt.Sscanf(hex, "%02x%02x%02x%02x", &c.R, &c.G, &c.B, &c.A)
+		if err != nil {
+			logger.Error("Invalid hex: %s", hex)
+			return defaultC
+		}
+		return c
+	default:
+		logger.Error("Invalid hex: %s", hex)
+		return defaultC
+	}
+}
+
+func GameColorFromHex(hex string) GameColor {
+	c := ColorFromHex(hex)
+	return GameColor(c)
+}
+
+func HexFromColor(c color.RGBA) string {
+	return fmt.Sprintf("#%02x%02x%02x%02x", c.R, c.G, c.B, c.A)
+}
+
+type GameColor color.RGBA
 
 var (
-	Black     = color.RGBA{0, 0, 0, 255}
-	Gray      = color.RGBA{100, 100, 100, 255}
-	White     = color.RGBA{200, 200, 200, 255}
-	Orange    = color.RGBA{255, 165, 0, 255}
-	Blue      = color.RGBA{0, 0, 255, 255}
-	LightBlue = color.RGBA{173, 216, 230, 255}
-	Yellow    = color.RGBA{255, 255, 0, 255}
-	Red       = color.RGBA{255, 0, 0, 255}
-	Green     = color.RGBA{0, 255, 0, 255}
+	Black     GameColor = GameColor(color.RGBA{0, 0, 0, 255})
+	Gray      GameColor = GameColor(color.RGBA{100, 100, 100, 255})
+	White     GameColor = GameColor(color.RGBA{200, 200, 200, 255})
+	Orange    GameColor = GameColor(color.RGBA{230, 130, 0, 255})
+	Blue      GameColor = GameColor(color.RGBA{50, 50, 255, 255})
+	LightBlue GameColor = GameColor(color.RGBA{173, 216, 230, 255})
+	Yellow    GameColor = GameColor(color.RGBA{230, 230, 0, 255})
+	Red       GameColor = GameColor(color.RGBA{200, 50, 50, 255})
+	Green     GameColor = GameColor(color.RGBA{50, 205, 50, 255})
+	Purple    GameColor = GameColor(color.RGBA{150, 30, 150, 255})
+	Pink      GameColor = GameColor(color.RGBA{255, 200, 200, 255})
 )
+
+var AllGameColors = []GameColor{
+	// Black,
+	Gray,
+	White,
+	Orange,
+	Blue,
+	LightBlue,
+	Yellow,
+	Red,
+	Green,
+	Purple,
+	Pink,
+}
+
+func (c GameColor) C() color.RGBA {
+	return color.RGBA(c)
+}
+
+func (c GameColor) String() string {
+	s := "color."
+	switch c {
+	case Black:
+		s += "black"
+	case Gray:
+		s += "gray"
+	case White:
+		s += "white"
+	case Orange:
+		s += "orange"
+	case Blue:
+		s += "blue"
+	case LightBlue:
+		s += "lightBlue"
+	case Yellow:
+		s += "yellow"
+	case Red:
+		s += "red"
+	case Green:
+		s += "green"
+	case Purple:
+		s += "purple"
+	case Pink:
+		s += "pink"
+	default:
+		s += "custom"
+	}
+	return s
+}
+
+type NoteColorTheme string
+
+const (
+	NoteColorThemeDefault   NoteColorTheme = l.NOTE_COLOR_DEFAULT
+	NoteColorThemeMono                     = l.NOTE_COLOR_MONO
+	NoteColorThemeDusk                     = l.NOTE_COLOR_DUSK
+	NoteColorThemeDawn                     = l.NOTE_COLOR_DAWN
+	NoteColorThemeAurora                   = l.NOTE_COLOR_AURORA
+	NoteColorThemeHamburger                = l.NOTE_COLOR_HAMBURGER
+	NoteColorThemeCustom                   = l.NOTE_COLOR_CUSTOM
+)
+
+func AllNoteColorThemes() []NoteColorTheme {
+	return []NoteColorTheme{
+		NoteColorThemeDefault,
+		NoteColorThemeDusk,
+		NoteColorThemeDawn,
+		NoteColorThemeAurora,
+		NoteColorThemeMono,
+		NoteColorThemeHamburger,
+		NoteColorThemeCustom,
+	}
+}
+
+var themeToColors = map[NoteColorTheme]map[TrackType]color.RGBA{
+	NoteColorThemeDefault: {
+		TrackTypeCenter: Yellow.C(),
+		TrackTypeCorner: Orange.C(),
+	},
+	NoteColorThemeDusk: {
+		TrackTypeCenter: Blue.C(),
+		TrackTypeCorner: Purple.C(),
+	},
+	NoteColorThemeDawn: {
+		TrackTypeCenter: Pink.C(),
+		TrackTypeCorner: Yellow.C(),
+	},
+	NoteColorThemeHamburger: {
+		TrackTypeCenter: Red.C(),
+		TrackTypeCorner: Yellow.C(),
+	},
+	NoteColorThemeAurora: {
+		TrackTypeCenter: LightBlue.C(),
+		TrackTypeCorner: Pink.C(),
+	},
+	NoteColorThemeMono: {
+		TrackTypeCenter: White.C(),
+		TrackTypeCorner: Gray.C(),
+	},
+}
+
+func (t NoteColorTheme) CenterColor() color.RGBA {
+	if t == NoteColorThemeCustom {
+		return ColorFromHex(user.S.CenterNoteColor)
+	}
+	return themeToColors[t][TrackTypeCenter]
+}
+func (t NoteColorTheme) CornerColor() color.RGBA {
+	if t == NoteColorThemeCustom {
+		return ColorFromHex(user.S.CornerNoteColor)
+	}
+	return themeToColors[t][TrackTypeCorner]
+}

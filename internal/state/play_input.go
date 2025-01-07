@@ -2,14 +2,14 @@ package state
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 )
 
 type PlayAction string
 
 const (
-	RestartAction PlayAction = types.L_STATE_PLAY_RESTART
-	PauseAction   PlayAction = types.L_STATE_PLAY_PAUSE
+	PauseAction   PlayAction = l.STATE_PLAY_PAUSE
+	RestartAction PlayAction = l.STATE_PLAY_RESTART
 )
 
 var PlayActions = map[PlayAction][]ebiten.Key{

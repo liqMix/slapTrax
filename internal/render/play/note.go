@@ -1,59 +1,147 @@
 package play
 
-// func (r *Play) drawNotes(screen *ebiten.Image) {
-// 	vectorCollection := ui.NewVectorCollection()
+import (
+	"image/color"
 
-// }
+	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/liqmix/ebiten-holiday-2024/internal/display"
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+)
 
-// func (r *Play) drawCachedNote(screen *ebiten.Image, track types.TrackName, note *types.Note, color color.RGBA) *cachedPath {
-// 	cachedPath := r.vectorCache.GetNotePath(track, note)
-// 	if cachedPath == nil {
-// 		return nil
-// 	}
-// 	return cachedPath
-// }
+func (r *Play) addNotePath(track *types.Track) {
+	if len(track.ActiveNotes) == 0 {
+		return
+	}
 
-// func drawNote(screen *ebiten.Image, note *types.Note, vec []*ui.Point, color color.RGBA) {
-// 	if note == nil || note.Progress < 0 || note.Progress > 1 {
-// 		return
-// 	}
+	for _, note := range track.ActiveNotes {
+		if note.IsHoldNote() {
+			r.addHoldPaths(track.Name, note)
+		}
+		path := r.vectorCache.GetNotePath(track.Name, note, false)
+		if path != nil {
+			r.vectorCollection.Add(path.vertices, path.indices)
+		}
+	}
+}
 
-// 	progress := SmoothProgress(note.Progress)
-// 	color.A = GetFadeAlpha(progress)
+func getPointPosition(point *ui.Point, progress float32) (float32, float32) {
+	pX, pY := point.ToRender32()
+	cX, cY := playCenterPoint.ToRender32()
+	x, y := cX+(pX-cX)*progress, cY+(pY-cY)*progress
+	return x, y
+}
 
-// 	// Skip rendering if fully transparent
-// 	if color.A == 0 {
-// 		return
-// 	}
+type NotePathOpts struct {
+	lineWidth       float32
+	isLarge         bool
+	largeWidthRatio float32
+	color           color.RGBA
+	alpha           uint8
+	solo            bool
+}
 
-// 	notePath := vector.Path{}
-// 	cX, cY := playCenterPoint.ToRender32()
+func CreateNotePath(track types.TrackName, progress float32, opts *NotePathOpts) *CachedPath {
+	return CreateNotePathFromPoints(notePoints[track], progress, opts)
+}
 
-// 	startX, startY := vec[0].ToRender32()
-// 	x, y := cX+(startX-cX)*progress, cY+(startY-cY)*progress
-// 	notePath.MoveTo(x, y)
+func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathOpts) *CachedPath {
+	if len(pts) == 0 || progress < 0 || progress > 1 {
+		return nil
+	}
 
-// 	for i := 1; i < len(vec); i++ {
-// 		if vec[i] == nil {
-// 			continue
-// 		}
-// 		x, y = vec[i].ToRender32()
-// 		x, y = cX+(x-cX)*progress, cY+(y-cY)*progress
-// 		notePath.LineTo(x, y)
-// 	}
+	// Create initial path for base shape
+	notePath := vector.Path{}
 
-// 	width := noteWidth * float32(note.Progress)
-// 	if !note.Solo {
-// 		width *= 3.0
-// 	}
+	// Store original points for depth extrusion
+	originalPoints := make([][2]float32, len(pts))
 
-// 	vs, is := notePath.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
-// 		Width:    width,
-// 		LineCap:  vector.LineCapRound,
-// 		LineJoin: vector.LineJoinRound,
-// 	})
+	// Initialize starting point
+	x, y := getPointPosition(pts[0], progress)
+	notePath.MoveTo(x, y)
+	originalPoints[0] = [2]float32{x, y}
 
-// 	ui.ColorVertices(vs, color)
-// 	screen.DrawTriangles(vs, is, ui.BaseTriImg, nil)
+	// Add line segments and store original points
+	for i, pt := range pts[1:] {
+		if pt == nil {
+			continue
+		}
+		x, y := getPointPosition(pt, progress)
+		notePath.LineTo(x, y)
+		originalPoints[i+1] = [2]float32{x, y}
+	}
 
-// }
+	// Calculate line width with depth consideration
+	width := (opts.lineWidth * progress) / float32(display.Window.RenderScale())
+	if opts.isLarge {
+		width *= opts.largeWidthRatio
+	}
+
+	// Create base vertices and indices
+	vertices, indices := notePath.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
+		Width:    width,
+		LineCap:  vector.LineCapRound,
+		LineJoin: vector.LineJoinRound,
+	})
+
+	if !opts.solo {
+		opts.color = types.White.C()
+	}
+	// Set color with transparency
+	opts.color.A = opts.alpha
+
+	ui.ColorVertices(vertices, opts.color)
+	cachedPath := &CachedPath{
+		vertices: vertices,
+		indices:  indices,
+	}
+	return cachedPath
+}
+
+func (r *Play) addHoldPaths(track types.TrackName, note *types.Note) {
+	notePoints := notePoints[track]
+	holdPaths := [3]vector.Path{}
+
+	if note.Progress < 0 {
+		return
+	}
+	progress := SmoothProgress(note.Progress)
+	releaseProgress := SmoothProgress(note.ReleaseProgress)
+
+	// Get last point positions
+	var x, y float32
+	var endX, endY float32
+
+	for i, pt := range notePoints {
+		if pt == nil {
+			continue
+		}
+		x, y = getPointPosition(notePoints[i], progress)
+		endX, endY = getPointPosition(notePoints[i], releaseProgress)
+		holdPaths[i].MoveTo(x, y)
+		holdPaths[i].LineTo(endX, endY)
+		if i > 0 {
+			holdPaths[i].LineTo(getPointPosition(notePoints[i-1], releaseProgress))
+			holdPaths[i].LineTo(getPointPosition(notePoints[i-1], progress))
+		}
+	}
+
+	// Generate vertices and indices for stroke
+	for _, holdPath := range holdPaths {
+		vs, is := holdPath.AppendVerticesAndIndicesForFilling(nil, nil)
+
+		// Set color with transparency
+		color := track.NoteColor()
+		if note.WasHit() {
+			if note.WasReleased() {
+				color.A = 50
+			} else {
+				color.A = 200
+			}
+		} else {
+			color.A = 100
+		}
+		ui.ColorVertices(vs, color)
+		r.vectorCollection.Add(vs, is)
+	}
+}

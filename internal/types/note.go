@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 type MarkerType int
@@ -27,7 +28,7 @@ type Note struct {
 	ReleaseProgress float64    // the note releases's progress
 	MarkerType      MarkerType // Allows for special markers to be in the track ?
 
-	HitRating HitType // The rating of the hit
+	HitRating HitRating // The rating of the hit
 
 	Solo bool // If the note is paired with other notes
 }
@@ -35,6 +36,9 @@ type Note struct {
 var noteId int = 0
 
 func NewNote(trackName TrackName, target, targetRelease int64) *Note {
+	if targetRelease > 0 {
+		logger.Debug("Id: %d | Target: %d | Release: %d", noteId, target, targetRelease)
+	}
 	noteId++
 	return &Note{
 		Id:            noteId,
@@ -64,7 +68,7 @@ func (n *Note) SetSolo(solo bool) {
 }
 
 func (n *Note) IsHoldNote() bool {
-	return false
+	return !user.S.DisableHoldNotes && n.TargetRelease > 0
 }
 
 func (n *Note) WasHit() bool {
@@ -80,7 +84,7 @@ func (n *Note) Hit(hitTime int64, score *Score) bool {
 		return false
 	}
 
-	diff := n.Target - hitTime
+	diff := n.Target - hitTime + user.S.InputOffset
 	timing := GetHitTiming(diff)
 	rating := GetHitRating(diff)
 	if rating == None {
@@ -90,10 +94,10 @@ func (n *Note) Hit(hitTime int64, score *Score) bool {
 	n.HitTime = hitTime
 	n.HitRating = rating
 	logger.Debug("Id: %d | Hit: %s | Diff: %d | Target: %d | HitTime: %d", n.Id, n.HitRating, int(diff), n.Target, n.HitTime)
-	score.AddHit(&HitRecord{
+	AddHit(&HitRecord{
 		Note:      n,
-		Diff:      n.Target - hitTime,
-		HitType:   n.HitRating,
+		HitDiff:   n.Target - hitTime,
+		HitRating: n.HitRating,
 		HitTiming: timing,
 	})
 
@@ -105,23 +109,38 @@ func (n *Note) Miss(score *Score) {
 	score.AddMiss(n)
 }
 
-func (n *Note) Release(releaseTime int64) HitType {
-	if n.MarkerType != MarkerTypeNone || !n.IsHoldNote() {
-		return None
+func (n *Note) Release(releaseTime int64) {
+	if !n.IsHoldNote() || !n.WasHit() || n.WasReleased() {
+		return
 	}
 
-	if n.WasHit() && n.ReleaseTime == 0 {
-		n.ReleaseTime = releaseTime
+	if n.WasHit() {
+		n.ReleaseTime = releaseTime + user.S.InputOffset
 		if n.IsHoldNote() {
 			// force rating to miss if the note was released early
 			// *use more generous window for release
-			diff := math.Abs(float64(n.TargetRelease - n.ReleaseTime))
-			if diff > (Bad.Window(false) * 3) {
-				n.HitRating = Miss
+			diff := n.TargetRelease - n.ReleaseTime
+
+			hit := &HitRecord{
+				Note:        n,
+				HitDiff:     n.Target - n.HitTime,
+				ReleaseDiff: diff,
 			}
+
+			if diff > int64(Bad.Window(false)*3) {
+				n.HitRating = Miss
+				hit.HitRating = Miss
+				hit.HitTiming = HitTimingEarly
+
+			} else {
+				n.HitRating = GetHitRating(hit.HitDiff)
+				hit.HitRating = n.HitRating
+				hit.HitTiming = GetHitTiming(hit.HitDiff)
+			}
+
+			AddHit(hit)
 		}
 	}
-	return n.HitRating
 }
 
 func (n *Note) InWindow(start, end int64) bool {

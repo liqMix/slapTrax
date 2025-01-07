@@ -1,14 +1,16 @@
 package types
 
 import (
-	"image/color"
 	"math"
 )
 
 type HitRecord struct {
-	Note      *Note
-	Diff      int64
-	HitType   HitType
+	Note *Note
+
+	HitDiff     int64
+	ReleaseDiff int64
+
+	HitRating HitRating
 	HitTiming HitTiming
 }
 
@@ -39,17 +41,17 @@ func GetHitTiming(diff int64) HitTiming {
 	return HitTimingNone
 }
 
-type HitType int
+type HitRating int
 
 const (
-	Perfect HitType = iota
+	Perfect HitRating = iota
 	Good
 	Bad
 	Miss
 	None
 )
 
-func (r HitType) String() string {
+func (r HitRating) String() string {
 	switch r {
 	case Perfect:
 		return "Perfect"
@@ -63,7 +65,7 @@ func (r HitType) String() string {
 	return "None"
 }
 
-func (r HitType) Value() int {
+func (r HitRating) Value() int {
 	switch r {
 	case Perfect:
 		return 10
@@ -75,7 +77,7 @@ func (r HitType) Value() int {
 	return 0
 }
 
-func (r HitType) Color() color.RGBA {
+func (r HitRating) Color() GameColor {
 	switch r {
 	case Perfect:
 		return Green
@@ -90,7 +92,7 @@ func (r HitType) Color() color.RGBA {
 // Loosen the window for early hits
 var earlyScale = 0.4
 
-func (r HitType) Window(early bool) float64 {
+func (r HitRating) Window(early bool) float64 {
 	scale := 1.0
 	if early {
 		scale = earlyScale
@@ -106,7 +108,7 @@ func (r HitType) Window(early bool) float64 {
 	return 0
 }
 
-func GetHitRating(diff int64) HitType {
+func GetHitRating(diff int64) HitRating {
 	d := math.Abs(float64(diff))
 
 	early := GetHitTiming(diff) == HitTimingEarly

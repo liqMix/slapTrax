@@ -1,58 +1,43 @@
 package types
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
+	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"gopkg.in/yaml.v2"
 )
 
-type Checksum string
-
-type Chart struct {
-	Difficulty Difficulty
-	TotalNotes int
-	Tracks     []*Track
-}
-type Track struct {
-	Name        TrackName
-	AllNotes    []*Note
-	ActiveNotes []*Note
-
-	Active      bool
-	StaleActive bool
-
-	NextNoteIndex int
-}
-
-func NewTrack(name TrackName, notes []*Note, beatInterval int64) *Track {
-	// Reset the notes
-	for _, n := range notes {
-		n.Reset()
+func GetAllSongs() []*Song {
+	allSongData := assets.GetAllSongData()
+	songs := make([]*Song, 0, len(allSongData))
+	for _, songData := range allSongData {
+		song, err := NewSong(songData)
+		if err != nil {
+			logger.Error("Failed to parse song data", err)
+			continue
+		}
+		songs = append(songs, song)
 	}
-
-	// Sort the notes by target time
-	sort.Slice(notes, func(i, j int) bool {
-		return notes[i].Target < notes[j].Target
-	})
-
-	return &Track{
-		Name:     name,
-		AllNotes: notes,
-	}
+	return songs
 }
 
-func (t *Track) Reset() {
-	t.ActiveNotes = make([]*Note, 0)
-	t.Active = false
-	t.StaleActive = false
-	t.NextNoteIndex = 0
-	for _, n := range t.AllNotes {
-		n.Reset()
+func GetAllCharts() []*Chart {
+	allSongData := assets.GetAllSongData()
+	charts := make([]*Chart, 0)
+	for _, songData := range allSongData {
+		song, err := NewSong(songData)
+		if err != nil {
+			logger.Error("Failed to parse song data", err)
+			continue
+		}
+		for _, chart := range song.Charts {
+			charts = append(charts, chart)
+		}
 	}
-}
-
-func (t Track) IsPressed() bool {
-	return t.Active || t.StaleActive
+	return charts
 }
 
 type SongLinks struct {
@@ -85,10 +70,44 @@ type Song struct {
 
 	Art       *ebiten.Image         // album art
 	AudioPath string                // path to the audio file
-	Checksum  Checksum              // calculated from folder contents
 	Charts    map[Difficulty]*Chart // charts for the song
 
 	FolderName string
+	Hash       string
+}
+
+var parsedSongs map[string]*Song = make(map[string]*Song)
+
+func NewSong(songData *assets.SongData) (*Song, error) {
+	if songData == nil {
+		return nil, fmt.Errorf("songData is nil")
+	}
+	hash := songData.GetHash()
+	if song, ok := parsedSongs[hash]; ok {
+		return song, nil
+	}
+
+	meta := songData.Meta
+	song := &Song{}
+	err := yaml.Unmarshal(meta, song)
+	if err != nil {
+		return nil, err
+	}
+
+	song.Art = songData.Art
+	song.AudioPath = songData.AudioPath
+	song.Charts = make(map[Difficulty]*Chart)
+	for difficulty, chartData := range songData.Charts {
+		chart, err := NewChart(song, chartData)
+		if err != nil {
+			return nil, err
+		}
+
+		song.Charts[Difficulty(difficulty)] = chart
+	}
+
+	parsedSongs[hash] = song
+	return song, nil
 }
 
 func (s *Song) GetChart(difficulty Difficulty) *Chart {
@@ -155,6 +174,25 @@ func (s *Song) GetSongLinks() *SongLinks {
 	}
 }
 
-func (s *Song) GetQuarterNoteInterval() int64 {
-	return int64(600000 / s.BPM / 4)
+func (s *Song) GetBeatInterval() int64 {
+	return int64(60000 / s.BPM)
+}
+
+func (s *Song) GetCountdownTicks(restart bool) []int64 {
+	b := s.GetBeatInterval()
+
+	if restart {
+		return []int64{
+			-b * 2,
+			-b * 1,
+			0,
+		}
+	}
+	return []int64{
+		-b * 4,
+		-b * 3,
+		-b * 2,
+		-b * 1,
+		0,
+	}
 }

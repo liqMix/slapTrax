@@ -1,5 +1,112 @@
-"locale": "日本語"
-"debug.greeting": "ジャミン"
-"difficulty.easy": "簡単"
-"difficulty.hard": "最難"
-"unknown": "？？？"
+locale: "日本語"
+title: "Ebiten 冬のゲームジャム2024"
+
+# General
+exit: "終了"
+back: "戻る"
+save: "保存"
+cancel: "キャンセル"
+off: "オフ"
+on: "オン"
+chart: "譜面"
+difficulties: "難易度"
+corner: "隅"
+center: "中央"
+
+# Difficulties
+difficulty.easy: "簡単"
+difficulty.medium: "普通"
+difficulty.hard: "最難"
+difficulty.unknown: "????"
+
+# Hit Judgments
+hit.perfect: "パーフェクト"
+hit.good: "良い"
+hit.bad: "悪い"
+hit.miss: "ミス"
+
+# Song Information
+song.artist: "アーティスト"
+song.album: "アルバム"
+
+# States
+state.greeting: "ようこそ"
+state.editor: "エディター"
+state.settings: "設定"
+state.profile: "プロフィール"
+state.play: "プレイ"
+state.offset: "オフセット調整"
+state.song.selection: "曲選択"
+state.difficulty.selection: "難易度選択"
+state.login: "ログイン"
+state.result: "結果"
+
+# Login
+login.text.offline: "オフラインモード"
+login.text.online: "オンラインモード"
+login.save.local: "ローカル保存"
+login.guest: "ゲストとしてプレイ"
+login.login: "ログイン"
+login.username: "ユーザー名"
+login.password: "パスワード"
+
+# Graphics Settings
+settings.gfx: "グラフィックス"
+settings.gfx.fullscreen: "フルスクリーン"
+settings.gfx.fixedrender: "固定描画サイズ"
+settings.gfx.vsync: "垂直同期"
+settings.gfx.screensize: "画面サイズ"
+settings.gfx.rendersize: "描画サイズ"
+settings.gfx.notecolor: "ノートの色"
+
+# Render Sizes
+rendersize.tiny: "極小"
+rendersize.small: "小"
+rendersize.medium: "中"
+rendersize.large: "大"
+rendersize.max: "最大"
+
+# Game Settings
+settings.game: "ゲーム"
+settings.game.locale: "言語"
+settings.game.theme: "テーマ"
+settings.game.audiooffset: "音声オフセット"
+settings.game.inputoffset: "入力オフセット"
+settings.game.lanespeed: "速度"
+
+# Audio Settings
+settings.audio: "オーディオ"
+settings.audio.bgmvolume: "BGM音量"
+settings.audio.sfxvolume: "効果音量"
+settings.audio.songvolume: "楽曲音量"
+settings.audio.songpreviewvolume: "プレビュー音量"
+
+# Accessibility Settings
+settings.access: "アクセシビリティ"
+settings.access.noholdnotes: "ホールドノート無効化"
+settings.access.nohiteffect: "ヒットエフェクト無効化"
+settings.access.nolaneeffect: "レーンエフェクト無効化"
+
+# Play State
+state.play.restart: "リスタート"
+state.play.pause: "一時停止"
+
+# Themes
+theme.standard: "スタンダード"
+theme.leftbehind: "レフトビハインド"
+
+# Colors
+color.white: "白"
+color.black: "黒"
+
+# Note Colors
+note.color.default: "デフォルト"
+note.color.mono: "モノクロ"
+note.color.dusk: "夕暮れ"
+note.color.dawn: "夜明け"
+note.color.aurora: "オーロラ"
+note.color.custom: "カスタム"
+note.color.hamburger: "ハンバーガー"
+
+# Other
+unknown: "???"
