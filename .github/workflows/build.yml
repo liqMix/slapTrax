@@ -20,7 +20,7 @@ jobs:
       with:
         name: ebihack24-win
         path: |
-          LICENSE
+          LICENSE.md
           ebihack24.exe
 
   build-mac:
@@ -38,7 +38,7 @@ jobs:
       run: go build -o ../../ebihack24
     - name: Tar it up
       shell: bash
-      run: tar -zcvf ebihack24-mac.tar.gz ebihack24 LICENSE
+      run: tar -zcvf ebihack24-mac.tar.gz ebihack24 LICENSE.md
     - name: Upload Mac exe
       uses: actions/upload-artifact@v3
       with:
@@ -63,7 +63,7 @@ jobs:
       run: go build -o ../../ebihack24
     - name: Tar it up
       shell: bash
-      run: tar -zcvf ebihack24-lin.tar.gz ebihack24 LICENSE
+      run: tar -zcvf ebihack24-lin.tar.gz ebihack24 LICENSE.md
     - name: Upload Linux exe
       uses: actions/upload-artifact@v3
       with:
@@ -92,7 +92,7 @@ jobs:
         name: ebihack24-web
         path: |
           web/
-          LICENSE
+          LICENSE.md
 
   upload-bundle:
     name: Bundle binaries with dev assets
@@ -118,7 +118,7 @@ jobs:
         name: ebihack24-bundle
         path: |
           README.md
-          LICENSE
+          LICENSE.md
           ebihack24-lin.tar.gz
           ebihack24-mac.tar.gz
           ebihack24.exe
