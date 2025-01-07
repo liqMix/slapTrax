@@ -110,7 +110,11 @@ func (s *SongDetails) UpdateDetails(song *types.Song) {
 	}
 	s.title.SetText(song.Title)
 	s.artist.SetText(song.Artist)
-	s.album.SetText(song.Album)
+	album := song.Album
+	if album == "" {
+		album = " "
+	}
+	s.album.SetText(album)
 	s.charter.SetText(song.ChartedBy)
 
 	links := song.GetSongLinks()
