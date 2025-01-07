@@ -6,6 +6,7 @@ exit: "Exit"
 back: "Back"
 save: "Save"
 cancel: "Cancel"
+continue: "Corntinue"
 off: "Off"
 on: "On"
 chart: "Chart"
@@ -88,7 +89,7 @@ settings.access.nohiteffect: "Disable Hit Effects"
 settings.access.nolaneeffect: "Disable Lane Effects"
 
 # Dialogs
-dialog.checkoffsets: "It looks like you haven't set your offsets yet.\nThis is important for the game to work correctly.\nIf your inputs seem to be off, please adjust them in the settings."
+dialog.checkoffsets: "It looks like you haven't set your offsets yet.\nThis is important for the game to work correctly.\nIf your timing seem to be off, please adjust them in the settings."
 
 # Play State
 state.play.restart: "Restart"
@@ -108,6 +109,7 @@ note.color.mono: "Monochrome"
 note.color.dusk: "Dusk"
 note.color.dawn: "Dawn"
 note.color.aurora: "Aurora"
+note.color.arorua: "Arorua"
 note.color.custom: "Custom"
 note.color.hamburger: "Hamburger"
 

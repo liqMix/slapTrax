@@ -11,6 +11,7 @@ const (
 	SAVE               = "save"
 	OK                 = "ok"
 	CANCEL             = "cancel"
+	CONTINUE           = "continue"
 	OFF                = "off"
 	ON                 = "on"
 	CHART              = "chart"
@@ -111,6 +112,7 @@ const (
 	NOTE_COLOR_DAWN      = "note.color.dawn"
 	NOTE_COLOR_CUSTOM    = "note.color.custom"
 	NOTE_COLOR_AURORA    = "note.color.aurora"
+	NOTE_COLOR_ARORUA    = "note.color.arorua"
 	NOTE_COLOR_HAMBURGER = "note.color.hamburger"
 
 	// Etc

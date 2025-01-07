@@ -54,6 +54,11 @@ func (p *Play) updateTrack(t *types.Track, currentTime int64, score *types.Score
 		}
 
 		// Drop expired notes
+		if n.IsHoldNote() && t.Active {
+			// u good
+			n.Release(currentTime)
+			continue
+		}
 		n.Miss(score)
 	}
 

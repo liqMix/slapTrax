@@ -35,8 +35,8 @@ type SongDetails struct {
 }
 
 var artSize = 0.2
-var detailsTop = ui.Point{X: 0.25, Y: 0.27}
-var detailsCenter = ui.Point{X: 0.25, Y: 0.50}
+var detailsTop = ui.Point{X: 0.5, Y: 0.27}
+var detailsCenter = ui.Point{X: 0.5, Y: 0.50}
 
 type SongSelection struct {
 	types.BaseGameState

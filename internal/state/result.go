@@ -54,22 +54,23 @@ func NewResultState(args *ResultStateArgs) *Result {
 
 	//// Buttons
 	position = ui.Point{X: 0.45, Y: 0.85}
-	b := ui.NewButton()
-	b.SetCenter(position)
-	b.SetText(l.String(l.BACK))
-	b.SetTrigger(func() {
+	e = ui.NewElement()
+	e.SetCenter(position)
+	e.SetText(l.String(l.CONTINUE))
+	e.SetTrigger(func() {
 		r.SetNextState(types.GameStateSongSelection, nil)
 	})
-	g.Add(b)
+	g.Add(e)
 
 	position.X += 0.1
-	b = ui.NewButton()
-	b.SetCenter(position)
-	b.SetText(l.String(l.STATE_PLAY_RESTART))
-	b.SetTrigger(func() {
+	e = ui.NewElement()
+	e.SetCenter(position)
+	e.SetText(l.String(l.STATE_PLAY_RESTART))
+	e.SetTrigger(func() {
 		r.SetNextState(types.GameStatePlay, &PlayArgs{Song: r.score.Song, Difficulty: r.score.Difficulty})
 	})
-	g.Add(b)
+	g.Add(e)
+	r.buttonGroup = g
 	return r
 }
 

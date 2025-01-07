@@ -52,8 +52,8 @@ var (
 	noteMaxAlpha          = uint8(255)
 	centerNoteLengthRatio = 0.5
 
-	fadeInThreshold  = SmoothProgress(0.75)
-	fadeOutThreshold = SmoothProgress(0.8)
+	fadeInThreshold  = SmoothProgress(0.4)
+	fadeOutThreshold = SmoothProgress(0.7)
 	fadeRange        = fadeOutThreshold - fadeInThreshold
 	minT             = 0.01 // Small value for vanishing point calculation
 

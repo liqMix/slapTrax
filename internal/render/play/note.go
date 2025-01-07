@@ -46,7 +46,7 @@ func CreateNotePath(track types.TrackName, progress float32, opts *NotePathOpts)
 }
 
 func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathOpts) *CachedPath {
-	if len(pts) == 0 || progress < 0 || progress > 1 {
+	if len(pts) == 0 {
 		return nil
 	}
 
@@ -102,7 +102,7 @@ func (r *Play) addHoldPaths(track types.TrackName, note *types.Note) {
 	notePoints := notePoints[track]
 	holdPaths := [3]vector.Path{}
 
-	if note.Progress < 0 {
+	if note.Progress < 0.25 {
 		return
 	}
 	progress := SmoothProgress(note.Progress)

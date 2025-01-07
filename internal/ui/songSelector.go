@@ -8,6 +8,9 @@ import (
 
 type SongSelector struct {
 	*UIGroup
+
+	minIdx int
+	maxIdx int
 }
 
 const maxDisplayedItems = 10
@@ -28,15 +31,18 @@ func (s *SongSelector) Update() {
 	position := s.GetCenter()
 	yOffset := 0.05
 	xOffset := 0.025
-	opacity := 0.8
+	opacity := 1.5
 	min := s.currentIdx - maxDisplayedItems/2
 	if min < 0 {
 		min = 0
 	}
+	s.minIdx = min
 	max := s.currentIdx + maxDisplayedItems/2
 	if max >= len(s.items) {
 		max = len(s.items) - 1
 	}
+	s.maxIdx = max
+
 	for i := min; i <= max; i++ {
 		item := s.items[i]
 		if i == s.currentIdx {
@@ -58,7 +64,8 @@ func (s *SongSelector) Update() {
 }
 
 func (s *SongSelector) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	for _, item := range s.items {
+	for i := s.minIdx; i <= s.maxIdx; i++ {
+		item := s.items[i]
 		item.Draw(screen, opts)
 	}
 }

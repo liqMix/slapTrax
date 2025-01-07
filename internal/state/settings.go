@@ -372,7 +372,6 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S.DisableHoldNotes = !user.S.DisableHoldNotes
-		user.Save()
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -388,7 +387,6 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S.DisableHitEffects = !user.S.DisableHitEffects
-		user.Save()
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -404,7 +402,6 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S.DisableLaneEffects = !user.S.DisableLaneEffects
-		user.Save()
 	})
 	group.Add(b)
 }

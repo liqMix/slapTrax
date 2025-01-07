@@ -181,7 +181,7 @@ func (s *SongDetails) UpdateDetails(song *types.Song) {
 }
 
 func (s *SongDetails) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	ui.DrawFilledRect(screen, &detailsCenter, s.panelSize, types.Gray.C())
+	ui.DrawNoteThemedRect(screen, &detailsCenter, s.panelSize)
 	s.art.Draw(screen, opts)
 	s.title.Draw(screen, opts)
 	s.artist.Draw(screen, opts)

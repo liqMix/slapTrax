@@ -123,6 +123,7 @@ const (
 	NoteColorThemeDusk                     = l.NOTE_COLOR_DUSK
 	NoteColorThemeDawn                     = l.NOTE_COLOR_DAWN
 	NoteColorThemeAurora                   = l.NOTE_COLOR_AURORA
+	NoteColorThemeArorua                   = l.NOTE_COLOR_ARORUA
 	NoteColorThemeHamburger                = l.NOTE_COLOR_HAMBURGER
 	NoteColorThemeCustom                   = l.NOTE_COLOR_CUSTOM
 )
@@ -133,6 +134,7 @@ func AllNoteColorThemes() []NoteColorTheme {
 		NoteColorThemeDusk,
 		NoteColorThemeDawn,
 		NoteColorThemeAurora,
+		NoteColorThemeArorua,
 		NoteColorThemeMono,
 		NoteColorThemeHamburger,
 		NoteColorThemeCustom,
@@ -159,6 +161,10 @@ var themeToColors = map[NoteColorTheme]map[TrackType]color.RGBA{
 	NoteColorThemeAurora: {
 		TrackTypeCenter: LightBlue.C(),
 		TrackTypeCorner: Pink.C(),
+	},
+	NoteColorThemeArorua: {
+		TrackTypeCenter: Pink.C(),
+		TrackTypeCorner: LightBlue.C(),
 	},
 	NoteColorThemeMono: {
 		TrackTypeCenter: White.C(),
