@@ -66,6 +66,7 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.6
 	github.com/joho/godotenv v1.5.1
 	github.com/kettek/go-multipath/v2 v2.0.0-alpha.11
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/radovskyb/watcher v1.0.7 // indirect
 	github.com/tinne26/etxt v0.0.9
 	gopkg.in/yaml.v2 v2.4.0

@@ -358,7 +358,7 @@ func updateSongPreview() {
 		status.restarting = false
 		current.SetPosition(time.Duration(status.start) * time.Millisecond)
 		fadeCurrentPreview(0, manager.volume.Song)
-	} else if position >= fadeEnd && !status.restarting {
+	} else if (position >= fadeEnd || !current.IsPlaying()) && !status.restarting {
 		fadeCurrentPreview(manager.volume.Song, 0)
 		status.restarting = true
 	}

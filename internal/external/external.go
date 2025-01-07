@@ -3,7 +3,11 @@ package external
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+
 	"time"
+
+	"github.com/pkg/browser"
 
 	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
@@ -12,8 +16,13 @@ import (
 var client = &http.Client{Timeout: 10 * time.Second}
 
 // Opens browser to URL
-func OpenURL(url string) {
-	logger.Debug("Not implemented")
+func OpenURL(path string) error {
+	_, err := url.Parse(path)
+	if err != nil {
+		return err
+	}
+
+	return browser.OpenURL(path)
 }
 
 func PingServer() bool {
