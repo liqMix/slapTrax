@@ -1,7 +1,10 @@
 package play
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/state"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
@@ -13,22 +16,24 @@ import (
 type Play struct {
 	display.BaseRenderer
 	state            *state.Play
-	vectorCache      *VectorCache
 	vectorCollection *ui.VectorCollection
 
 	hitRecordIdx int
 }
 
 func NewPlayRender(s state.State) *Play {
-	display.ResetCaches()
-
 	p := &Play{
-		state: s.(*state.Play),
+		state:            s.(*state.Play),
+		vectorCollection: ui.NewVectorCollection(),
 	}
-	p.vectorCache = NewVectorCache()
-	display.AttachCache(p.vectorCache)
-	p.vectorCollection = ui.NewVectorCollection()
 	p.BaseRenderer.Init(p.static)
+
+	// If clear returns true, we need to rebuild the vector cache
+	renderWidth, renderHeight := display.Window.RenderSize()
+	fmt.Println("Clearing caches from play")
+	if cache.Path.Clear(renderWidth, renderHeight) {
+		RebuildVectorCache()
+	}
 
 	return p
 }

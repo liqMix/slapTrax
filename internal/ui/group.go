@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
@@ -129,7 +127,6 @@ func (g *UIGroup) Update() {
 		}
 	} else if input.K.Is(ebiten.KeyEnter, input.JustPressed) {
 		if g.current != nil {
-			fmt.Println("trigger")
 			g.current.Trigger()
 		}
 	}

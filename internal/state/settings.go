@@ -5,6 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
@@ -172,7 +173,10 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		currentNoteColorThemeIdx = (currentNoteColorThemeIdx + 1) % len(noteColorThemes)
 		current := noteColorThemes[currentNoteColorThemeIdx]
 		user.S.NoteColorTheme = string(current)
-		display.RebuildCaches()
+
+		// Gotta clear the vector cache
+		cache.Path.ForceClear()
+
 		if current == types.NoteColorThemeCustom {
 			centerNoteColorB.SetHidden(false)
 			cornerNoteColorB.SetHidden(false)
@@ -210,7 +214,9 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		centerIdx = (centerIdx + 1) % len(colors)
 		user.S.CenterNoteColor = types.HexFromColor(colors[centerIdx].C())
 		centerNoteColorB.SetTextColor(types.ColorFromHex(user.S.CenterNoteColor))
-		display.RebuildCaches()
+
+		// Gotta clear the vector cache
+		cache.Path.ForceClear()
 	})
 	group.Add(centerNoteColorB)
 	optionPos.Y += optionsOffset
@@ -227,7 +233,10 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		cornerIdx = (cornerIdx + 1) % len(colors)
 		user.S.CornerNoteColor = types.HexFromColor(colors[cornerIdx].C())
 		cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S.CornerNoteColor))
-		display.RebuildCaches()
+
+		// Gotta clear the vector cache
+		cache.Path.ForceClear()
+
 	})
 	group.Add(cornerNoteColorB)
 	optionPos.Y += optionsOffset

@@ -4,6 +4,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
@@ -18,9 +19,9 @@ func (r *Play) addNotePath(track *types.Track) {
 		if note.IsHoldNote() {
 			r.addHoldPaths(track.Name, note)
 		}
-		path := r.vectorCache.GetNotePath(track.Name, note, false)
+		path := GetNotePath(track.Name, note, false)
 		if path != nil {
-			r.vectorCollection.Add(path.vertices, path.indices)
+			r.vectorCollection.AddPath(path)
 		}
 	}
 }
@@ -41,11 +42,11 @@ type NotePathOpts struct {
 	solo            bool
 }
 
-func CreateNotePath(track types.TrackName, progress float32, opts *NotePathOpts) *CachedPath {
+func CreateNotePath(track types.TrackName, progress float32, opts *NotePathOpts) *cache.CachedPath {
 	return CreateNotePathFromPoints(notePoints[track], progress, opts)
 }
 
-func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathOpts) *CachedPath {
+func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathOpts) *cache.CachedPath {
 	if len(pts) == 0 {
 		return nil
 	}
@@ -91,9 +92,9 @@ func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathO
 	opts.color.A = opts.alpha
 
 	ui.ColorVertices(vertices, opts.color)
-	cachedPath := &CachedPath{
-		vertices: vertices,
-		indices:  indices,
+	cachedPath := &cache.CachedPath{
+		Vertices: vertices,
+		Indices:  indices,
 	}
 	return cachedPath
 }

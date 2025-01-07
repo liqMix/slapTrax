@@ -4,100 +4,55 @@ import (
 	"math"
 	"time"
 
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
-// CacheKey represents a unique identifier for cached vector paths
-type CacheKey struct {
-	track          types.TrackName
-	progress       int
-	pressed        bool
-	solo           bool
-	hitEffectTrail bool
-}
+// Rebuild reconstructs the entire vector path cache
+func RebuildVectorCache() {
+	renderWidth, renderHeight := display.Window.RenderSize()
+	resolution := getMaxResolution(renderWidth)
 
-// CachedPath stores the pre-calculated vector path data
-type CachedPath struct {
-	vertices []ebiten.Vertex
-	indices  []uint16
-}
+	cache.Path.SetResolution(resolution)
+	logger.Info("Rebuilding vector cache at %dx%d, with %d resolution", renderWidth, renderHeight, resolution)
+	startTime := time.Now()
 
-// VectorCache manages pre-calculated vector paths for improved performance
-type VectorCache struct {
-	renderWidth  int
-	renderHeight int
-	renderScale  float64
-	resolution   int // How many steps to cache (e.g., 100 for 1% increments)
+	buildNoteCache(resolution)
+	buildJudgementLineCache()
 
-	pathCache map[CacheKey]*CachedPath
-
-	disabled bool
-}
-
-// NewVectorCache creates a new vector cache instance
-func NewVectorCache() *VectorCache {
-	cache := &VectorCache{
-		disabled: false,
-	}
-	cache.Rebuild()
-	return cache
+	logger.Info("Rebuilt vector cache in %s", time.Since(startTime))
 }
 
 // getMaxResolution calculates the maximum resolution needed based on track distances
-func (c *VectorCache) getMaxResolution() int {
+func getMaxResolution(renderWidth int) int {
 	maxDistance := 0
-	centerX := float64(c.renderWidth) / 2
+	centerX := float64(renderWidth) / 2
 
 	for _, trackName := range types.TrackNames() {
 		point := notePoints[trackName][0]
-		endPixel := int(point.X * float64(c.renderWidth))
+		endPixel := int(point.X * float64(renderWidth))
 		distance := int(math.Abs(float64(endPixel) - centerX))
 		maxDistance = max(maxDistance, distance)
 	}
 	return maxDistance
 }
 
-// Rebuild reconstructs the entire cache when display parameters change
-func (c *VectorCache) Rebuild() {
-	if c.disabled {
-		return
-	}
-	c.pathCache = make(map[CacheKey]*CachedPath)
-	c.renderWidth, c.renderHeight = display.Window.RenderSize()
-	c.renderScale = display.Window.RenderScale()
-	c.resolution = c.getMaxResolution()
-
-	if c.disabled {
-		return
-	}
-
-	logger.Info("Rebuilding vector cache at %dx%d", c.renderWidth, c.renderHeight)
-	startTime := time.Now()
-
-	c.buildNoteCache()
-	c.buildJudgementLineCache()
-
-	logger.Info("Rebuilt vector cache in %s", time.Since(startTime))
-}
-
 // buildNoteCache pre-calculates all possible note paths
-func (c *VectorCache) buildNoteCache() {
+func buildNoteCache(resolution int) {
 	for _, trackName := range types.TrackNames() {
 		notePts := notePoints[trackName]
-
-		for i := 0; i <= c.resolution; i++ {
-			progress := float32(i) / float32(c.resolution)
+		for i := 0; i <= resolution; i++ {
+			progress := float32(i) / float32(resolution)
 
 			for _, solo := range []bool{true, false} {
 				for _, hitEffectTrail := range []bool{true, false} {
-					key := CacheKey{
-						track:          trackName,
-						progress:       i,
-						solo:           solo,
-						hitEffectTrail: hitEffectTrail,
+					key := &cache.PathCacheKey{
+						TrackName:        int(trackName),
+						Progress:         i,
+						Solo:             solo,
+						IsHitEffectTrail: hitEffectTrail,
 					}
 					alpha := GetNoteFadeAlpha(progress)
 					if hitEffectTrail {
@@ -112,7 +67,7 @@ func (c *VectorCache) buildNoteCache() {
 						solo:            solo,
 					}
 
-					c.pathCache[key] = CreateNotePathFromPoints(notePts, progress, opts)
+					cache.Path.Set(key, CreateNotePathFromPoints(notePts, progress, opts))
 				}
 			}
 		}
@@ -120,71 +75,65 @@ func (c *VectorCache) buildNoteCache() {
 }
 
 // getOrCreatePath retrieves a cached path or creates a new one if needed
-func (c *VectorCache) getOrCreatePath(key CacheKey) *CachedPath {
-	path, exists := c.pathCache[key]
+func getOrCreatePath(key *cache.PathCacheKey) *cache.CachedPath {
+	path := cache.Path.Get(key)
 
-	if !exists {
+	if path == nil {
 		// If not in cache, create new path
-		progress := float32(key.progress) / float32(c.resolution)
+		res := cache.Path.GetResolution()
+		progress := float32(key.Progress) / float32(res)
 		opts := &NotePathOpts{
 			lineWidth:       getJudgementWidth(),
-			isLarge:         !key.solo,
+			isLarge:         !key.Solo,
 			largeWidthRatio: noteComboRatio,
-			color:           key.track.NoteColor(),
+			color:           types.TrackName(key.TrackName).NoteColor(),
 			alpha:           GetNoteFadeAlpha(progress),
-			solo:            key.solo,
+			solo:            key.Solo,
 		}
 
-		path = CreateNotePathFromPoints(notePoints[key.track], progress, opts)
-
-		// Store in cache if not disabled
-		if !c.disabled {
-			c.pathCache[key] = path
-		}
+		path = CreateNotePathFromPoints(notePoints[key.TrackName], progress, opts)
+		cache.Path.Set(key, path)
 	}
 
 	return path
 }
 
 // GetNotePath retrieves the cached path for a regular note
-func (c *VectorCache) GetNotePath(track types.TrackName, note *types.Note, hitEffect bool) *CachedPath {
+func GetNotePath(track types.TrackName, note *types.Note, hitEffect bool) *cache.CachedPath {
 	if note == nil || (note.Progress < 0 || note.Progress > 1) {
 		return nil
 	}
 
+	res := cache.Path.GetResolution()
 	progress := SmoothProgress(note.Progress)
-	quantizedProgress := int(progress * float32(c.resolution))
-	key := CacheKey{
-		track:          track,
-		progress:       quantizedProgress,
-		solo:           note.Solo,
-		hitEffectTrail: hitEffect,
+	quantizedProgress := int(progress * float32(res))
+	key := &cache.PathCacheKey{
+		TrackName:        int(track),
+		Progress:         quantizedProgress,
+		Solo:             note.Solo,
+		IsHitEffectTrail: hitEffect,
 	}
 
-	return c.getOrCreatePath(key)
+	return getOrCreatePath(key)
 }
 
-func (c *VectorCache) buildJudgementLineCache() {
+func buildJudgementLineCache() {
 	for _, trackName := range types.TrackNames() {
 		for _, pressed := range []bool{true, false} {
-			key := CacheKey{
-				track:   trackName,
-				pressed: pressed,
+			key := &cache.PathCacheKey{
+				TrackName: int(trackName),
+				Pressed:   pressed,
 			}
-			c.pathCache[key] = CreateJudgementPath(trackName, pressed)
+			cache.Path.Set(key, CreateJudgementPath(trackName, pressed))
 		}
 	}
 }
 
 // GetJudgementLinePath retrieves the cached path for a judgement line
-func (c *VectorCache) GetJudgementLinePath(track types.TrackName, pressed bool) *CachedPath {
-	if c.disabled {
-		return CreateJudgementPath(track, pressed)
+func GetJudgementLinePath(track types.TrackName, pressed bool) *cache.CachedPath {
+	key := &cache.PathCacheKey{
+		TrackName: int(track),
+		Pressed:   pressed,
 	}
-
-	key := CacheKey{
-		track:   track,
-		pressed: pressed,
-	}
-	return c.getOrCreatePath(key)
+	return getOrCreatePath(key)
 }

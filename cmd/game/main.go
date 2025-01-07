@@ -7,6 +7,7 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal"
 	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
@@ -19,6 +20,13 @@ func main() {
 		logger.Warn("Failed to initialize user: %v", err)
 	}
 	display.InitWindow()
+
+	renderWidth, renderHeight := display.Window.RenderSize()
+	cache.InitCaches(renderWidth, renderHeight)
+
+	// Refresh window after cache init
+	display.Window.Refresh()
+
 	assets.Init(
 		assets.AssetInit{
 			Locale: user.S.Locale,
@@ -35,7 +43,7 @@ func main() {
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
 
-	// Do the game
+	// Do the game thing
 	game := internal.NewGame()
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)

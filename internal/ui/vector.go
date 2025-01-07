@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 )
 
@@ -196,6 +197,13 @@ func (vc *VectorCollection) Add(verts []ebiten.Vertex, inds []uint16) {
 
 	vc.vertIdx += vlen
 	vc.idxIdx += ilen
+}
+
+func (vc *VectorCollection) AddPath(path *cache.CachedPath) {
+	if path == nil {
+		return
+	}
+	vc.Add(path.Vertices, path.Indices)
 }
 
 func (vc *VectorCollection) Draw(img *ebiten.Image) {

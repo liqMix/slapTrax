@@ -1,8 +1,6 @@
 package play
 
-import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-)
+import "github.com/liqmix/ebiten-holiday-2024/internal/types"
 
 const (
 	PULSE_LINE_WIDTH = 5.0
@@ -37,9 +35,9 @@ func (r *Play) addHitTrailEffect(hit *types.HitRecord, p float64) {
 		return
 	}
 	hit.Note.Progress = p
-	path := r.vectorCache.GetNotePath(hit.Note.TrackName, hit.Note, true)
+	path := GetNotePath(hit.Note.TrackName, hit.Note, true)
 	if path != nil {
-		r.vectorCollection.Add(path.vertices, path.indices)
+		r.vectorCollection.AddPath(path)
 	}
 	// progress := SmoothProgress(p)
 	// sin, cos := calculatePulseWave(float64(progress))

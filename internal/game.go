@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/debug"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
@@ -114,10 +115,10 @@ func (g *Game) Update() error {
 
 // Create canvas at render size
 func (g *Game) GetCanvasImage() *ebiten.Image {
-	canvas, ok := display.GetCachedImage("canvas")
+	canvas, ok := cache.Image.Get("canvas")
 	if !ok {
 		canvas = display.NewRenderImage()
-		display.SetCachedImage("canvas", canvas)
+		cache.Image.Set("canvas", canvas)
 	}
 	canvas.Clear()
 	return canvas

@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
@@ -33,10 +34,14 @@ func InitWindow() {
 
 		fixedRenderScale: true,
 	}
-	Window.refresh()
 }
 
-func (w *window) refresh() {
+func (w *window) ClearCaches() {
+	cache.Image.Clear(w.renderWidth, w.renderHeight)
+	cache.Path.Clear(w.renderWidth, w.renderHeight)
+}
+
+func (w *window) Refresh() {
 	// Update the offset and the render scale
 	width, height := w.DisplaySize()
 	x, y := w.RenderSize()
@@ -53,7 +58,7 @@ func (w *window) refresh() {
 func (w *window) SetDisplaySize(width, height float64) {
 	w.displayWidth = width
 	w.displayHeight = height
-	w.refresh()
+	w.Refresh()
 }
 
 func (w *window) SetFixedRenderScale(fixed bool) {
@@ -71,7 +76,7 @@ func (w *window) IsFullscreen() bool {
 func (w *window) SetFullscreen(fullscreen bool) {
 	ebiten.SetFullscreen(fullscreen)
 	w.fullScreen = fullscreen
-	w.refresh()
+	w.Refresh()
 }
 
 func (w *window) GetMonitorSize() (float64, float64) {
@@ -96,7 +101,6 @@ func (w *window) GetScreenDrawOptions() *ebiten.DrawImageOptions {
 
 func (w *window) SetRenderScale(s float64) {
 	w.renderScale = s
-	clearImageCache()
 }
 
 func (w *window) SetRenderSize(width, height int) {
@@ -106,8 +110,7 @@ func (w *window) SetRenderSize(width, height int) {
 
 	w.renderWidth = width
 	w.renderHeight = height
-	clearImageCache()
-	RebuildCaches()
+	w.ClearCaches()
 	w.SetDisplaySize(w.displayWidth, w.displayHeight)
 }
 

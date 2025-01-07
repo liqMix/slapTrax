@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
@@ -23,11 +24,11 @@ func (r *Play) addJudgementPath(track *types.Track) {
 	if track.IsPressed() {
 		width *= 2
 	}
-	cachedPath := r.vectorCache.GetJudgementLinePath(track.Name, track.IsPressed())
-	r.vectorCollection.Add(cachedPath.vertices, cachedPath.indices)
+	path := GetJudgementLinePath(track.Name, track.IsPressed())
+	r.vectorCollection.AddPath(path)
 }
 
-func CreateJudgementPath(track types.TrackName, pressed bool) *CachedPath {
+func CreateJudgementPath(track types.TrackName, pressed bool) *cache.CachedPath {
 	return CreateNotePath(track, 1, &NotePathOpts{
 		lineWidth:       judgementWidth,
 		largeWidthRatio: judgementPressedRatio,

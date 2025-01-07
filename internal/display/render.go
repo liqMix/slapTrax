@@ -3,6 +3,7 @@ package display
 import (
 	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 )
 
@@ -60,12 +61,12 @@ func (r *BaseRenderer) Init(render func(*ebiten.Image, *ebiten.DrawImageOptions)
 }
 
 func (r *BaseRenderer) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	img, ok := GetCachedImage(r.id)
+	img, ok := cache.Image.Get(r.id)
 	if !ok {
 		img = NewRenderImage()
 		r.static(img, opts)
 		if img != nil {
-			SetCachedImage(r.id, img)
+			cache.Image.Set(r.id, img)
 		}
 	}
 	if img != nil {
