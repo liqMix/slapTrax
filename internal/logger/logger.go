@@ -16,6 +16,8 @@ var (
 	GetMessages    = l.GetMessages
 	IsDebugEnabled = l.IsDebugEnabled
 	ToggleDebug    = l.ToggleDebug
+	StartTimer     = l.StartTimer
+	EndTimer       = l.EndTimer
 )
 
 type logLevel string
@@ -74,13 +76,32 @@ type Message struct {
 type logger struct {
 	enableDebug bool
 	messages    []*Message
+	timers      map[string]time.Time
 }
 
 // New creates a new Logger instance
 func new() *logger {
 	return &logger{
 		enableDebug: true,
+		timers:      make(map[string]time.Time),
 	}
+}
+
+// StartTimer starts a timer with the given name
+func (l *logger) StartTimer(name string) {
+	l.timers[name] = time.Now()
+}
+
+// EndTimer ends a timer with the given name and logs the duration
+func (l *logger) EndTimer(name string) {
+	start, ok := l.timers[name]
+	if !ok {
+		l.Error("Timer %s not found", name)
+		return
+	}
+	delete(l.timers, name)
+	duration := time.Since(start)
+	l.Debug("Timer %s took %s", name, duration)
 }
 
 func (l *logger) emit(m *Message) {
