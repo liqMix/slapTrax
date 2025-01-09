@@ -4,52 +4,75 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/external"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
 
+type SongDetails struct {
+	// Clickable to navigate to song meta links
+	title   *ui.HotLink
+	artist  *ui.HotLink
+	album   *ui.HotLink
+	charter *ui.HotLink
+
+	// Display only
+	art     *ui.Element
+	bpm     *ui.Element
+	version *ui.Element
+	year    *ui.Element
+
+	chartText      *ui.Element
+	difficultyText *ui.Element
+	difficulties   []*ui.Element
+
+	// Positions
+	panelSize        *ui.Point
+	difficultyCenter *ui.Point
+}
+
 func NewSongDetails() *SongDetails {
 	d := &SongDetails{}
+	offset := float64(ui.TextHeight(nil)) * 1.2
+	size := ui.Point{X: 0.15, Y: 0.1}
 	center := ui.Point{
 		X: detailsTop.X,
-		Y: detailsTop.Y,
+		Y: detailsTop.Y + offset*1.5,
 	}
-	offset := float64(ui.TextHeight(nil)) * 1.2
 
 	// Art
 	e := ui.NewElement()
 	e.SetCenter(center)
-	e.SetSize(ui.Point{X: artSize, Y: artSize})
+	e.SetSize(size)
 	d.art = e
-	center.Y += artSize/2 + offset
+	center.Y += size.Y + offset*2
 
 	// Track Details
-	scale := 1.5
-	b := ui.NewButton()
+	size = ui.Point{X: 0.1, Y: 0.025}
+	b := ui.NewHotLink()
 	b.SetCenter(center)
-	b.SetScale(scale)
+	b.SetSize(size)
 	b.SetTextBold(true)
+	b.SetTextScale(1.25)
 	d.title = b
 	center.Y += offset
 
-	scale = 1.2
-	b = ui.NewButton()
+	b = ui.NewHotLink()
 	b.SetCenter(center)
-	b.SetScale(scale)
+	b.SetSize(size.Scale(1.2))
 	d.artist = b
 	center.Y += offset
 
-	b = ui.NewButton()
+	b = ui.NewHotLink()
 	b.SetCenter(center)
-	b.SetScale(scale)
+	b.SetSize(size.Scale(1.2))
 	d.album = b
 	center.Y += offset
 
-	scale = 1.0
+	size = ui.Point{X: 0.15, Y: 0.1}
 	e = ui.NewElement()
+	e.SetSize(size)
 	e.SetCenter(center)
 	d.year = e
 	center.Y += offset
@@ -59,37 +82,38 @@ func NewSongDetails() *SongDetails {
 	center.Y += offset * 2
 
 	// Difficulties
-	scale = 1.2
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(l.DIFFICULTIES)
-	e.SetScale(scale)
+	e.SetText(l.String(l.DIFFICULTIES))
+	e.SetSize(size.Scale(1.2))
 	e.SetTextBold(true)
 	d.difficultyText = e
-	center.Y += offset * scale
+	// center.Y += offset * e.GetSize().Y
 
 	d.difficultyCenter = &ui.Point{
 		X: center.X,
 		Y: center.Y,
 	}
-	center.Y += offset * 2
+	// center.Y += offset * 2
 
 	// Chart Details
 	e = ui.NewElement()
 	e.SetCenter(center)
-	e.SetText(l.CHART)
-	e.SetScale(scale)
+	e.SetText(l.String(l.CHART))
+	e.SetSize(size)
 	e.SetTextBold(true)
 	d.chartText = e
 	center.Y += offset
 
 	e = ui.NewElement()
 	e.SetCenter(center)
+	e.SetSize(size)
 	center.Y += offset
 	d.version = e
 
-	b = ui.NewButton()
+	b = ui.NewHotLink()
 	b.SetCenter(center)
+	b.SetSize(size)
 	center.Y += offset * 2
 	d.charter = b
 
@@ -119,29 +143,20 @@ func (s *SongDetails) UpdateDetails(song *types.Song) {
 
 	links := song.GetSongLinks()
 	if links != nil {
-		s.title.SetTrigger(func() {
-			external.OpenURL(song.TitleLink)
-		})
+		s.title.SetURL(links.TitleLink)
+		s.artist.SetURL(links.ArtistLink)
+		s.album.SetURL(links.AlbumLink)
 
-		s.artist.SetTrigger(func() {
-			external.OpenURL(song.ArtistLink)
-		})
-
-		s.album.SetTrigger(func() {
-			external.OpenURL(song.AlbumLink)
-		})
 		if links.CharterLink != "" {
-			s.charter.SetTrigger(func() {
-				external.OpenURL(links.CharterLink)
-			})
+			s.charter.SetURL(links.CharterLink)
 		} else {
-			s.charter.SetTrigger(nil)
+			s.charter.SetURL("")
 		}
 	} else {
-		s.title.SetTrigger(nil)
-		s.artist.SetTrigger(nil)
-		s.album.SetTrigger(nil)
-		s.charter.SetTrigger(nil)
+		s.title.SetURL("")
+		s.artist.SetURL("")
+		s.album.SetURL("")
+		s.charter.SetURL("")
 	}
 
 	s.art.SetImage(song.Art)
@@ -195,11 +210,12 @@ func (s *SongDetails) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) 
 	s.chartText.Draw(screen, opts)
 	s.version.Draw(screen, opts)
 	s.charter.Draw(screen, opts)
-	s.difficultyText.Draw(screen, opts)
-	for _, d := range s.difficulties {
-		d.Draw(screen, opts)
-	}
+	// s.difficultyText.Draw(screen, opts)
+	// for _, d := range s.difficulties {
+	// 	d.Draw(screen, opts)
+	// }
 }
+
 func (s *SongDetails) Update() {
 	s.title.Update()
 	s.artist.Update()

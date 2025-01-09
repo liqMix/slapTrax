@@ -5,24 +5,33 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/tinne26/etxt"
 )
 
 type Element struct {
 	Component
 
-	image          *ebiten.Image
-	text           string
-	textColor      color.RGBA
-	textBold       bool
-	scale          float64
-	forceTextColor bool
+	image *ebiten.Image
+	text  string
+
+	imageScale float64
+	imageWidth float64
+
+	textOptions      *TextOptions
+	textBold         bool
+	invertHoverColor bool
 }
 
 func NewElement() *Element {
-	e := Element{scale: 1.0, textColor: types.White.C()}
-	return &e
+	textOpts := GetDefaultTextOptions()
+	e := &Element{
+		Component: Component{
+			center: &Point{},
+			size:   &Point{},
+		},
+		textOptions: textOpts,
+	}
+	return e
 }
 
 func (e *Element) SetText(text string) {
@@ -30,17 +39,18 @@ func (e *Element) SetText(text string) {
 		text = l.String(l.UNKNOWN)
 	}
 	e.text = text
-	w := TextWidth(nil, text)
-	h := TextHeight(nil)
-	e.SetSize(Point{float64(w), float64(h)})
+}
+
+func (e *Element) SetTextScale(scale float64) {
+	e.textOptions.Scale = scale
 }
 
 func (e *Element) SetTextColor(color color.RGBA) {
-	e.textColor = color
+	e.textOptions.Color = color
 }
 
-func (e *Element) ForceTextColor() {
-	e.forceTextColor = true
+func (e *Element) InvertHoverColor() {
+	e.invertHoverColor = true
 }
 
 func (e *Element) GetText() string {
@@ -52,107 +62,69 @@ func (e *Element) SetTextBold(b bool) {
 }
 
 func (e *Element) SetImage(img *ebiten.Image) {
-	e.image = img
-	if img != nil {
-		w, h := img.Bounds().Dx(), img.Bounds().Dy()
-
-		size := e.GetSize()
-		if size == nil {
-			e.SetSize(Point{float64(w), float64(h)})
-		} else {
-			// Scale image to fit size
-			eW, eH := size.ToRender()
-			scaleW := eW / float64(w)
-			scaleH := eH / float64(h)
-			if scaleW < scaleH {
-				e.SetScale(scaleW)
-			} else {
-				e.SetScale(scaleH)
-			}
-		}
-	}
-}
-
-func (e *Element) SetScale(scale float64) {
-	e.scale = scale
-}
-
-const hoveredMarkerLeft = "> "
-const hoveredMarkerRight = " <"
-
-func (e *Element) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	if e.hidden {
+	if img == nil {
 		return
 	}
-	t := e.text
-	if e.image == nil && len(e.text) == 0 {
-		t = l.String(l.UNKNOWN)
+
+	width, _ := e.GetSize().ToRender()
+	scale := width / float64(img.Bounds().Dx())
+	e.image = img
+	e.imageScale = scale
+	e.imageWidth = PointFromRender(float64(img.Bounds().Dx()), 0).X
+}
+
+const hoverScale = 1.25
+
+func (e *Element) DrawMarkers(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	if !e.hovered {
+		return
+	}
+
+	textOpts := &TextOptions{
+		Align: etxt.Center,
+		Scale: e.textOptions.Scale * hoverScale,
+		Color: CornerTrackColor(),
+	}
+	if e.invertHoverColor {
+		textOpts.Color = CenterTrackColor()
+	}
+
+	width := TextWidth(textOpts, hoverMarkerLeft)
+	if e.image != nil {
+		width += e.imageWidth * e.imageScale
+	} else {
+		width += TextWidth(textOpts, e.text)
+	}
+
+	DrawHoverMarkersCenteredAt(screen, e.center, &Point{X: width, Y: 0}, textOpts, opts)
+}
+
+func (e *Element) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	if e.hidden || (e.image == nil && len(e.text) == 0) {
+		return
 	}
 
 	center := e.GetCenter()
-	if center == nil {
-		return
-	}
-
-	scale := e.scale
-	if e.IsHovered() {
-		scale = 1.5 * scale
-	}
 
 	if e.image != nil {
-		DrawImageAt(screen, e.image, center, scale, opts)
-	}
-
-	if len(t) > 0 && e.scale > 0 {
-		textClr := e.textColor
-		if e.disabled {
-			textClr = color.RGBA{
-				R: textClr.R / 2,
-				G: textClr.G / 2,
-				B: textClr.B / 2,
-				A: textClr.A,
-			}
-		} else if e.hovered {
-			hoverTextOpts := &TextOptions{
-				Align: etxt.Center,
-				Scale: scale,
-				Color: CornerTrackColor(),
-			}
-			if !e.forceTextColor {
-				textClr = CenterTrackColor()
-			}
-			width := TextWidth(nil, t)*scale + TextWidth(nil, hoveredMarkerLeft)
-
-			DrawTextAt(
-				screen,
-				hoveredMarkerLeft,
-				&Point{
-					X: center.X - float64(width/2),
-					Y: center.Y,
-				},
-				hoverTextOpts,
-				opts,
-			)
-			DrawTextAt(
-				screen,
-				hoveredMarkerRight,
-				&Point{
-					X: center.X + float64(width/2),
-					Y: center.Y,
-				},
-				hoverTextOpts,
-				opts,
-			)
+		DrawImageAt(screen, e.image, center, e.imageScale, opts)
+	} else {
+		textScale := e.textOptions.Scale
+		textClr := e.textOptions.Color
+		if e.hovered {
+			textScale *= hoverScale
 		}
 
+		// Plain draw
 		textOpts := &TextOptions{
 			Align: etxt.Center,
-			Scale: scale,
+			Scale: textScale,
 			Color: textClr,
 		}
-		DrawTextAt(screen, t, center, textOpts, opts)
+		DrawTextAt(screen, e.text, center, textOpts, opts)
 		if e.textBold {
-			DrawTextAt(screen, t, &Point{X: center.X + 0.001, Y: center.Y}, textOpts, opts)
+			DrawTextAt(screen, e.text, &Point{X: center.X + 0.001, Y: center.Y}, textOpts, opts)
 		}
 	}
+	e.DrawMarkers(screen, opts)
 }

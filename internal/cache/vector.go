@@ -25,18 +25,34 @@ type PathCache struct {
 	resolution   int // How many steps to cache (e.g., 100 for 1% increments)
 
 	cache map[PathCacheKey]*CachedPath
+	cbs   []*func()
 }
 
-func InitPathCache(renderWidth, renderHeight, resolution int) {
-	Path = NewPathCache(renderWidth, renderHeight, resolution)
+func InitPathCache() {
+	Path = NewPathCache()
 }
 
-func NewPathCache(renderWidth, renderHeight, resolution int) *PathCache {
+func NewPathCache() *PathCache {
 	return &PathCache{
-		renderWidth:  renderWidth,
-		renderHeight: renderHeight,
-		resolution:   resolution,
-		cache:        make(map[PathCacheKey]*CachedPath),
+		cache: make(map[PathCacheKey]*CachedPath),
+		cbs:   make([]*func(), 0),
+	}
+}
+
+func (c *PathCache) AddCb(cb *func()) {
+	c.cbs = append(c.cbs, cb)
+}
+
+func (c *PathCache) RemoveCbs() {
+	c.cbs = make([]*func(), 0)
+}
+
+func (c *PathCache) RemoveCb(cb *func()) {
+	for i, v := range c.cbs {
+		if v == cb {
+			c.cbs = append(c.cbs[:i], c.cbs[i+1:]...)
+			return
+		}
 	}
 }
 
@@ -55,19 +71,29 @@ func (c *PathCache) SetResolution(resolution int) {
 func (c *PathCache) ForceClear() {
 	// ok fine fine, I'll clear it
 	c.cache = make(map[PathCacheKey]*CachedPath)
+	if c.cbs != nil {
+		for _, cb := range c.cbs {
+			(*cb)()
+		}
+	}
 }
 
 // If same render size or empty cache, no need to clear
 // Resolution is currently tied directly to render size,
 // so we don't need to clear if resolution changes
-func (c *PathCache) Clear(renderWidth, renderHeight int) bool {
+func (c *PathCache) Clear(renderWidth, renderHeight int) {
 	if len(c.cache) == 0 {
-		return true
+		return
 	} else if c.renderWidth == renderWidth && c.renderHeight == renderHeight {
-		return false
+		return
 	}
 	c.cache = make(map[PathCacheKey]*CachedPath)
-	return true
+	if c.cbs != nil {
+		for _, cb := range c.cbs {
+			(*cb)()
+		}
+	}
+	return
 }
 
 func (c *PathCache) Get(key *PathCacheKey) *CachedPath {

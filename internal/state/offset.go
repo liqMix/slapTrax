@@ -58,12 +58,12 @@ type weightedHit struct {
 }
 
 func NewOffsetState() *Offset {
-	if !user.S.PromptedOffsetCheck {
-		user.S.PromptedOffsetCheck = true
+	if !user.S().PromptedOffsetCheck {
+		user.S().PromptedOffsetCheck = true
 		user.Save()
 	}
-	aOffset := int64(user.S.AudioOffset)
-	iOffset := int64(user.S.InputOffset)
+	aOffset := int64(user.S().AudioOffset)
+	iOffset := int64(user.S().InputOffset)
 
 	now := time.Now()
 	state := &Offset{
@@ -285,8 +285,8 @@ func (s *Offset) resetOffsets() {
 }
 
 func (s *Offset) saveAndExit() error {
-	user.S.AudioOffset = s.AudioOffset
-	user.S.InputOffset = s.InputOffset
+	user.S().AudioOffset = s.AudioOffset
+	user.S().InputOffset = s.InputOffset
 	return s.exit()
 }
 

@@ -54,25 +54,25 @@ const (
 func (r HitRating) String() string {
 	switch r {
 	case Perfect:
-		return "Perfect"
+		return "PERFECT"
 	case Good:
-		return "Good"
+		return "GOOD"
 	case Bad:
-		return "Bad"
+		return "OK"
 	case Miss:
-		return "Miss"
+		return "MISS"
 	}
-	return "None"
+	return ""
 }
 
-func (r HitRating) Value() int {
+func (r HitRating) Value() float64 {
 	switch r {
 	case Perfect:
-		return 10
+		return 1
 	case Good:
-		return 5
+		return 0.5
 	case Bad:
-		return 0
+		return 0.25
 	}
 	return 0
 }

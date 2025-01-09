@@ -63,7 +63,7 @@ func NewPlayState(args *PlayArgs) *Play {
 }
 
 func (p *Play) GetTravelTime() int64 {
-	return int64(travelTime / user.S.LaneSpeed)
+	return int64(travelTime / user.S().LaneSpeed)
 }
 
 func (p *Play) restart() {
@@ -90,7 +90,7 @@ func (p *Play) getGracePeriod() int64 {
 }
 
 func (p *Play) getOffsetTime() int64 {
-	return user.S.AudioOffset + config.INHERENT_OFFSET
+	return user.S().AudioOffset + config.INHERENT_OFFSET
 }
 
 func (p *Play) inGracePeriod() bool {
@@ -157,7 +157,7 @@ func (p *Play) Update() error {
 			}
 		}
 	} else {
-		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + user.S.AudioOffset
+		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + user.S().AudioOffset
 	}
 
 	// Update the tracks

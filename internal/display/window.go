@@ -1,6 +1,7 @@
 package display
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -26,17 +27,18 @@ type window struct {
 
 func InitWindow() {
 	Window = window{
-		displayWidth:  float64(user.S.ScreenWidth),
-		displayHeight: float64(user.S.ScreenHeight),
+		displayWidth:  float64(user.S().ScreenWidth),
+		displayHeight: float64(user.S().ScreenHeight),
 
-		renderWidth:  user.S.RenderWidth,
-		renderHeight: user.S.RenderHeight,
+		renderWidth:  user.S().RenderWidth,
+		renderHeight: user.S().RenderHeight,
 
 		fixedRenderScale: true,
 	}
 }
 
 func (w *window) ClearCaches() {
+	fmt.Println("Clearing caches")
 	cache.Image.Clear(w.renderWidth, w.renderHeight)
 	cache.Path.Clear(w.renderWidth, w.renderHeight)
 }
@@ -100,6 +102,10 @@ func (w *window) GetScreenDrawOptions() *ebiten.DrawImageOptions {
 }
 
 func (w *window) SetRenderScale(s float64) {
+	if w.renderScale == s {
+		return
+	}
+	w.ClearCaches()
 	w.renderScale = s
 }
 

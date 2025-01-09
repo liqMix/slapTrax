@@ -28,15 +28,11 @@ func (p *Point) Copy() *Point {
 	return &Point{X: p.X, Y: p.Y}
 }
 
-func (p *Point) Translate(dx, dy float64) {
-	p.X += dx
-	p.Y += dy
+func (p *Point) Translate(dx, dy float64) Point {
+	return Point{X: p.X + dx, Y: p.Y + dy}
 }
-func (p *Point) TranslateX(dx float64) {
-	p.X += dx
-}
-func (p *Point) TranslateY(dy float64) {
-	p.Y += dy
+func (p *Point) Scale(s float64) Point {
+	return Point{X: p.X * s, Y: p.Y * s}
 }
 
 func (p *Point) V() (float64, float64) {

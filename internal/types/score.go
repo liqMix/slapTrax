@@ -1,6 +1,10 @@
 package types
 
+import "image/color"
+
 type SongRating int
+
+const maxScore = 100000
 
 const (
 	RatingSSS SongRating = iota
@@ -10,6 +14,8 @@ const (
 	RatingB
 	RatingF
 )
+
+var Ratings = []SongRating{RatingSSS, RatingSS, RatingS, RatingA, RatingB, RatingF}
 
 func (r SongRating) String() string {
 	switch r {
@@ -29,54 +35,69 @@ func (r SongRating) String() string {
 	return "F"
 }
 
+func (r SongRating) Color() color.RGBA {
+	switch r {
+	case RatingSSS:
+		return Red.C()
+	case RatingSS:
+		return Orange.C()
+	case RatingS:
+		return Yellow.C()
+	case RatingA:
+		return LightBlue.C()
+	case RatingB:
+		return Green.C()
+	case RatingF:
+		return Gray.C()
+	}
+	return Gray.C()
+}
+
 func (r SongRating) Threshold() int {
 	switch r {
 	case RatingSSS:
-		return 100
+		return maxScore
 	case RatingSS:
-		return 90
+		return maxScore * 0.9
 	case RatingS:
-		return 80
+		return maxScore * 0.8
 	case RatingA:
-		return 70
+		return maxScore * 0.7
 	case RatingB:
-		return 60
+		return maxScore * 0.6
 	case RatingF:
 		return 0
 	}
 	return 0
 }
 
-// scoreThresholds is the minimum percentage of perfect/good hits required to achieve a rating
-var scoreThresholds map[SongRating]int = map[SongRating]int{
-	RatingSSS: 100,
-	RatingSS:  90,
-	RatingS:   80,
-	RatingA:   70,
-	RatingB:   60,
-	RatingF:   0,
-}
+func GetSongRating(score int) SongRating {
+	for _, r := range Ratings {
+		if score >= r.Threshold() {
+			return r
+		}
+	}
 
-// type ScoreRecord struct {
-// 	songChecksum string
-// 	score        *Score
-// }
+	return RatingF
+}
 
 type Score struct {
 	Song       *Song
 	Difficulty Difficulty
 	TotalNotes int
 
-	Rating  SongRating
-	Perfect int
-	Good    int
-	Bad     int
-	Miss    int
+	TotalScore int
+	Rating     SongRating
+	Perfect    int
+	Good       int
+	Bad        int
+	Miss       int
 
 	Combo    int
 	MaxCombo int
 
 	HitRecords []*HitRecord
+	hitValue   int
 }
 
 var score *Score
@@ -89,6 +110,7 @@ func NewScore(song *Song, difficulty Difficulty) *Score {
 		Difficulty: difficulty,
 		TotalNotes: totalNotes,
 		HitRecords: make([]*HitRecord, 0, totalNotes),
+		hitValue:   maxScore / totalNotes,
 	}
 	return score
 }
@@ -129,6 +151,7 @@ func AddHit(h *HitRecord) {
 	if s.Combo > s.MaxCombo {
 		s.MaxCombo = s.Combo
 	}
+	s.TotalScore += int(hitType.Value() * float64(s.hitValue))
 }
 
 func (s *Score) AddMiss(n *Note) {
@@ -141,18 +164,6 @@ func (s *Score) AddMiss(n *Note) {
 	s.Combo = 0
 }
 
-func (s *Score) GetScore() int {
-	return s.Perfect*Perfect.Value() +
-		s.Good*Good.Value() +
-		s.Bad*Bad.Value()
-}
-
-func (s *Score) GetRating() SongRating {
-	percentage := (s.Perfect + s.Good) / s.TotalNotes
-	for rating, threshold := range scoreThresholds {
-		if percentage >= threshold {
-			return rating
-		}
-	}
-	return RatingF
+func (s *Score) GetAccuracy() float64 {
+	return float64(s.Perfect) / float64(s.TotalNotes)
 }

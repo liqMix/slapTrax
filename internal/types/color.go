@@ -174,13 +174,13 @@ var themeToColors = map[NoteColorTheme]map[TrackType]color.RGBA{
 
 func (t NoteColorTheme) CenterColor() color.RGBA {
 	if t == NoteColorThemeCustom {
-		return ColorFromHex(user.S.CenterNoteColor)
+		return ColorFromHex(user.S().CenterNoteColor)
 	}
 	return themeToColors[t][TrackTypeCenter]
 }
 func (t NoteColorTheme) CornerColor() color.RGBA {
 	if t == NoteColorThemeCustom {
-		return ColorFromHex(user.S.CornerNoteColor)
+		return ColorFromHex(user.S().CornerNoteColor)
 	}
 	return themeToColors[t][TrackTypeCorner]
 }

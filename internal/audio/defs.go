@@ -24,13 +24,11 @@ func (b BGMCode) Path() string {
 type SFXCode string
 
 const (
-	SFXNone        SFXCode = "none"
-	SFXOffset      SFXCode = "offset"
-	SFXHat         SFXCode = "hat"
-	SFXSelectUp    SFXCode = "selectup"
-	SFXSelectDown  SFXCode = "selectdown"
-	SFXSelectLeft  SFXCode = "selectleft"
-	SFXSelectRight SFXCode = "selectright"
+	SFXNone       SFXCode = "none"
+	SFXOffset     SFXCode = "offset"
+	SFXHat        SFXCode = "hat"
+	SFXSelectUp   SFXCode = "selectup"
+	SFXSelectDown SFXCode = "selectdown"
 	// SFXNoteHit          SFXCode = "hit"
 	// SFXSelect     SFXCode = "select"
 )

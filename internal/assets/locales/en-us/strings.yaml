@@ -10,9 +10,11 @@ continue: "Corntinue"
 off: "Off"
 on: "On"
 chart: "Chart"
+guest: "Guest"
 difficulties: "Difficulties"
 corner: "Corner"
 center: "Center"
+leaderboard: "Top Scores"
 
 # Difficulties
 difficulty.easy: "Easy"
@@ -41,15 +43,16 @@ state.song.selection: "Select Song"
 state.difficulty.selection: "Select Difficulty"
 state.login: "Login"
 state.result: "Results"
+state.howtoplay: "How to Play"
 
 # Login
 login.text.offline: "Offline Mode"
 login.text.online: "Online Mode"
-login.save.local: "Save Locally"
-login.guest: "Play as Guest"
 login.login: "Login"
+login.logout: "Logout"
 login.username: "Username"
 login.password: "Password"
+login.continue: "Continue Offline"
 
 # Graphics Settings
 settings.gfx: "Graphics"
@@ -89,7 +92,8 @@ settings.access.nohiteffect: "Disable Hit Effects"
 settings.access.nolaneeffect: "Disable Lane Effects"
 
 # Dialogs
-dialog.checkoffsets: "It looks like you haven't set your offsets yet.\nThis is important for the game to work correctly.\nIf your timing seems to be off, please adjust them in the settings."
+dialog.newplayer: "It looks like you haven't set your offsets yet.\nThis is important for the game to work correctly.\nIf your timing seems to be off, please adjust them in the settings."
+dialog.howtoplay: ""
 
 # Play State
 state.play.restart: "Restart"

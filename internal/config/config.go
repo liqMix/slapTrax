@@ -18,5 +18,5 @@ const (
 	TRAVEL_TIME         int64   = 2500 // The amount of time it takes for a note to travel from it's spawn point to the hit zone.
 
 	// Server
-	SERVER_ENDPOINT = "http://localhost:8080"
+	SERVER_ENDPOINT = "http://localhost:8080/api/v1"
 )

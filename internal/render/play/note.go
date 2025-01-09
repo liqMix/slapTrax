@@ -73,7 +73,7 @@ func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathO
 	}
 
 	// Calculate line width with depth consideration
-	width := (opts.lineWidth * progress) / float32(display.Window.RenderScale())
+	width := (opts.lineWidth * progress) / float32(display.Window.RenderScale()) * 1.5
 	if opts.isLarge {
 		width *= opts.largeWidthRatio
 	}

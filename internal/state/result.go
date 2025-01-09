@@ -2,8 +2,10 @@ package state
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/external"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
@@ -24,6 +26,19 @@ type Result struct {
 
 func NewResultState(args *ResultStateArgs) *Result {
 	score := args.Score
+
+	go func() {
+		// Send score
+		external.AddScore(&external.Score{
+			Song:       score.Song.Hash,
+			Difficulty: score.Difficulty.String(),
+			Score:      score.TotalScore,
+			MaxCombo:   score.MaxCombo,
+			Accuracy:   score.GetAccuracy(),
+			PlayedAt:   time.Now(),
+		})
+	}()
+
 	r := &Result{score: score}
 	g := ui.NewUIGroup()
 	g.SetHorizontal()
@@ -31,18 +46,20 @@ func NewResultState(args *ResultStateArgs) *Result {
 	var e *ui.Element
 
 	//// Score + Rating
+	size := ui.Point{X: 0.4, Y: 0.2}
 	position := ui.Point{X: 0.5, Y: 0.15}
 	e = ui.NewElement()
 	e.SetCenter(position)
-	e.SetScale(4.0)
-	e.SetText(score.GetRating().String())
+	e.SetSize(size)
+	e.SetText(types.GetSongRating(score.TotalScore).String())
 	r.elements = append(r.elements, e)
-
 	position.Y += 0.1
+
+	size = size.Scale(0.5)
 	e = ui.NewElement()
 	e.SetCenter(position)
-	e.SetScale(2.0)
-	e.SetText(strconv.Itoa(score.GetScore()))
+	e.SetSize(size)
+	e.SetText(strconv.Itoa(score.TotalScore))
 	r.elements = append(r.elements, e)
 	position.Y += 0.2
 

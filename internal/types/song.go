@@ -133,39 +133,9 @@ func (s *Song) GetSongLinks() *SongLinks {
 	if s == nil {
 		return nil
 	}
-	defaultLink := ""
-
 	artistLink := s.ArtistLink
-	hasArtistLink := artistLink != ""
-
 	albumLink := s.AlbumLink
-	hasAlbumLink := albumLink != ""
-
 	titleLink := s.TitleLink
-	hasTitleLink := titleLink != ""
-
-	if hasArtistLink {
-		defaultLink = artistLink
-	} else if hasAlbumLink {
-		defaultLink = albumLink
-	} else if hasTitleLink {
-		defaultLink = titleLink
-	}
-
-	if defaultLink == "" {
-		return nil
-	}
-
-	if !hasArtistLink {
-		artistLink = defaultLink
-	}
-	if !hasAlbumLink {
-		albumLink = defaultLink
-	}
-	if !hasTitleLink {
-		titleLink = defaultLink
-	}
-
 	return &SongLinks{
 		ArtistLink:  artistLink,
 		AlbumLink:   albumLink,

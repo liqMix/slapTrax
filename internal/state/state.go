@@ -32,8 +32,9 @@ var FloatingStates = map[types.GameState]bool{
 	types.GameStateOffset:              true,
 	types.GameStateSettings:            true,
 	types.GameStateDifficultySelection: true,
-	types.GameStateLogin:               true,
 	types.GameStateModal:               true,
+	types.GameStateLogin:               true,
+	types.GameStateHowToPlay:           true,
 }
 
 func New(s types.GameState, arg interface{}) State {
@@ -58,6 +59,8 @@ func New(s types.GameState, arg interface{}) State {
 		state = NewLoginState()
 	case types.GameStateModal:
 		state = NewModalState(arg.(*ModalStateArgs))
+	case types.GameStateHowToPlay:
+		state = NewHowToPlayState()
 	}
 
 	if state == nil {

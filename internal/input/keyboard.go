@@ -17,6 +17,8 @@ type keyboard struct {
 	heldBits     bimts
 
 	watchedKeys map[ebiten.Key]int64
+
+	runes []rune
 }
 
 func getBitPosition(key ebiten.Key) (wordIndex, bitOffset int) {
@@ -27,8 +29,10 @@ func getBitPosition(key ebiten.Key) (wordIndex, bitOffset int) {
 func newKeyboard() keyboard {
 	return keyboard{
 		watchedKeys: make(map[ebiten.Key]int64),
+		runes:       make([]rune, 16),
 	}
 }
+
 func (k *keyboard) update() {
 	// Clear all bits
 	for j := range k.pressedBits {
@@ -63,6 +67,10 @@ func (k *keyboard) update() {
 			k.watchedKeys[key]++
 		}
 	}
+}
+
+func (k *keyboard) Runes() []rune {
+	return ebiten.AppendInputChars(k.runes[:0])
 }
 
 func (k *keyboard) Get(s Status) []ebiten.Key {

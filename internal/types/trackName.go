@@ -68,7 +68,7 @@ func TrackTypeFromName(n TrackName) TrackType {
 }
 
 func (t TrackType) Color() color.RGBA {
-	theme := NoteColorTheme(user.S.NoteColorTheme)
+	theme := NoteColorTheme(user.S().NoteColorTheme)
 	switch t {
 	case TrackTypeCenter:
 		return theme.CenterColor()

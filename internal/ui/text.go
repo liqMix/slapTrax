@@ -10,39 +10,45 @@ import (
 	"github.com/tinne26/etxt"
 )
 
-func TextHeight(text *etxt.Renderer) float64 {
-	if text == nil {
-		text = getTextRenderer(nil)
-	}
-	_, y := display.Window.RenderSize()
-	h := text.Measure(" ").Height().ToFloat64() * getRenderTextScale()
-	return h / float64(y)
-}
-
-func TextWidth(text *etxt.Renderer, s string) float64 {
-	if text == nil {
-		text = getTextRenderer(nil)
-	}
-	x, _ := display.Window.RenderSize()
-	w := text.Measure(s).Width().ToFloat64() * getRenderTextScale()
-	return w / float64(x)
-}
-
 type TextOptions struct {
 	Align etxt.Align
 	Scale float64
 	Color color.RGBA
 }
 
-var DefaultOptions = TextOptions{
-	Align: etxt.Center,
-	Scale: 1,
-	Color: types.White.C(),
+var GetDefaultTextOptions = func() *TextOptions {
+	return &TextOptions{
+		Align: etxt.Center,
+		Scale: 1,
+		Color: types.White.C(),
+	}
+}
+
+var defaultWidth, defaultHeight float64 = 1280, 720
+
+func TextHeight(opts *TextOptions) float64 {
+	if opts == nil {
+		opts = GetDefaultTextOptions()
+	}
+	text := getTextRenderer(opts)
+	_, y := display.Window.RenderSize()
+	h := text.Measure(" ").Height().ToFloat64() * getRenderTextScale()
+	return h / float64(y)
+}
+
+func TextWidth(opts *TextOptions, s string) float64 {
+	if opts == nil {
+		opts = GetDefaultTextOptions()
+	}
+	text := getTextRenderer(opts)
+	x, _ := display.Window.RenderSize()
+	w := text.Measure(s).Width().ToFloat64() * getRenderTextScale()
+	return w / float64(x)
 }
 
 func getTextRenderer(opts *TextOptions) *etxt.Renderer {
 	if opts == nil {
-		opts = &DefaultOptions
+		opts = GetDefaultTextOptions()
 	}
 	r := etxt.NewRenderer()
 	r.Utils().SetCache8MiB()
@@ -69,15 +75,16 @@ func saferDraw(txt *etxt.Renderer, screen *ebiten.Image, t string, x, y int) {
 
 func getRenderTextScale() float64 {
 	renderWidth, _ := display.Window.RenderSize()
-	return float64(renderWidth) / 1280
+	return float64(renderWidth) / defaultWidth
 }
+
 func DrawTextAt(screen *ebiten.Image, txt string, center *Point, opts *TextOptions, screenOpts *ebiten.DrawImageOptions) {
 	if center == nil {
 		return
 	}
 
 	if opts == nil {
-		opts = &DefaultOptions
+		opts = GetDefaultTextOptions()
 	}
 	color := opts.Color
 	if screenOpts != nil {
@@ -99,7 +106,7 @@ func DrawTextBlockAt(screen *ebiten.Image, s []string, p *Point, opts *TextOptio
 		return
 	}
 	if opts == nil {
-		opts = &DefaultOptions
+		opts = GetDefaultTextOptions()
 	}
 	color := opts.Color
 	if screenOpts != nil {
@@ -117,4 +124,31 @@ func DrawTextBlockAt(screen *ebiten.Image, s []string, p *Point, opts *TextOptio
 	for i, line := range s {
 		saferDraw(text, screen, line, int(x), int(y)+h*i)
 	}
+}
+
+const hoverMarkerLeft = "> "
+const hoverMarkerRight = " <"
+
+func DrawHoverMarkersCenteredAt(screen *ebiten.Image, center *Point, size *Point, opts *TextOptions, screenOpts *ebiten.DrawImageOptions) {
+	if center == nil {
+		return
+	}
+	if opts == nil {
+		opts = GetDefaultTextOptions()
+	}
+	color := opts.Color
+	if screenOpts != nil {
+		color = ApplyAlphaScale(color, screenOpts.ColorScale.A())
+	}
+	text := getTextRenderer(&TextOptions{
+		Align: opts.Align,
+		Scale: opts.Scale * getRenderTextScale(),
+		Color: color,
+	})
+	w, _ := size.ToRender()
+	x, y := center.ToRender()
+
+	// Draw the selection markers
+	saferDraw(text, screen, hoverMarkerLeft, int(x-w/2), int(y))
+	saferDraw(text, screen, hoverMarkerRight, int(x+w/2), int(y))
 }

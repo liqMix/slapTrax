@@ -1,19 +1,26 @@
 package external
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
 	"time"
 
 	"github.com/pkg/browser"
-
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 )
 
-var client = &http.Client{Timeout: 10 * time.Second}
+var (
+	client         = &http.Client{Timeout: 10 * time.Second}
+	M              = NewManager("storage")
+	HasConnection  = M.HasConnection
+	GetLoginState  = M.GetLoginState
+	Logout         = M.Logout
+	Login          = M.Login
+	Register       = M.Register
+	GetLeaderboard = M.GetLeaderboard
+	AddScore       = M.AddScore
+	PlayOffline    = M.PlayOffline
+)
 
 // Opens browser to URL
 func OpenURL(path string) error {
@@ -23,15 +30,4 @@ func OpenURL(path string) error {
 	}
 
 	return browser.OpenURL(path)
-}
-
-func PingServer() bool {
-	resp, err := client.Get(fmt.Sprintf("%s/health", config.SERVER_ENDPOINT))
-	if err != nil {
-		logger.Error("Failed to ping server: %v", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	return resp.StatusCode != http.StatusOK
 }

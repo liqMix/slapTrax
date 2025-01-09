@@ -102,9 +102,9 @@ func (r *Play) addTrackPath(track *types.Track) {
 	// Set color with transparency
 	color := track.Name.NoteColor()
 	if track.IsPressed() {
-		color.A = 25
+		color.A = 10
 	} else {
-		color.A = 5
+		color.A = 0
 	}
 	ui.ColorVertices(vs, color)
 

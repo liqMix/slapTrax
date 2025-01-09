@@ -41,11 +41,11 @@ func BorderColor() color.RGBA {
 }
 
 func CornerTrackColor() color.RGBA {
-	theme := user.S.NoteColorTheme
+	theme := user.S().NoteColorTheme
 	return types.NoteColorTheme(theme).CornerColor()
 }
 
 func CenterTrackColor() color.RGBA {
-	theme := user.S.NoteColorTheme
+	theme := user.S().NoteColorTheme
 	return types.NoteColorTheme(theme).CenterColor()
 }

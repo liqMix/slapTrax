@@ -97,7 +97,7 @@ func (g *Game) Update() error {
 
 	gs := g.currentState.state
 	if err := gs.Update(); err != nil {
-		return fmt.Errorf("state update failed: %w", err)
+		return err
 	}
 
 	if gs.HasNextState() {

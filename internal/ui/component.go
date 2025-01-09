@@ -2,20 +2,40 @@ package ui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 )
 
-type Interactable interface {
-	Draw(*ebiten.Image, *ebiten.DrawImageOptions)
-	Update()
-
+type Positionable interface {
 	GetCenter() *Point
 	SetCenter(Point)
 
 	GetSize() *Point
 	SetSize(Point)
+}
 
+type Textable interface {
 	GetText() string
 	SetText(string)
+}
+
+type Pressable interface {
+	IsPressed() bool
+	SetPressed(bool)
+}
+
+type Focusable interface {
+	IsFocused() bool
+	SetFocused(bool)
+}
+
+type Componentable interface {
+	Positionable
+	Textable
+	Pressable
+	Focusable
+
+	Draw(*ebiten.Image, *ebiten.DrawImageOptions)
+	Update()
 
 	IsHovered() bool
 	SetHovered(bool)
@@ -36,6 +56,20 @@ type Interactable interface {
 	Trigger()
 }
 
+type UICheckKind int
+
+const (
+	UICheckNone UICheckKind = iota
+	UICheckHover
+	UICheckPress
+	UICheckRelease
+)
+
+type Clickable interface {
+	Componentable
+	Check(UICheckKind) bool
+}
+
 type Component struct {
 	center *Point
 	size   *Point
@@ -43,9 +77,12 @@ type Component struct {
 	disabled bool
 	hidden   bool
 	hovered  bool
-	paneled  bool
-	opacity  float64
-	trigger  func()
+	pressed  bool
+	focused  bool
+
+	paneled bool
+	opacity float64
+	trigger func()
 }
 
 func (c *Component) SetCenter(center Point) { c.center = &center }
@@ -73,6 +110,12 @@ func (c *Component) IsHidden() bool { return c.hidden }
 func (c *Component) SetHovered(h bool) { c.hovered = h }
 func (c *Component) IsHovered() bool   { return c.hovered }
 
+func (c *Component) SetPressed(p bool) { c.pressed = p }
+func (c *Component) IsPressed() bool   { return c.pressed }
+
+func (c *Component) SetFocused(f bool) { c.focused = f }
+func (c *Component) IsFocused() bool   { return c.focused }
+
 func (c *Component) SetPaneled(p bool) { c.paneled = p }
 func (c *Component) IsPaneled() bool   { return c.paneled }
 
@@ -88,8 +131,39 @@ func (c *Component) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		// Panel
 		size := c.GetSize()
 		center := c.GetCenter()
-		DrawNoteThemedRect(screen, center, size)
+		if c.focused {
+			DrawInvertedNoteThemedRect(screen, center, size)
+		} else {
+			DrawNoteThemedRect(screen, center, size)
+		}
 	}
 }
 
 func (c *Component) Update() {}
+
+func (c *Component) Check(kind UICheckKind) bool {
+	if c.disabled || kind == UICheckNone || c.center == nil || c.size == nil {
+		return false
+	}
+	cX, cY := c.center.ToRender()
+	w, h := c.size.ToRender()
+	x, y := cX-w/2, cY-h/2
+	mouseInBounds := input.M.InBounds(x, y, w, h)
+
+	switch kind {
+	case UICheckHover:
+		return mouseInBounds || c.IsFocused()
+	case UICheckPress:
+		if !c.hovered {
+			return false
+		}
+		return mouseInBounds && input.M.Is(ebiten.MouseButtonLeft, input.JustPressed)
+	case UICheckRelease:
+		if !c.pressed {
+			return false
+		}
+		return mouseInBounds && input.M.Is(ebiten.MouseButtonLeft, input.JustReleased)
+	}
+
+	return false
+}

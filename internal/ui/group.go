@@ -9,9 +9,9 @@ import (
 type UIGroup struct {
 	Component
 
-	items          []Interactable
-	current        Interactable
+	items          []Componentable
 	currentIdx     int
+	usingKeyboard  bool
 	horizontal     bool
 	triggerOnHover bool
 }
@@ -19,14 +19,20 @@ type UIGroup struct {
 func NewUIGroup() *UIGroup {
 	return &UIGroup{
 		Component: Component{},
-		items:     make([]Interactable, 0),
+		items:     make([]Componentable, 0),
 	}
 }
 
-func (g *UIGroup) Add(i Interactable) {
+func (g *UIGroup) Add(i Componentable) {
+	if g.disabled {
+		i.SetDisabled(true)
+	}
+
 	g.items = append(g.items, i)
-	if g.current == nil && !i.IsDisabled() {
-		g.Hover(len(g.items) - 1)
+	if g.Get() != nil {
+		g.Select(g.currentIdx)
+	} else {
+		g.currentIdx++
 	}
 }
 
@@ -49,20 +55,42 @@ func (g *UIGroup) SetTriggerOnHover(t bool) {
 	g.triggerOnHover = t
 }
 
-func (g *UIGroup) Hover(idx int) {
-	if g.IsDisabled() || idx < 0 || idx >= len(g.items) {
+func (g *UIGroup) Select(idx int) {
+	if idx < 0 || idx >= len(g.items) || len(g.items) == 0 {
 		return
 	}
 
-	if g.current != nil {
-		g.current.SetHovered(false)
+	item := g.Get()
+	if item != nil {
+		item.SetHovered(false)
+		item.SetPressed(false)
 	}
+
 	g.currentIdx = idx
-	g.current = g.items[idx]
-	g.current.SetHovered(true)
-	if g.triggerOnHover {
-		g.current.Trigger()
+	item = g.Get()
+	if item == nil {
+		return
 	}
+
+	item.SetHovered(true)
+	if g.triggerOnHover {
+		item.Trigger()
+	}
+}
+
+func (g *UIGroup) Get() Componentable {
+	if g.currentIdx < 0 || g.currentIdx >= len(g.items) || len(g.items) == 0 {
+		return nil
+	}
+	current := g.items[g.currentIdx]
+	if current.IsDisabled() {
+		return nil
+	}
+	return current
+}
+
+func (g *UIGroup) GetIndex() int {
+	return g.currentIdx
 }
 
 // Find next not disabled item until the end of the list
@@ -85,9 +113,40 @@ func (g *UIGroup) getPrev() int {
 }
 
 func (g *UIGroup) Update() {
-	if g.IsDisabled() {
+	if g.IsDisabled() || len(g.items) == 0 {
 		return
 	}
+
+	if input.M.DidMove() {
+		g.usingKeyboard = false
+	}
+	for _, item := range g.items {
+		if item != nil && item.IsFocused() {
+			item.Update()
+			return
+		}
+	}
+
+	// if !g.usingKeyboard {
+	// 	for _, item := range g.items {
+	// 		item.Update()
+
+	// 		if item.Check(UICheckHover) {
+	// 			item.SetHovered(true)
+
+	// 			if item.Check(UICheckPress) {
+	// 				item.SetPressed(true)
+
+	// 			} else if item.Check(UICheckRelease) && item.IsPressed() {
+	// 				item.Trigger()
+	// 				item.SetPressed(false)
+	// 				g.Select(g.currentIdx)
+	// 			}
+	// 		} else {
+	// 			item.SetHovered(false)
+	// 		}
+	// 	}
+	// }
 
 	downKey := ebiten.KeyArrowDown
 	upKey := ebiten.KeyArrowUp
@@ -100,67 +159,40 @@ func (g *UIGroup) Update() {
 
 	// Move through buttons with arrow keys
 	if input.K.Is(downKey, input.JustPressed) {
+		g.usingKeyboard = true
 		if g.currentIdx < len(g.items)-1 {
 			next := g.getNext()
 			if next == g.currentIdx {
 				return
 			}
-			g.Hover(next)
-			if g.horizontal {
-				sfxCode = audio.SFXSelectLeft
-			} else {
-				sfxCode = audio.SFXSelectDown
-			}
+			g.Select(next)
+			sfxCode = audio.SFXSelectDown
 		}
 	} else if input.K.Is(upKey, input.JustPressed) {
+		g.usingKeyboard = true
 		if g.currentIdx > 0 {
 			prev := g.getPrev()
 			if prev == g.currentIdx {
 				return
 			}
-			g.Hover(prev)
-			if g.horizontal {
-				sfxCode = audio.SFXSelectRight
-			} else {
-				sfxCode = audio.SFXSelectUp
-			}
+			g.Select(prev)
+			sfxCode = audio.SFXSelectUp
 		}
 	} else if input.K.Is(ebiten.KeyEnter, input.JustPressed) {
-		if g.current != nil {
-			g.current.Trigger()
-		}
+		g.usingKeyboard = true
+		g.items[g.currentIdx].Trigger()
 	}
 
 	if sfxCode != audio.SFXNone {
 		audio.PlaySFX(sfxCode)
 	}
-
-	for i, item := range g.items {
-		item.Update()
-		if item.IsHovered() && i != g.currentIdx {
-			g.Hover(i)
-		}
-	}
-}
-
-func (g *UIGroup) Get() Interactable {
-	if g.current == nil && len(g.items) > 0 {
-		g.Hover(0)
-		return g.current
-	}
-	return g.current
-}
-
-func (g *UIGroup) GetIndex() int {
-	return g.currentIdx
 }
 
 func (g *UIGroup) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	g.Component.Draw(screen, opts)
-
 	if len(g.items) == 0 {
 		return
 	}
+	g.Component.Draw(screen, opts)
 
 	for i, item := range g.items {
 		if i == g.currentIdx {
@@ -170,7 +202,9 @@ func (g *UIGroup) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	}
 
 	// Draw the current item last so it appears on top
-	if g.currentIdx >= 0 {
-		g.items[g.currentIdx].Draw(screen, opts)
+	item := g.Get()
+	if item == nil {
+		return
 	}
+	item.Draw(screen, opts)
 }

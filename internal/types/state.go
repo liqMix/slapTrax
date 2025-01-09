@@ -18,6 +18,8 @@ const (
 	GameStateLogin               GameState = l.STATE_LOGIN
 	GameStateModal               GameState = "modal"
 	GameStateBack                GameState = l.BACK
+	GameStateExit                GameState = l.EXIT
+	GameStateHowToPlay           GameState = "howtoplay"
 )
 
 func (gs GameState) String() string {

@@ -5,27 +5,23 @@ import "github.com/liqmix/ebiten-holiday-2024/internal/assets"
 const (
 	LOCALE = "locale" // The current locale name in locale language
 
-	TITLE              = "title"
-	EXIT               = "exit"
-	BACK               = "back"
-	SAVE               = "save"
-	OK                 = "ok"
-	CANCEL             = "cancel"
-	CONTINUE           = "continue"
-	OFF                = "off"
-	ON                 = "on"
-	CHART              = "chart"
-	CENTER             = "center"
-	CORNER             = "corner"
-	DIFFICULTIES       = "difficulties"
-	DIFFICULTY_EASY    = "difficulty.easy"
-	DIFFICULTY_MEDIUM  = "difficulty.medium"
-	DIFFICULTY_HARD    = "difficulty.hard"
-	DIFFICULTY_UNKNOWN = "difficulty.unknown"
-	HIT_PERFECT        = "hit.perfect"
-	HIT_GOOD           = "hit.good"
-	HIT_BAD            = "hit.bad"
-	HIT_MISS           = "hit.miss"
+	TITLE        = "title"
+	EXIT         = "exit"
+	BACK         = "back"
+	SAVE         = "save"
+	OK           = "ok"
+	CANCEL       = "cancel"
+	CONTINUE     = "continue"
+	OFF          = "off"
+	ON           = "on"
+	GUEST        = "guest"
+	LOADING      = "loading"
+	CHART        = "chart"
+	CENTER       = "center"
+	CORNER       = "corner"
+	DIFFICULTIES = "difficulties"
+	WELCOME      = "welcome"
+	LEADERBOARD  = "leaderboard"
 
 	// Song
 	SONG_ARTIST = "song.artist"
@@ -42,13 +38,15 @@ const (
 	STATE_SONG_SELECTION       = "state.song.selection"
 	STATE_LOGIN                = "state.login"
 	STATE_DIFFICULTY_SELECTION = "state.difficulty.selection"
+	STATE_HOW_TO_PLAY          = "state.howtoplay"
 
 	// Login
 	LOGIN_TEXT_OFFLINE = "login.text.offline"
 	LOGIN_TEXT_ONLINE  = "login.text.online"
 	LOGIN_SAVE_LOCAL   = "login.save.local"
-	LOGIN_GUEST        = "login.guest"
+	LOGIN_CONTINUE     = "login.continue"
 	LOGIN_LOGIN        = "login.login"
+	LOGIN_LOGOUT       = "login.logout"
 	LOGIN_USERNAME     = "login.username"
 	LOGIN_PASSWORD     = "login.password"
 
@@ -90,7 +88,8 @@ const (
 	SETTINGS_ACCESS_NOLANEEFFECT = "settings.access.nolaneeffect"
 
 	// Dialog
-	DIALOG_CHECKOFFSETS = "dialog.checkoffsets"
+	DIALOG_NEW_PLAYER  = "dialog.newplayer"
+	DIALOG_HOW_TO_PLAY = "dialog.howtoplay"
 
 	// States
 	//// Play
@@ -114,6 +113,13 @@ const (
 	NOTE_COLOR_AURORA    = "note.color.aurora"
 	NOTE_COLOR_ARORUA    = "note.color.arorua"
 	NOTE_COLOR_HAMBURGER = "note.color.hamburger"
+
+	// Erors
+	ERROR_USERNAME_REQUIRED   = "error.login.username.required"
+	ERROR_PASSWORD_REQUIRED   = "error.login.password.required"
+	ERROR_REGISTER_FAIL       = "error.register.fail"
+	ERROR_LOGIN_REGISTER_FAIL = "error.login.register.fail"
+	ERROR_LOGIN_FAILED        = "error.login.failed"
 
 	// Etc
 	UNKNOWN = "unknown"

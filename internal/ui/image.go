@@ -6,13 +6,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-//	func NewImage(p *Point) *ebiten.Image {
-//		x, y := p.ToRender()
-//		img := ebiten.NewImage(int(x), int(y))
-//		return img
-//	}
-//
-// Draws image centered on x, y
 func DrawImageAt(screen *ebiten.Image, img *ebiten.Image, center *Point, scale float64, opts *ebiten.DrawImageOptions) {
 	if img == nil || screen == nil {
 		fmt.Println("img or screen is nil")

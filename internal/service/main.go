@@ -65,8 +65,8 @@ func main() {
 		v1.POST("/register", register)
 		v1.POST("/login", login)
 		v1.POST("/refresh", refresh)
-		v1.GET("/auth/check-auto-login", checkAutoLogin)
-		v1.POST("/auth/auto-login", autoLogin)
+		v1.GET("/check-auto-login", checkAutoLogin)
+		v1.POST("/auto-login", autoLogin)
 
 		// Public leaderboard access
 		v1.GET("/scores/leaderboard", getLeaderboard)
@@ -77,9 +77,9 @@ func main() {
 	protected.Use(authMiddleware())
 	{
 		// User routes
-		protected.GET("/users/:id", getUser)
-		protected.PUT("/users/:id", updateUser)
-		protected.GET("/users/:id/scores", getUserScores)
+		protected.GET("/users", getUser)
+		protected.PUT("/users", updateUser)
+		protected.GET("/users/scores", getUserScores)
 
 		// Score routes
 		protected.POST("/scores", createScore)

@@ -27,7 +27,8 @@ var (
 type Settings struct {
 	types.BaseGameState
 
-	tabs *ui.Tabs
+	clearingCache bool
+	tabs          *ui.Tabs
 }
 
 func NewSettingsState() *Settings {
@@ -75,7 +76,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	}
 
 	// screenSizeButton := ui.NewValueElement()
-	// if user.S.Fullscreen {
+	// if user.S().Fullscreen {
 	// 	screenSizeButton.SetDisabled(true)
 	// }
 
@@ -91,7 +92,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	fixedRender.SetTrigger(func() {
 		isFixed := !display.Window.IsFixedRenderScale()
 		display.Window.SetFixedRenderScale(isFixed)
-		user.S.FixedRenderScale = isFixed
+		user.S().FixedRenderScale = isFixed
 	})
 	// Render size
 	renderSize := ui.NewValueElement()
@@ -108,7 +109,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	currentRenderIdx := 0
 	for i, size := range renderSizes {
 		w, h := size.Value()
-		if user.S.RenderWidth == w && user.S.RenderHeight == h {
+		if user.S().RenderWidth == w && user.S().RenderHeight == h {
 			currentRenderIdx = i
 			break
 		}
@@ -122,8 +123,8 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		size := renderSizes[currentRenderIdx]
 		w, h := size.Value()
 
-		user.S.RenderWidth = w
-		user.S.RenderHeight = h
+		user.S().RenderWidth = w
+		user.S().RenderHeight = h
 		display.Window.SetRenderSize(w, h)
 	})
 	group.Add(renderSize)
@@ -141,7 +142,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		display.Window.SetFullscreen(!ebiten.IsFullscreen())
-		user.S.Fullscreen = ebiten.IsFullscreen()
+		user.S().Fullscreen = ebiten.IsFullscreen()
 
 		fixedRender.SetHidden(!ebiten.IsFullscreen())
 	})
@@ -157,7 +158,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	noteColorThemes := types.AllNoteColorThemes()
 	currentNoteColorThemeIdx := 0
 	for i, theme := range noteColorThemes {
-		if types.NoteColorTheme(user.S.NoteColorTheme) == theme {
+		if types.NoteColorTheme(user.S().NoteColorTheme) == theme {
 			currentNoteColorThemeIdx = i
 			break
 		}
@@ -172,10 +173,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	b.SetTrigger(func() {
 		currentNoteColorThemeIdx = (currentNoteColorThemeIdx + 1) % len(noteColorThemes)
 		current := noteColorThemes[currentNoteColorThemeIdx]
-		user.S.NoteColorTheme = string(current)
-
-		// Gotta clear the vector cache
-		cache.Path.ForceClear()
+		user.S().NoteColorTheme = string(current)
 
 		if current == types.NoteColorThemeCustom {
 			centerNoteColorB.SetHidden(false)
@@ -184,6 +182,9 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 			centerNoteColorB.SetHidden(true)
 			cornerNoteColorB.SetHidden(true)
 		}
+		// Gotta clear the vector cache
+		s.clearingCache = true
+
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -192,8 +193,8 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	colors := types.AllGameColors
 	centerIdx := -1
 	cornerIdx := -1
-	currentCenter := types.GameColorFromHex(user.S.CenterNoteColor)
-	currentCorner := types.GameColorFromHex(user.S.CornerNoteColor)
+	currentCenter := types.GameColorFromHex(user.S().CenterNoteColor)
+	currentCorner := types.GameColorFromHex(user.S().CornerNoteColor)
 	for i, color := range colors {
 		if color == currentCenter {
 			centerIdx = i
@@ -204,38 +205,38 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	}
 	centerNoteColorB.SetCenter(optionPos)
 	centerNoteColorB.SetText(l.String(l.CENTER))
-	centerNoteColorB.ForceTextColor()
-	centerNoteColorB.SetTextColor(types.ColorFromHex(user.S.CenterNoteColor))
+	centerNoteColorB.InvertHoverColor()
+	centerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CenterNoteColor))
 	centerNoteColorB.SetHidden(!startingCustom)
 	centerNoteColorB.SetTrigger(func() {
 		if centerIdx == -1 {
 			centerIdx = 0
 		}
 		centerIdx = (centerIdx + 1) % len(colors)
-		user.S.CenterNoteColor = types.HexFromColor(colors[centerIdx].C())
-		centerNoteColorB.SetTextColor(types.ColorFromHex(user.S.CenterNoteColor))
+		user.S().CenterNoteColor = types.HexFromColor(colors[centerIdx].C())
+		centerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CenterNoteColor))
 
 		// Gotta clear the vector cache
-		cache.Path.ForceClear()
+		s.clearingCache = true
 	})
 	group.Add(centerNoteColorB)
 	optionPos.Y += optionsOffset
 
 	cornerNoteColorB.SetCenter(optionPos)
 	cornerNoteColorB.SetText(l.String(l.CORNER))
-	cornerNoteColorB.ForceTextColor()
-	cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S.CornerNoteColor))
+	cornerNoteColorB.InvertHoverColor()
+	cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CornerNoteColor))
 	cornerNoteColorB.SetHidden(!startingCustom)
 	cornerNoteColorB.SetTrigger(func() {
 		if cornerIdx == -1 {
 			cornerIdx = 0
 		}
 		cornerIdx = (cornerIdx + 1) % len(colors)
-		user.S.CornerNoteColor = types.HexFromColor(colors[cornerIdx].C())
-		cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S.CornerNoteColor))
+		user.S().CornerNoteColor = types.HexFromColor(colors[cornerIdx].C())
+		cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CornerNoteColor))
 
 		// Gotta clear the vector cache
-		cache.Path.ForceClear()
+		s.clearingCache = true
 
 	})
 	group.Add(cornerNoteColorB)
@@ -256,8 +257,8 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	// 	currentRes = (currentRes + 1) % len(resolutions)
 	// 	res := resolutions[currentRes]
 
-	// 	user.S.ScreenWidth = res.w
-	// 	user.S.ScreenHeight = res.h
+	// 	user.S().ScreenWidth = res.w
+	// 	user.S().ScreenHeight = res.h
 	// 	display.Window.SetDisplaySize(float64(res.w), float64(res.h))
 	// })
 	// group.Add(b)
@@ -271,9 +272,9 @@ func (s *Settings) createAudioOptions(group *ui.UIGroup) {
 		step   float64
 		button *ui.ValueElement
 	}{
-		{l.SETTINGS_AUDIO_BGMVOLUME, &user.S.BGMVolume, 0.1, ui.NewValueElement()},
-		{l.SETTINGS_AUDIO_SFXVOLUME, &user.S.SFXVolume, 0.1, ui.NewValueElement()},
-		{l.SETTINGS_AUDIO_SONGVOLUME, &user.S.SongVolume, 0.1, ui.NewValueElement()},
+		{l.SETTINGS_AUDIO_BGMVOLUME, &user.S().BGMVolume, 0.1, ui.NewValueElement()},
+		{l.SETTINGS_AUDIO_SFXVOLUME, &user.S().SFXVolume, 0.1, ui.NewValueElement()},
+		{l.SETTINGS_AUDIO_SONGVOLUME, &user.S().SongVolume, 0.1, ui.NewValueElement()},
 	}
 
 	optionPos := ui.Point{
@@ -293,9 +294,9 @@ func (s *Settings) createAudioOptions(group *ui.UIGroup) {
 				*v.value = 0
 			}
 			audio.SetVolume(&audio.Volume{
-				BGM:  user.S.BGMVolume,
-				SFX:  user.S.SFXVolume,
-				Song: user.S.SongVolume,
+				BGM:  user.S().BGMVolume,
+				SFX:  user.S().SFXVolume,
+				Song: user.S().SongVolume,
 			})
 		})
 		group.Add(v.button)
@@ -313,7 +314,7 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	laneSpeeds := []float64{0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0}
 	currentSpeedIdx := 0
 	for i, speed := range laneSpeeds {
-		if user.S.LaneSpeed == speed {
+		if user.S().LaneSpeed == speed {
 			currentSpeedIdx = i
 			break
 		}
@@ -327,7 +328,7 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		currentSpeedIdx = (currentSpeedIdx + 1) % len(laneSpeeds)
-		user.S.LaneSpeed = laneSpeeds[currentSpeedIdx]
+		user.S().LaneSpeed = laneSpeeds[currentSpeedIdx]
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -337,12 +338,13 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_GAME_AUDIOOFFSET))
 	b.SetGetValueText(func() string {
-		return fmt.Sprintf("%dms", user.S.AudioOffset)
+		return fmt.Sprintf("%dms", user.S().AudioOffset)
 	})
 	b.SetTrigger(func() {
 		s.SetNextState(types.GameStateOffset, &FloatStateArgs{
 			onClose: func() {
-				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_AUDIOOFFSET), user.S.AudioOffset))
+				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_AUDIOOFFSET), user.S().AudioOffset))
+				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_INPUTOFFSET), user.S().InputOffset))
 			},
 		})
 	})
@@ -353,12 +355,13 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_GAME_INPUTOFFSET))
 	b.SetGetValueText(func() string {
-		return fmt.Sprintf("%dms", user.S.InputOffset)
+		return fmt.Sprintf("%dms", user.S().InputOffset)
 	})
 	b.SetTrigger(func() {
 		s.SetNextState(types.GameStateOffset, &FloatStateArgs{
 			onClose: func() {
-				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_INPUTOFFSET), user.S.InputOffset))
+				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_AUDIOOFFSET), user.S().AudioOffset))
+				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_INPUTOFFSET), user.S().InputOffset))
 			},
 		})
 	})
@@ -374,13 +377,13 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_ACCESS_NOHOLDNOTES))
 	b.SetGetValueText(func() string {
-		if user.S.DisableHoldNotes {
+		if user.S().DisableHoldNotes {
 			return l.String(l.ON)
 		}
 		return l.String(l.OFF)
 	})
 	b.SetTrigger(func() {
-		user.S.DisableHoldNotes = !user.S.DisableHoldNotes
+		user.S().DisableHoldNotes = !user.S().DisableHoldNotes
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -389,13 +392,13 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_ACCESS_NOHITEFFECT))
 	b.SetGetValueText(func() string {
-		if user.S.DisableHitEffects {
+		if user.S().DisableHitEffects {
 			return l.String(l.ON)
 		}
 		return l.String(l.OFF)
 	})
 	b.SetTrigger(func() {
-		user.S.DisableHitEffects = !user.S.DisableHitEffects
+		user.S().DisableHitEffects = !user.S().DisableHitEffects
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -404,18 +407,23 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_ACCESS_NOLANEEFFECT))
 	b.SetGetValueText(func() string {
-		if user.S.DisableLaneEffects {
+		if user.S().DisableLaneEffects {
 			return l.String(l.ON)
 		}
 		return l.String(l.OFF)
 	})
 	b.SetTrigger(func() {
-		user.S.DisableLaneEffects = !user.S.DisableLaneEffects
+		user.S().DisableLaneEffects = !user.S().DisableLaneEffects
 	})
 	group.Add(b)
 }
 
 func (s *Settings) Update() error {
+	if s.clearingCache {
+		cache.Path.ForceClear()
+		s.clearingCache = false
+	}
+
 	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
 		user.Save()
 		s.SetNextState(types.GameStateBack, nil)

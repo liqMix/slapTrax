@@ -40,16 +40,22 @@ func DrawBorderedFilledRect(screen *ebiten.Image, center *Point, size *Point, co
 	vector.DrawFilledRect(screen, x, y, w, h, color, true)
 }
 
-const noteThemedRectBorderSize = 0.01
+const panelBorderSize = 0.01
 
-func DrawNoteThemedRect(screen *ebiten.Image, center *Point, size *Point) {
-	yBorderSize := &Point{X: size.X, Y: size.Y + noteThemedRectBorderSize*2}
-	xBorderSize := &Point{X: size.X + noteThemedRectBorderSize*2, Y: yBorderSize.Y}
+func DrawThemedRect(screen *ebiten.Image, center *Point, size *Point, xBorderColor, yBorderColor color.RGBA) {
+	yBorderSize := &Point{X: size.X, Y: size.Y + panelBorderSize*2}
+	xBorderSize := &Point{X: size.X + panelBorderSize*2, Y: yBorderSize.Y}
 
-	yBorderColor := CenterTrackColor()
-	xBorderColor := CornerTrackColor()
 	DrawFilledRect(screen, center, xBorderSize, xBorderColor)
 	DrawFilledRect(screen, center, yBorderSize, yBorderColor)
 
 	DrawFilledRect(screen, center, size, types.Black.C())
+}
+
+func DrawNoteThemedRect(screen *ebiten.Image, center *Point, size *Point) {
+	DrawThemedRect(screen, center, size, CornerTrackColor(), CenterTrackColor())
+}
+
+func DrawInvertedNoteThemedRect(screen *ebiten.Image, center *Point, size *Point) {
+	DrawThemedRect(screen, center, size, CenterTrackColor(), CornerTrackColor())
 }

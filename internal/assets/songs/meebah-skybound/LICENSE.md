@@ -2,7 +2,7 @@
 Copyright (c) 2024 Meebah (Drew Sanford)
 
 This song is used with explicit permission from the creator.
-Permission granted on December 21st, 2024 via private correspondence.
+Permission granted on December 29th, 2024 via private correspondence.
 Full correspondence retained privately by Brady Young.
 
 Permissions:

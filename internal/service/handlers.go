@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/liqmix/ebiten-holiday-2024/internal/external"
 )
 
 func getClientIP(c *gin.Context) string {
@@ -46,9 +47,9 @@ func checkAutoLogin(c *gin.Context) {
 
 func register(c *gin.Context) {
 	var input struct {
-		Username    string `json:"username" binding:"required"`
-		Password    string `json:"password" binding:"required,min=6"`
-		DisplayName string `json:"display_name"`
+		Username string            `json:"username" binding:"required"`
+		Password string            `json:"password" binding:"required,min=1"`
+		Settings external.Settings `json:"settings" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -58,6 +59,7 @@ func register(c *gin.Context) {
 
 	user := User{
 		Username: input.Username,
+		Settings: input.Settings,
 	}
 
 	if err := user.SetPassword(input.Password); err != nil {
@@ -82,7 +84,7 @@ func login(c *gin.Context) {
 
 	var user User
 	if result := db.Where("username = ?", creds.Username).First(&user); result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -232,7 +234,7 @@ func authMiddleware() gin.HandlerFunc {
 }
 
 func getUser(c *gin.Context) {
-	id := c.Param("id")
+	id := c.MustGet("userID")
 	var user User
 
 	if result := db.First(&user, id); result.Error != nil {
@@ -244,14 +246,7 @@ func getUser(c *gin.Context) {
 }
 
 func updateUser(c *gin.Context) {
-	id := c.Param("id")
-	userID := c.MustGet("userID")
-
-	// Ensure users can only update their own data
-	if userID != id {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot update other users"})
-		return
-	}
+	id := c.MustGet("userID").(uint)
 
 	var user User
 	if result := db.First(&user, id); result.Error != nil {
@@ -259,14 +254,16 @@ func updateUser(c *gin.Context) {
 		return
 	}
 
-	var updateData User
-	if err := c.ShouldBindJSON(&updateData); err != nil {
+	var settings external.Settings
+	if err := c.ShouldBindJSON(&settings); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if result := db.Model(&user).Updates(updateData); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+	if err := user.UpdateSettings(map[string]interface{}{
+		"settings": settings,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -274,7 +271,13 @@ func updateUser(c *gin.Context) {
 }
 
 func createScore(c *gin.Context) {
-	userID := c.MustGet("userID").(uint)
+	id := c.MustGet("userID").(uint)
+
+	var u User
+	if result := db.First(&u, id); result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
 
 	var score Score
 	if err := c.ShouldBindJSON(&score); err != nil {
@@ -282,7 +285,8 @@ func createScore(c *gin.Context) {
 		return
 	}
 
-	score.UserID = userID
+	score.UserID = id
+	score.Username = u.Username
 	score.PlayedAt = time.Now()
 
 	if result := db.Create(&score); result.Error != nil {
@@ -308,7 +312,7 @@ func getUserScores(c *gin.Context) {
 func getLeaderboard(c *gin.Context) {
 	song := c.Query("song")
 	difficulty := c.Query("difficulty")
-	limit := 100 // Default limit for leaderboard entries
+	limit := 10 // Default limit for leaderboard entries
 
 	var scores []struct {
 		Score

@@ -29,16 +29,16 @@ func main() {
 
 	assets.Init(
 		assets.AssetInit{
-			Locale: user.S.Locale,
+			Locale: user.S().Locale,
 		})
 	audio.InitAudioManager(&audio.Volume{
-		BGM:  user.S.BGMVolume,
-		SFX:  user.S.SFXVolume,
-		Song: user.S.SongVolume,
+		BGM:  user.S().BGMVolume,
+		SFX:  user.S().SFXVolume,
+		Song: user.S().SongVolume,
 	})
 
-	ebiten.SetWindowSize(user.S.ScreenWidth, user.S.ScreenHeight)
-	ebiten.SetFullscreen(user.S.Fullscreen)
+	ebiten.SetWindowSize(user.S().ScreenWidth, user.S().ScreenHeight)
+	ebiten.SetFullscreen(user.S().Fullscreen)
 	ebiten.SetWindowTitle(l.String(l.TITLE))
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)

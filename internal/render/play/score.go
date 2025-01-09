@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 	"github.com/tinne26/etxt"
@@ -29,13 +28,15 @@ func (r *Play) drawScore(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		Scale: 1.0,
 		Color: types.White.C(),
 	}
-	perfectText := fmt.Sprintf(l.String(l.HIT_PERFECT)+": %d", score.Perfect)
-	goodText := fmt.Sprintf(l.String(l.HIT_GOOD)+": %d", score.Good)
-	badText := fmt.Sprintf(l.String(l.HIT_BAD)+": %d", score.Bad)
-	missText := fmt.Sprintf(l.String(l.HIT_MISS)+": %d", score.Miss)
+	scoreText := fmt.Sprintf("%d", score.TotalScore)
+	perfectText := fmt.Sprintf(types.Perfect.String()+": %d", score.Perfect)
+	goodText := fmt.Sprintf(types.Good.String()+": %d", score.Good)
+	badText := fmt.Sprintf(types.Bad.String()+": %d", score.Bad)
+	missText := fmt.Sprintf(types.Miss.String()+": %d", score.Miss)
 
 	hitDiffText := fmt.Sprintf("Diff: %v", score.GetLastHitRecord())
 	ui.DrawTextBlockAt(screen, []string{
+		scoreText,
 		perfectText,
 		goodText,
 		badText,
@@ -63,30 +64,30 @@ func (r *Play) drawScore(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	}
 
 	// Draw the last hit text
-	lastHit := r.state.Score.GetLastHitRecord()
-	if lastHit != nil {
-		// currentMs := r.state.CurrentTime()
+	// lastHit := r.state.Score.GetLastHitRecord()
+	// if lastHit != nil {
+	// 	// currentMs := r.state.CurrentTime()
 
-		// if lastHit != prevHit {
-		// 	lastDisplayedHitMs = currentMs
-		// }
-		// opacity := 1.0 - float64(currentMs-lastDisplayedHitMs)/float64(fadeOutHitMs)
-		hitType := lastHit.HitRating
-		c := hitType.Color().C()
-		// c.A = uint8(opacity * 255)
-		ui.DrawTextAt(
-			screen,
-			hitType.String(),
-			&ui.Point{
-				X: headerCenterPoint.X,
-				Y: headerCenterPoint.Y + 0.05,
-			},
-			&ui.TextOptions{
-				Align: etxt.Center,
-				Scale: 1.0,
-				Color: c,
-			},
-			opts,
-		)
-	}
+	// 	// if lastHit != prevHit {
+	// 	// 	lastDisplayedHitMs = currentMs
+	// 	// }
+	// 	// opacity := 1.0 - float64(currentMs-lastDisplayedHitMs)/float64(fadeOutHitMs)
+	// 	hitType := lastHit.HitRating
+	// 	c := hitType.Color().C()
+	// 	// c.A = uint8(opacity * 255)
+	// 	ui.DrawTextAt(
+	// 		screen,
+	// 		hitType.String(),
+	// 		&ui.Point{
+	// 			X: headerCenterPoint.X,
+	// 			Y: headerCenterPoint.Y + 0.05,
+	// 		},
+	// 		&ui.TextOptions{
+	// 			Align: etxt.Center,
+	// 			Scale: 1.0,
+	// 			Color: c,
+	// 		},
+	// 		opts,
+	// 	)
+	// }
 }

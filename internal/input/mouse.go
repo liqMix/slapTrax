@@ -9,6 +9,8 @@ type mouse struct {
 	sX, sY int
 	cX, cY float64
 
+	dX, dY float64
+
 	// Buttons
 	left, right mousebutton
 }
@@ -59,7 +61,9 @@ func (m *mouse) update() {
 	m.sX, m.sY = ebiten.CursorPosition()
 
 	// Canvas position
-	m.cX, m.cY = display.Window.CanvasPosition(float64(m.sX), float64(m.sY))
+	cX, cY := display.Window.CanvasPosition(float64(m.sX), float64(m.sY))
+	m.dX, m.dY = m.cX-cX, m.cY-cY
+	m.cX, m.cY = cX, cY
 
 	// Buttons
 	leftP := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
@@ -98,4 +102,13 @@ func (m *mouse) HoldTime(b ebiten.MouseButton) int {
 		return m.right.held
 	}
 	return 0
+}
+
+const threshold = 0.05
+
+func (m *mouse) DidMove() bool {
+	if m.dX > threshold || m.dX < -threshold || m.dY > threshold || m.dY < -threshold {
+		return true
+	}
+	return false
 }

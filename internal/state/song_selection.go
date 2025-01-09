@@ -2,7 +2,6 @@ package state
 
 import (
 	"sort"
-	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
@@ -12,39 +11,21 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
 
-type SongDetails struct {
-	// Clickable to navigate to song meta links
-	title   *ui.Button
-	artist  *ui.Button
-	album   *ui.Button
-	charter *ui.Button
-
-	// Display only
-	art     *ui.Element
-	bpm     *ui.Element
-	version *ui.Element
-	year    *ui.Element
-
-	chartText      *ui.Element
-	difficultyText *ui.Element
-	difficulties   []*ui.Element
-
-	// Positions
-	panelSize        *ui.Point
-	difficultyCenter *ui.Point
-}
-
 var artSize = 0.2
 var detailsTop = ui.Point{X: 0.5, Y: 0.27}
 var detailsCenter = ui.Point{X: 0.5, Y: 0.50}
+var lastIdx = 0
 
+type SongSelectionArgs struct {
+	Song *types.Song
+}
 type SongSelection struct {
 	types.BaseGameState
 
-	options  []*SongOption
-	details  *SongDetails
-	songList *ui.SongSelector
-
+	options          []*SongOption
+	details          *SongDetails
+	songList         *ui.SongSelector
+	leaderboard      *ui.Leaderboard
 	currentIdx       int
 	uiIdxToOptionIdx map[int]int
 }
@@ -66,7 +47,7 @@ func NewSongSelectionState() *SongSelection {
 		}
 	}
 
-	//orde by difficulty,
+	//order by difficulty,
 	//then by song title
 	difficulties := map[types.Difficulty]int{}
 	for _, o := range songs {
@@ -86,7 +67,11 @@ func NewSongSelectionState() *SongSelection {
 		return songs[i].song.Title < songs[j].song.Title
 	})
 
-	s := &SongSelection{options: songs}
+	// Create
+	s := &SongSelection{
+		options:     songs,
+		leaderboard: ui.NewLeaderboard(),
+	}
 
 	center := ui.Point{
 		X: 0.75,
@@ -98,12 +83,14 @@ func NewSongSelectionState() *SongSelection {
 
 	uiIdx := 0
 	s.uiIdxToOptionIdx = make(map[int]int)
+	size := ui.Point{X: 0.25, Y: 0.15}
 	for _, d := range sortedD {
-		count := difficulties[d]
 		e := ui.NewElement()
-		e.SetText(l.String(d.String()) + " (" + (strconv.Itoa(count) + ")"))
+		e.SetText(l.String(d.String()))
 		e.SetDisabled(true)
-		e.SetScale(1.2)
+		e.SetSize(size)
+		e.SetTextScale(1.25)
+		e.SetTextColor(d.Color())
 		songElements.Add(e)
 		uiIdx++
 
@@ -129,7 +116,13 @@ func NewSongSelectionState() *SongSelection {
 	details := NewSongDetails()
 	s.details = details
 	if len(s.options) > 0 {
-		song := s.options[0].song
+		idx := 0
+		if lastIdx > 0 {
+			idx = lastIdx
+			s.songList.Select(idx)
+		}
+		idx = s.uiIdxToOptionIdx[idx]
+		song := s.options[idx].song
 		s.details.UpdateDetails(song)
 		audio.PlaySongPreview(song)
 	}
@@ -146,16 +139,23 @@ func (s *SongSelection) Update() error {
 	idx := s.songList.GetIndex()
 	if idx != s.currentIdx {
 		s.currentIdx = idx
+		lastIdx = s.currentIdx
+
 		optionIdx := s.uiIdxToOptionIdx[s.currentIdx]
 		song := s.options[optionIdx].song
+		diff := s.options[optionIdx].difficulty
 		s.details.UpdateDetails(song)
 		audio.PlaySongPreview(song)
+		s.leaderboard.FetchScores(song.Hash, diff)
 	}
+
 	s.details.Update()
+	s.leaderboard.Update()
 	return nil
 }
 
 func (s *SongSelection) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	s.songList.Draw(screen, opts)
 	s.details.Draw(screen, opts)
+	s.leaderboard.Draw(screen, opts)
 }

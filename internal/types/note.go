@@ -36,9 +36,6 @@ type Note struct {
 var noteId int = 0
 
 func NewNote(trackName TrackName, target, targetRelease int64) *Note {
-	if targetRelease > 0 {
-		logger.Debug("Id: %d | Target: %d | Release: %d", noteId, target, targetRelease)
-	}
 	noteId++
 	return &Note{
 		Id:            noteId,
@@ -68,7 +65,7 @@ func (n *Note) SetSolo(solo bool) {
 }
 
 func (n *Note) IsHoldNote() bool {
-	return !user.S.DisableHoldNotes && n.TargetRelease > 0
+	return !user.S().DisableHoldNotes && n.TargetRelease > 0
 }
 
 func (n *Note) WasHit() bool {
@@ -84,7 +81,7 @@ func (n *Note) Hit(hitTime int64, score *Score) bool {
 		return false
 	}
 
-	diff := n.Target - hitTime + user.S.InputOffset
+	diff := n.Target - hitTime + user.S().InputOffset
 	timing := GetHitTiming(diff)
 	rating := GetHitRating(diff)
 	if rating == None {
@@ -115,7 +112,7 @@ func (n *Note) Release(releaseTime int64) {
 	}
 
 	if n.WasHit() {
-		n.ReleaseTime = releaseTime + user.S.InputOffset
+		n.ReleaseTime = releaseTime + user.S().InputOffset
 		if n.IsHoldNote() {
 			// force rating to miss if the note was released early
 			// *use more generous window for release
