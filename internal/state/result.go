@@ -120,11 +120,11 @@ func NewResultState(args *ResultStateArgs) *Result {
 
 	detailsStart := center.Y
 
-	left := ui.Point{X: 0.5, Y: center.Y}
+	left := ui.Point{X: 0.45, Y: center.Y}
 	leftTextOpts := textOpts
 	leftTextOpts.Align = etxt.Left
 
-	right := ui.Point{X: 0.5, Y: center.Y}
+	right := ui.Point{X: 0.55, Y: center.Y}
 	rightTextOpts := textOpts
 	rightTextOpts.Align = etxt.Right
 
