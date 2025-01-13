@@ -14,14 +14,14 @@ jobs:
     - name: Build Windows exe
       working-directory: cmd/game
       shell: bash
-      run: go build -o ../../ebihack24.exe
+      run: go build -o ../../slapTrax.exe
     - name: Upload Windows exe
       uses: actions/upload-artifact@v3
       with:
-        name: ebihack24-win
+        name: slapTrax-win
         path: |
           LICENSE.md
-          ebihack24.exe
+          slapTrax.exe
 
   build-mac:
     name: Build MacOS binary
@@ -35,15 +35,15 @@ jobs:
     - name: Build Mac exe
       working-directory: cmd/game
       shell: bash
-      run: go build -o ../../ebihack24
+      run: go build -o ../../slapTrax
     - name: Tar it up
       shell: bash
-      run: tar -zcvf ebihack24-mac.tar.gz ebihack24 LICENSE.md
+      run: tar -zcvf slapTrax-mac.tar.gz slapTrax LICENSE.md
     - name: Upload Mac exe
       uses: actions/upload-artifact@v3
       with:
-        name: ebihack24-mac
-        path: ebihack24-mac.tar.gz
+        name: slapTrax-mac
+        path: slapTrax-mac.tar.gz
 
   build-lin:
     name: Build Linux binary
@@ -60,15 +60,15 @@ jobs:
     - name: Build Linux exe
       working-directory: cmd/game
       shell: bash
-      run: go build -o ../../ebihack24
+      run: go build -o ../../slapTrax
     - name: Tar it up
       shell: bash
-      run: tar -zcvf ebihack24-lin.tar.gz ebihack24 LICENSE.md
+      run: tar -zcvf slapTrax-lin.tar.gz slapTrax LICENSE.md
     - name: Upload Linux exe
       uses: actions/upload-artifact@v3
       with:
-        name: ebihack24-lin
-        path: ebihack24-lin.tar.gz
+        name: slapTrax-lin
+        path: slapTrax-lin.tar.gz
 
   build-web:
     name: Build Web binary
@@ -82,14 +82,14 @@ jobs:
     - name: Build Web binary
       working-directory: cmd/game
       shell: bash
-      run: GOOS=js GOARCH=wasm go build -o ../../web/ebihack24.wasm
+      run: GOOS=js GOARCH=wasm go build -o ../../web/slapTrax.wasm
     - name: Copy WASM exec script
       shell: bash
       run: cp $(go env GOROOT)/misc/wasm/wasm_exec.js web/.
     - name: Upload Web build
       uses: actions/upload-artifact@v3
       with:
-        name: ebihack24-web
+        name: slapTrax-web
         path: |
           web/
           LICENSE.md
@@ -103,24 +103,22 @@ jobs:
     - name: Download Windows binary
       uses: actions/download-artifact@v3
       with:
-        name: ebihack24-win
+        name: slapTrax-win
     - name: Download Linux binary
       uses: actions/download-artifact@v3
       with:
-        name: ebihack24-lin
+        name: slapTrax-lin
     - name: Download Mac binary
       uses: actions/download-artifact@v3
       with:
-        name: ebihack24-mac
+        name: slapTrax-mac
     - name: Upload beta testing bundle
       uses: actions/upload-artifact@v3
       with:
-        name: ebihack24-bundle
+        name: slapTrax-bundle
         path: |
           README.md
           LICENSE.md
-          ebihack24-lin.tar.gz
-          ebihack24-mac.tar.gz
-          ebihack24.exe
-
-
+          slapTrax-lin.tar.gz
+          slapTrax-mac.tar.gz
+          slapTrax.exe
