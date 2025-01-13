@@ -14,11 +14,11 @@ func main() {
 		exe = ".exe"
 	}
 
-	runArgs := append([]interface{}{}, "./game"+exe)
+	runArgs := append([]interface{}{}, "./slapTrax"+exe)
 	var wasmSrc string
 
 	Task("build").
-		Exec("go", "build", "./cmd/game")
+		Exec("go", "build", "-o", "slapTrax"+exe, "./cmd/game")
 	Task("run").
 		Exec(runArgs...)
 	Task("watch").
@@ -26,6 +26,9 @@ func main() {
 		Signaler(SigQuit).
 		Run("build").
 		Run("run")
+	Task("build-service").
+		Env("GOOS=linux", "GOARCH=amd64").
+		Exec("go", "build", "-o", "slapboard", "./cmd/service")
 	Task("build-web").
 		Env("GOOS=js", "GOARCH=wasm").
 		Exec("go", "build", "-o", "web/holiday24.wasm", "./cmd/game").

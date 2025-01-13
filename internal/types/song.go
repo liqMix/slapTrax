@@ -16,7 +16,6 @@ func GetAllSongs() []*Song {
 	for _, songData := range allSongData {
 		song, err := NewSong(songData)
 		if err != nil {
-			logger.Error("Failed to parse song data", err)
 			continue
 		}
 		songs = append(songs, song)
@@ -88,7 +87,9 @@ func NewSong(songData *assets.SongData) (*Song, error) {
 	}
 
 	meta := songData.Meta
-	song := &Song{}
+	song := &Song{
+		Hash: songData.GetHash(),
+	}
 	err := yaml.Unmarshal(meta, song)
 	if err != nil {
 		return nil, err

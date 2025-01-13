@@ -1,6 +1,8 @@
 package play
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/types"
+import (
+	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+)
 
 const (
 	PULSE_LINE_WIDTH = 5.0
@@ -16,12 +18,45 @@ func (r *Play) addTrackEffects(track *types.Track) {
 	// }
 
 }
-
 func (r *Play) addHitEffects() {
 	for _, hit := range r.state.Score.HitRecords[r.hitRecordIdx:] {
-		progress := types.GetTrackProgress(hit.Note.HitTime, r.state.CurrentTime(), -r.state.GetTravelTime()/5)
+		hitTime := hit.Note.HitTime
+		now := r.state.CurrentTime()
+		speed := r.state.GetTravelTime()
+
+		// path := GetNotePath(hit.Note.TrackName, hit.Note, true)
+		// if path != nil {
+		// 	getOrCreatePath(&cache.PathCacheKey{
+		// 		TrackName:        int(hit.Note.TrackName),
+
+		// 		Progress:         int64(progress * 100),
+		// 		Solo:             true,
+		// 		IsHitEffectTrail: true,
+		// 	})
+
+		// 	// var p []*cache.CachedPath
+		// 	// copy([]*cache.CachedPath{path}, p)
+		// 	// noteColor := hit.Note.TrackName.NoteColor()
+		// 	// ui.ColorVertices(p[0].Vertices, color.RGBA{
+		// 	// 	R: noteColor.R,
+		// 	// 	G: noteColor.G,
+		// 	// 	B: color.B,
+		// 	// 	A: uint8(200 * endProgress),
+		// 	// })
+		// 	r.vectorCollection.AddPath(path)
+		// }
+
+		progress := types.GetTrackProgress(hitTime, now, -speed/4)
 		if progress > 0 {
-			r.addHitTrailEffect(hit, progress)
+			if !hit.Note.IsHoldNote() {
+				op := hit.Note.Progress
+				hit.Note.Progress = progress
+				path := GetNotePath(hit.Note.TrackName, hit.Note, true)
+				hit.Note.Progress = op
+				if path != nil {
+					r.vectorCollection.AddPath(path)
+				}
+			}
 		} else {
 			r.hitRecordIdx++
 		}
@@ -30,48 +65,38 @@ func (r *Play) addHitEffects() {
 
 // func (r *Play) drawNoteEffect(note *types.Note) {}
 
-func (r *Play) addHitTrailEffect(hit *types.HitRecord, p float64) {
-	if hit.Note.IsHoldNote() {
-		return
-	}
-	hit.Note.Progress = p
-	path := GetNotePath(hit.Note.TrackName, hit.Note, true)
-	if path != nil {
-		r.vectorCollection.AddPath(path)
-	}
-	// progress := SmoothProgress(p)
-	// sin, cos := calculatePulseWave(float64(progress))
+// progress := SmoothProgress(p)
+// sin, cos := calculatePulseWave(float64(progress))
 
-	// // Create local copy of points for pulse modification
-	// points := notePoints[hit.Note.TrackName]
+// // Create local copy of points for pulse modification
+// points := notePoints[hit.Note.TrackName]
 
-	// opts := &NotePathOpts{
-	// 	lineWidth: PULSE_LINE_WIDTH,
-	// 	isLarge:   true,
-	// 	color:     hit.Note.TrackName.NoteColor(),
-	// 	solo:      true,
-	// }
-	// // Modulate outer points with sine wave
-	// for i := 0; i < len(pulsePoints); i += 2 {
-	// 	pulsePoints[i].X = points[i].X * sin
-	// 	pulsePoints[i].Y = points[i].Y * sin
-	// }
+// opts := &NotePathOpts{
+// 	lineWidth: PULSE_LINE_WIDTH,
+// 	isLarge:   true,
+// 	color:     hit.Note.TrackName.NoteColor(),
+// 	solo:      true,
+// }
+// // Modulate outer points with sine wave
+// for i := 0; i < len(pulsePoints); i += 2 {
+// 	pulsePoints[i].X = points[i].X * sin
+// 	pulsePoints[i].Y = points[i].Y * sin
+// }
 
-	// // Modulate center point with cosine wave
-	// pulsePoints[1].X = points[1].X * cos
-	// pulsePoints[1].Y = points[1].Y * cos
+// // Modulate center point with cosine wave
+// pulsePoints[1].X = points[1].X * cos
+// pulsePoints[1].Y = points[1].Y * cos
 
-	// // Fade out opacity and scale as effect travels
-	// opts.alpha = uint8(100 * progress)
-	// opts.largeWidthRatio = float32(PULSE_MAX_SCALE - ((PULSE_MAX_SCALE - PULSE_MIN_SCALE) * progress))
+// // Fade out opacity and scale as effect travels
+// opts.alpha = uint8(100 * progress)
+// opts.largeWidthRatio = float32(PULSE_MAX_SCALE - ((PULSE_MAX_SCALE - PULSE_MIN_SCALE) * progress))
 
-	// // Create and add path to vector collection
-	// // path := r.vectorCache.createNotePath(pulsePoints, float32(progress), opts)
-	// // r.vectorCollection.Add(path.vertices, path.indices)
+// // Create and add path to vector collection
+// // path := r.vectorCache.createNotePath(pulsePoints, float32(progress), opts)
+// // r.vectorCollection.Add(path.vertices, path.indices)
 
-	// // Add the normal path as well
-	// path := CreateNotePathFromPoints(points, float32(progress), opts)
-	// if path != nil {
-	// 	r.vectorCollection.Add(path.vertices, path.indices)
-	// }
-}
+// // Add the normal path as well
+// path := CreateNotePathFromPoints(points, float32(progress), opts)
+// if path != nil {
+// 	r.vectorCollection.Add(path.vertices, path.indices)
+// }

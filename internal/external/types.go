@@ -15,17 +15,14 @@ const (
 	StateOffline
 	StateOnline
 	StateLoggingIn
-	StatePlayOffline
 )
 
 // Settings represents user preferences and configuration
 type Settings struct {
-	Version       int       `json:"version"`
-	LastModified  time.Time `json:"last_modified"`
-	LastSync      time.Time `json:"last_sync"`
-	IsNewUser     bool      `json:"is_new_user"`
-	IsGuest       bool      `json:"is_guest"`
-	HasServerUser bool      `json:"has_server_user"`
+	Version      int       `json:"version"`
+	LastModified time.Time `json:"last_modified"`
+	LastSync     time.Time `json:"last_sync"`
+	IsNewUser    bool      `json:"is_new_user"`
 
 	// Game Settings
 	Locale           string `json:"locale"`
@@ -35,6 +32,7 @@ type Settings struct {
 	RenderWidth      int    `json:"render_width"`
 	RenderHeight     int    `json:"render_height"`
 	FixedRenderScale bool   `json:"fixed_render_scale"`
+	KeyConfig        int    `json:"key_config"`
 
 	// Audio Settings
 	BGMVolume   float64 `json:"bgm_volume"`
@@ -44,15 +42,15 @@ type Settings struct {
 	InputOffset int64   `json:"input_offset"`
 
 	// Gameplay Settings
-	LaneSpeed           float64 `json:"lane_speed"`
-	WaveringLane        bool    `json:"wavering_lane"`
-	NoteColorTheme      string  `json:"note_color_theme"`
-	CenterNoteColor     string  `json:"center_note_color"`
-	CornerNoteColor     string  `json:"corner_note_color"`
-	DisableHoldNotes    bool    `json:"disable_hold_notes"`
-	DisableHitEffects   bool    `json:"disable_hit_effects"`
-	DisableLaneEffects  bool    `json:"disable_lane_effects"`
-	PromptedOffsetCheck bool    `json:"prompted_offset_check"`
+	NoteWidth          float32 `json:"note_width"`
+	LaneSpeed          float64 `json:"lane_speed"`
+	NoteColorTheme     string  `json:"note_color_theme"`
+	CenterNoteColor    string  `json:"center_note_color"`
+	CornerNoteColor    string  `json:"corner_note_color"`
+	DisableHoldNotes   bool    `json:"disable_hold_notes"`
+	DisableHitEffects  bool    `json:"disable_hit_effects"`
+	DisableLaneEffects bool    `json:"disable_lane_effects"`
+	EdgePlayArea       bool    `json:"fullscreen_play_area"`
 }
 
 func (s *Settings) Value() (driver.Value, error) {
@@ -76,6 +74,7 @@ func (s *Settings) Scan(value interface{}) error {
 // User represents the current user state
 type User struct {
 	Username string    `json:"username"`
+	Rank     float64   `json:"rank"`
 	Settings *Settings `json:"settings"`
 }
 
@@ -95,12 +94,16 @@ type Session struct {
 }
 
 type Score struct {
+	ID         uint      `json:"id"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 	UserID     uint      `json:"user_id"`
 	Username   string    `json:"username"`
-	Song       string    `json:"song"`
+	SongHash   string    `json:"song_hash"`
 	Score      int       `json:"score"`
+	Rank       float64   `json:"rank"`
 	Accuracy   float64   `json:"accuracy"`
 	MaxCombo   int       `json:"max_combo"`
 	PlayedAt   time.Time `json:"played_at"`
-	Difficulty string    `json:"difficulty"`
+	Difficulty int       `json:"difficulty"`
 }

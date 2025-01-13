@@ -26,11 +26,10 @@ func NewAPIClient() *APIClient {
 }
 
 // Register creates a new user account
-func (c *APIClient) Register(username, password string, settings *Settings) error {
+func (c *APIClient) Register(username, password string) error {
 	body := map[string]interface{}{
 		"username": username,
 		"password": password,
-		"settings": settings,
 	}
 
 	resp, err := c.post("/register", body)
@@ -85,7 +84,7 @@ func (c *APIClient) Refresh(refreshToken string) (*TokenPair, error) {
 
 // GetUser retrieves the user
 func (c *APIClient) GetUser(accessToken string) (*User, error) {
-	resp, err := c.authGet("/users", accessToken)
+	resp, err := c.authGet("/user", accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("profile request failed: %w", err)
 	}
@@ -100,19 +99,23 @@ func (c *APIClient) GetUser(accessToken string) (*User, error) {
 }
 
 // UpdateUser updates the user
-func (c *APIClient) UpdateUser(accessToken string, settings map[string]interface{}) error {
-	resp, err := c.authPost("/users", accessToken, settings)
-	if err != nil {
-		return fmt.Errorf("profile update failed: %w", err)
-	}
-	defer resp.Body.Close()
+// func (c *APIClient) UpdateUser(accessToken string, settings *Settings) error {
+// 	v, err := settings.Value()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal settings: %w", err)
+// 	}
+// 	resp, err := c.authPost("/users", accessToken, v)
+// 	if err != nil {
+// 		return fmt.Errorf("profile update failed: %w", err)
+// 	}
+// 	defer resp.Body.Close()
 
-	return nil
-}
+// 	return nil
+// }
 
 // Get user scores retrieves the scores for a user
-func (c *APIClient) GetUserScores(accessToken, id string) ([]Score, error) {
-	resp, err := c.authGet("/users/"+id+"/scores", accessToken)
+func (c *APIClient) GetUserScores(accessToken string) ([]Score, error) {
+	resp, err := c.authGet("/user/scores", accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("scores request failed: %w", err)
 	}
@@ -124,24 +127,6 @@ func (c *APIClient) GetUserScores(accessToken, id string) ([]Score, error) {
 	}
 
 	return scores, nil
-}
-
-// CheckAutoLogin checks if auto-login is available
-func (c *APIClient) CheckAutoLogin(accessToken string) (bool, error) {
-	resp, err := c.get("/check-auto-login")
-	if err != nil {
-		return false, fmt.Errorf("auto-login check failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var result struct {
-		Found bool `json:"found"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return false, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return result.Found, nil
 }
 
 // AddScore submits a new score
@@ -260,7 +245,7 @@ func (c *APIClient) authPost(path, token string, body interface{}) (*http.Respon
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		return nil, fmt.Errorf("server returned %d: %s", resp.StatusCode, body)

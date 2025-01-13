@@ -26,8 +26,8 @@ func getBitPosition(key ebiten.Key) (wordIndex, bitOffset int) {
 	return int(k / bitsPerWord), int(k % bitsPerWord)
 }
 
-func newKeyboard() keyboard {
-	return keyboard{
+func newKeyboard() *keyboard {
+	return &keyboard{
 		watchedKeys: make(map[ebiten.Key]int64),
 		runes:       make([]rune, 16),
 	}
@@ -84,6 +84,14 @@ func (k *keyboard) Get(s Status) []ebiten.Key {
 		}
 	}
 	return keys
+}
+
+func (k *keyboard) ForceReset() {
+	for i := range k.pressedBits {
+		k.pressedBits[i] = 0
+		k.releasedBits[i] = 0
+		k.heldBits[i] = 0
+	}
 }
 
 func (k *keyboard) Is(key ebiten.Key, s Status) bool {

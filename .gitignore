@@ -28,3 +28,4 @@ go.work.sum
 **/**/*._*
 *.zip
 settings.json
+cmd/service/data/*

@@ -9,6 +9,7 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
 	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
+	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
@@ -20,12 +21,7 @@ func main() {
 		logger.Warn("Failed to initialize user: %v", err)
 	}
 	display.InitWindow()
-
-	renderWidth, renderHeight := display.Window.RenderSize()
-	cache.InitCaches(renderWidth, renderHeight)
-
-	// Refresh window after cache init
-	display.Window.Refresh()
+	cache.InitCaches()
 
 	assets.Init(
 		assets.AssetInit{
@@ -36,7 +32,9 @@ func main() {
 		SFX:  user.S().SFXVolume,
 		Song: user.S().SongVolume,
 	})
+	input.InitInput()
 
+	// Ebiten setup
 	ebiten.SetWindowSize(user.S().ScreenWidth, user.S().ScreenHeight)
 	ebiten.SetFullscreen(user.S().Fullscreen)
 	ebiten.SetWindowTitle(l.String(l.TITLE))

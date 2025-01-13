@@ -40,16 +40,18 @@ func DrawBorderedFilledRect(screen *ebiten.Image, center *Point, size *Point, co
 	vector.DrawFilledRect(screen, x, y, w, h, color, true)
 }
 
-const panelBorderSize = 0.01
+const PanelBorderSize = 0.01
 
 func DrawThemedRect(screen *ebiten.Image, center *Point, size *Point, xBorderColor, yBorderColor color.RGBA) {
-	yBorderSize := &Point{X: size.X, Y: size.Y + panelBorderSize*2}
-	xBorderSize := &Point{X: size.X + panelBorderSize*2, Y: yBorderSize.Y}
+	yBorderSize := &Point{X: size.X, Y: size.Y + PanelBorderSize*2}
+	xBorderSize := &Point{X: size.X + PanelBorderSize, Y: yBorderSize.Y}
 
 	DrawFilledRect(screen, center, xBorderSize, xBorderColor)
 	DrawFilledRect(screen, center, yBorderSize, yBorderColor)
 
-	DrawFilledRect(screen, center, size, types.Black.C())
+	b := types.Black.C()
+	b.A = 255
+	DrawFilledRect(screen, center, size, b)
 }
 
 func DrawNoteThemedRect(screen *ebiten.Image, center *Point, size *Point) {

@@ -27,8 +27,8 @@ func newMousebutton(b ebiten.MouseButton) mousebutton {
 	}
 }
 
-func newMouse() mouse {
-	return mouse{
+func newMouse() *mouse {
+	return &mouse{
 		left:  newMousebutton(ebiten.MouseButtonLeft),
 		right: newMousebutton(ebiten.MouseButtonRight),
 	}

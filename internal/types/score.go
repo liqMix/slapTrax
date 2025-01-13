@@ -4,7 +4,7 @@ import "image/color"
 
 type SongRating int
 
-const maxScore = 100000
+const MaxScore = 100000
 
 const (
 	RatingSSS SongRating = iota
@@ -56,15 +56,15 @@ func (r SongRating) Color() color.RGBA {
 func (r SongRating) Threshold() int {
 	switch r {
 	case RatingSSS:
-		return maxScore
+		return MaxScore
 	case RatingSS:
-		return maxScore * 0.9
+		return MaxScore * 0.9
 	case RatingS:
-		return maxScore * 0.8
+		return MaxScore * 0.8
 	case RatingA:
-		return maxScore * 0.7
+		return MaxScore * 0.7
 	case RatingB:
-		return maxScore * 0.6
+		return MaxScore * 0.6
 	case RatingF:
 		return 0
 	}
@@ -96,6 +96,8 @@ type Score struct {
 	Combo    int
 	MaxCombo int
 
+	Early      int
+	Late       int
 	HitRecords []*HitRecord
 	hitValue   int
 }
@@ -105,12 +107,13 @@ var score *Score
 func NewScore(song *Song, difficulty Difficulty) *Score {
 	chart := song.Charts[difficulty]
 	totalNotes := chart.TotalNotes
+
 	score = &Score{
 		Song:       song,
 		Difficulty: difficulty,
 		TotalNotes: totalNotes,
 		HitRecords: make([]*HitRecord, 0, totalNotes),
-		hitValue:   maxScore / totalNotes,
+		hitValue:   MaxScore / (totalNotes + chart.TotalHoldNotes),
 	}
 	return score
 }
@@ -150,6 +153,13 @@ func AddHit(h *HitRecord) {
 	s.Combo++
 	if s.Combo > s.MaxCombo {
 		s.MaxCombo = s.Combo
+	}
+
+	timing := h.HitTiming
+	if timing == HitTimingEarly {
+		s.Early++
+	} else if timing == HitTimingLate {
+		s.Late++
 	}
 	s.TotalScore += int(hitType.Value() * float64(s.hitValue))
 }

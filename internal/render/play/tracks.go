@@ -17,6 +17,8 @@ var (
 		B: types.Gray.B,
 		A: 150,
 	}
+	trackActiveAlpha   = uint8(15)
+	trackInactiveAlpha = uint8(10)
 )
 
 func (r *Play) addJudgementPath(track *types.Track) {
@@ -48,7 +50,7 @@ func (r *Play) addTrackPath(track *types.Track) {
 
 	// Get starting point dimensions
 	startX, startY := notePoints[0].ToRender32()
-	width := float32(5) // Adjust this for lane width
+	width := float32(2) // Adjust this for lane width
 
 	// Calculate perpendicular vector for width
 	dx := startX - centerX
@@ -102,9 +104,9 @@ func (r *Play) addTrackPath(track *types.Track) {
 	// Set color with transparency
 	color := track.Name.NoteColor()
 	if track.IsPressed() {
-		color.A = 10
+		color.A = trackActiveAlpha
 	} else {
-		color.A = 0
+		color.A = trackInactiveAlpha
 	}
 	ui.ColorVertices(vs, color)
 

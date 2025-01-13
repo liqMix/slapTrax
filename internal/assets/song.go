@@ -23,6 +23,7 @@ const songDir = "songs"
 const songAudioPrefix = "audio."
 const songMetaFilename = "meta.yaml"
 const songArtPath = "art.png"
+const defaultArtPath = "default_art.png"
 
 var songs map[string]*SongData = make(map[string]*SongData)
 
@@ -115,15 +116,12 @@ func findAudioFile(folderName string) (string, error) {
 	}
 
 	for _, entry := range entries {
-		logger.Debug("Checking file %s", entry.Name())
 		if entry.IsDir() {
 			logger.Debug("\tSkipping directory %s", entry.Name())
 			continue
 		}
 
 		name := entry.Name()
-		logger.Debug("\tFound file %s", name)
-
 		if !strings.HasPrefix(name, songAudioPrefix) {
 			logger.Debug("\tSkipping file %s", name)
 			continue
@@ -156,7 +154,8 @@ func loadSong(folderName string) *SongData {
 	artPath := path.Join(songPath, songArtPath)
 	artImg, _, err := ebitenutil.NewImageFromFileSystem(songFS, artPath)
 	if err != nil {
-		logger.Warn("\tUnable to load art for %s: %s", folderName, err)
+		logger.Warn("\tUnable to find art for %s, falling back to default", folderName)
+		song.Art = GetImage(defaultArtPath)
 	} else {
 		song.Art = artImg
 	}

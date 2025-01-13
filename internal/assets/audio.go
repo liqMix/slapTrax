@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-//go:embed sfx/*.mp3 bgm/*.mp3 songs/**/*.mp3
+//go:embed bgm/*.ogg sfx/*.ogg songs/**/*.ogg
 var audioFS embed.FS
 var loadedAudio = make(map[string][]byte)
 

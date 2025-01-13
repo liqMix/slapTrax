@@ -35,11 +35,9 @@ func (s *Settings) MergeFrom(other *Settings) {
 	// Boolean flags
 	s.Fullscreen = other.Fullscreen
 	s.FixedRenderScale = other.FixedRenderScale
-	s.WaveringLane = other.WaveringLane
 	s.DisableHoldNotes = other.DisableHoldNotes
 	s.DisableHitEffects = other.DisableHitEffects
 	s.DisableLaneEffects = other.DisableLaneEffects
-	s.PromptedOffsetCheck = other.PromptedOffsetCheck
 
 	// Only update if positive values
 	if other.BGMVolume > 0 {

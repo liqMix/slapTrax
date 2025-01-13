@@ -24,15 +24,18 @@ func (b *ValueElement) SetLabel(label string) {
 	b.label = label
 }
 
+func (b *ValueElement) Refresh() {
+	b.SetText(fmt.Sprintf("%s: %s", b.label, b.getValueText()))
+}
 func (b *ValueElement) SetGetValueText(getValueText func() string) {
 	b.getValueText = getValueText
-	b.SetText(fmt.Sprintf("%s: %s", b.label, b.getValueText()))
+	b.Refresh()
 }
 
 func (b *ValueElement) SetTrigger(trigger func()) {
 	b.Element.SetTrigger(func() {
 		trigger()
-		b.SetGetValueText(b.getValueText)
+		b.Refresh()
 	})
 }
 

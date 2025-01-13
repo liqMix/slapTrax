@@ -97,7 +97,6 @@ func DrawTextAt(screen *ebiten.Image, txt string, center *Point, opts *TextOptio
 	})
 
 	x, y := center.ToRender()
-
 	saferDraw(text, screen, txt, int(x), int(y))
 }
 
@@ -108,21 +107,25 @@ func DrawTextBlockAt(screen *ebiten.Image, s []string, p *Point, opts *TextOptio
 	if opts == nil {
 		opts = GetDefaultTextOptions()
 	}
+
 	color := opts.Color
 	if screenOpts != nil {
 		color = ApplyAlphaScale(color, screenOpts.ColorScale.A())
 	}
+
 	text := getTextRenderer(&TextOptions{
 		Align: opts.Align,
 		Scale: opts.Scale * getRenderTextScale(),
 		Color: color,
 	})
 
-	h := text.Measure(s[0]).IntHeight()
-
 	x, y := p.ToRender()
+	h := text.Measure(s[0]).IntHeight()
+	totalHeight := float64(len(s) * h)
+	y -= totalHeight / 2
+
 	for i, line := range s {
-		saferDraw(text, screen, line, int(x), int(y)+h*i)
+		saferDraw(text, screen, line, int(x), int(y)+h*(i+1))
 	}
 }
 

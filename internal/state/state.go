@@ -2,11 +2,12 @@ package state
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 )
 
 type FloatStateArgs struct {
-	onClose func()
+	Cb func()
 }
 
 type State interface {
@@ -25,6 +26,9 @@ type State interface {
 	SetNextState(types.GameState, interface{})
 	HasNextState() bool
 	GetNextState() (types.GameState, interface{})
+
+	CheckActions() input.Action
+	IsNavigable() bool
 }
 
 var FloatingStates = map[types.GameState]bool{
@@ -35,12 +39,15 @@ var FloatingStates = map[types.GameState]bool{
 	types.GameStateModal:               true,
 	types.GameStateLogin:               true,
 	types.GameStateHowToPlay:           true,
+	types.GameStateKeyConfig:           true,
 }
 
 func New(s types.GameState, arg interface{}) State {
 	var state State
 
 	switch s {
+	case types.GameStateExit:
+		state = NewExitState()
 	case types.GameStatePlay:
 		state = NewPlayState(arg.(*PlayArgs))
 	case types.GameStateTitle:
@@ -48,7 +55,7 @@ func New(s types.GameState, arg interface{}) State {
 	case types.GameStatePause:
 		state = NewPauseState(arg.(*PauseArgs))
 	case types.GameStateOffset:
-		state = NewOffsetState()
+		state = NewOffsetState(arg.(*FloatStateArgs))
 	case types.GameStateSettings:
 		state = NewSettingsState()
 	case types.GameStateSongSelection:
@@ -61,6 +68,8 @@ func New(s types.GameState, arg interface{}) State {
 		state = NewModalState(arg.(*ModalStateArgs))
 	case types.GameStateHowToPlay:
 		state = NewHowToPlayState()
+	case types.GameStateKeyConfig:
+		state = NewKeyConfigState(arg.(*FloatStateArgs))
 	}
 
 	if state == nil {
@@ -69,5 +78,6 @@ func New(s types.GameState, arg interface{}) State {
 	if _, ok := FloatingStates[s]; ok {
 		state.IsDoBeFloating()
 	}
+
 	return state
 }

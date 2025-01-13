@@ -11,9 +11,6 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
 )
 
-var artSize = 0.2
-var detailsTop = ui.Point{X: 0.5, Y: 0.27}
-var detailsCenter = ui.Point{X: 0.5, Y: 0.50}
 var lastIdx = 0
 
 type SongSelectionArgs struct {
@@ -23,7 +20,7 @@ type SongSelection struct {
 	types.BaseGameState
 
 	options          []*SongOption
-	details          *SongDetails
+	details          *ui.SongDetails
 	songList         *ui.SongSelector
 	leaderboard      *ui.Leaderboard
 	currentIdx       int
@@ -36,6 +33,15 @@ type SongOption struct {
 }
 
 func NewSongSelectionState() *SongSelection {
+	audio.FadeOutBGM()
+
+	s := &SongSelection{leaderboard: ui.NewLeaderboard()}
+	s.SetAction(input.ActionBack, func() {
+		audio.StopAll()
+		audio.PlaySFX(audio.SFXBack)
+		s.SetNextState(types.GameStateTitle, nil)
+	})
+
 	allSongs := types.GetAllSongs()
 	songs := make([]*SongOption, 0)
 	for _, song := range allSongs {
@@ -66,30 +72,26 @@ func NewSongSelectionState() *SongSelection {
 		}
 		return songs[i].song.Title < songs[j].song.Title
 	})
-
-	// Create
-	s := &SongSelection{
-		options:     songs,
-		leaderboard: ui.NewLeaderboard(),
-	}
+	s.options = songs
 
 	center := ui.Point{
 		X: 0.75,
 		Y: 0.5,
 	}
-
 	songElements := ui.NewSongSelector()
 	songElements.SetCenter(center)
 
 	uiIdx := 0
 	s.uiIdxToOptionIdx = make(map[int]int)
+
 	size := ui.Point{X: 0.25, Y: 0.15}
 	for _, d := range sortedD {
 		e := ui.NewElement()
 		e.SetText(l.String(d.String()))
 		e.SetDisabled(true)
 		e.SetSize(size)
-		e.SetTextScale(1.25)
+		e.SetTextScale(2)
+		e.SetTextBold(true)
 		e.SetTextColor(d.Color())
 		songElements.Add(e)
 		uiIdx++
@@ -113,7 +115,7 @@ func NewSongSelectionState() *SongSelection {
 	}
 	s.songList = songElements
 
-	details := NewSongDetails()
+	details := ui.NewSongDetails()
 	s.details = details
 	if len(s.options) > 0 {
 		idx := 0
@@ -123,17 +125,15 @@ func NewSongSelectionState() *SongSelection {
 		}
 		idx = s.uiIdxToOptionIdx[idx]
 		song := s.options[idx].song
-		s.details.UpdateDetails(song)
+		diff := s.options[idx].difficulty
+		s.details.UpdateDetails(song, diff)
 		audio.PlaySongPreview(song)
 	}
 	return s
 }
 
 func (s *SongSelection) Update() error {
-	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
-		audio.StopAll()
-		s.SetNextState(types.GameStateTitle, nil)
-	}
+	s.BaseGameState.Update()
 
 	s.songList.Update()
 	idx := s.songList.GetIndex()
@@ -144,9 +144,9 @@ func (s *SongSelection) Update() error {
 		optionIdx := s.uiIdxToOptionIdx[s.currentIdx]
 		song := s.options[optionIdx].song
 		diff := s.options[optionIdx].difficulty
-		s.details.UpdateDetails(song)
+		s.details.UpdateDetails(song, diff)
 		audio.PlaySongPreview(song)
-		s.leaderboard.FetchScores(song.Hash, diff)
+		s.leaderboard.FetchScores(song.Hash, int(diff), float64(song.BPM))
 	}
 
 	s.details.Update()

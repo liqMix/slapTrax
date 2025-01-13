@@ -28,21 +28,28 @@ func NewPlayRender(s state.State) *Play {
 
 	// awful but idc
 	cache.Path.RemoveCbs()
-
 	cb := func() {
-		RebuildVectorCache()
+		go func() {
+			if cache.Path.IsBuilding() {
+				return
+			}
+			cache.Path.SetIsBuilding(true)
+			RebuildVectorCache()
+			cache.Path.SetIsBuilding(false)
+		}()
 	}
 	cache.Path.AddCb(&cb)
-	cache.Path.ForceClear()
+	cache.Path.Clear()
 	return p
 }
 
 func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	if cache.Path.IsBuilding() {
+		return
+	}
+
 	r.BaseRenderer.Draw(screen, opts)
 	r.drawMeasureMarkers(screen)
-	// if user.S().FullScreenLane {
-	// 	OscillateWindowOffset(r.state.CurrentTime())
-	// }
 
 	// Track vemctors
 	for _, track := range r.state.Tracks {
@@ -57,27 +64,21 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	if !user.S().DisableHitEffects {
 		r.addHitEffects()
 	}
+
+	r.drawHeader(screen, opts)
+	r.drawStats(screen, opts)
 	r.vectorCollection.Draw(screen)
-
-	// Effects and score
-	r.drawScore(screen, opts)
-
 	r.vectorCollection.Clear()
+
 }
 
 // These are static items we only need to render once
 func (r *Play) static(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	r.renderBackground(img, opts)
-	r.renderProfile(img, opts)
-	r.renderSongInfo(img, opts)
+	r.drawStaticHeader(img, opts)
 }
 
 func (r *Play) renderBackground(img *ebiten.Image, _ *ebiten.DrawImageOptions) {
 	// TODO: actually make some sort of background?
 	img.Fill(types.Black.C())
-}
-
-// TODO: later after tracks and notes
-func (r *Play) renderProfile(img *ebiten.Image, opts *ebiten.DrawImageOptions) {}
-func (r *Play) renderSongInfo(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
 }

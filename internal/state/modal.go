@@ -25,6 +25,7 @@ func NewModalState(args *ModalStateArgs) *Modal {
 }
 
 func (m *Modal) Update() error {
+	m.BaseGameState.Update()
 	m.update(m.SetNextState)
 	return nil
 }

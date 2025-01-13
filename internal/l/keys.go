@@ -23,6 +23,14 @@ const (
 	WELCOME      = "welcome"
 	LEADERBOARD  = "leaderboard"
 
+	// Actions
+	ACTION_BACK   = "action.back"
+	ACTION_UP     = "action.up"
+	ACTION_DOWN   = "action.down"
+	ACTION_LEFT   = "action.left"
+	ACTION_RIGHT  = "action.right"
+	ACTION_SELECT = "action.select"
+
 	// Song
 	SONG_ARTIST = "song.artist"
 	SONG_ALBUM  = "song.album"
@@ -67,12 +75,15 @@ const (
 	RENDERSIZE_MAX    = "rendersize.max"
 
 	//// Game
-	SETTINGS_GAME             = "settings.game"
-	SETTINGS_GAME_LOCALE      = "settings.game.locale"
-	SETTINGS_GAME_THEME       = "settings.game.theme"
-	SETTINGS_GAME_AUDIOOFFSET = "settings.game.audiooffset"
-	SETTINGS_GAME_INPUTOFFSET = "settings.game.inputoffset"
-	SETTINGS_GAME_LANESPEED   = "settings.game.lanespeed"
+	SETTINGS_GAME              = "settings.game"
+	SETTINGS_GAME_KEY_CONFIG   = "settings.game.keyconfig"
+	SETTINGS_GAME_NOTEWIDTH    = "settings.game.notewidth"
+	SETTINGS_GAME_LOCALE       = "settings.game.locale"
+	SETTINGS_GAME_THEME        = "settings.game.theme"
+	SETTINGS_GAME_AUDIOOFFSET  = "settings.game.audiooffset"
+	SETTINGS_GAME_INPUTOFFSET  = "settings.game.inputoffset"
+	SETTINGS_GAME_LANESPEED    = "settings.game.lanespeed"
+	SETTINGS_GAME_EDGEPLAYAREA = "settings.game.edgeplayarea"
 
 	//// Audio
 	SETTINGS_AUDIO                   = "settings.audio"
@@ -86,10 +97,22 @@ const (
 	SETTINGS_ACCESS_NOHOLDNOTES  = "settings.access.noholdnotes"
 	SETTINGS_ACCESS_NOHITEFFECT  = "settings.access.nohiteffect"
 	SETTINGS_ACCESS_NOLANEEFFECT = "settings.access.nolaneeffect"
+	SETTINGS_ACCESS_MIRROR       = "settings.access.mirror"
+
+	KEY_CONFIG_DEFAULT      = "keyconfig.default"
+	KEY_CONFIG_DEFAULT_DESC = "keyconfig.default.desc"
+	KEY_CONFIG_REDUCED      = "keyconfig.reduced"
+	KEY_CONFIG_REDUCED_DESC = "keyconfig.reduced.desc"
 
 	// Dialog
-	DIALOG_NEW_PLAYER  = "dialog.newplayer"
-	DIALOG_HOW_TO_PLAY = "dialog.howtoplay"
+	DIALOG_NEW_PLAYER        = "dialog.newplayer"
+	DIALOG_HOW_TO_PLAY       = "dialog.howtoplay"
+	DIALOG_BE_SURE_TO_LOGIN  = "dialog.besuretologin"
+	DIALOG_BE_SURE_TO_OFFSET = "dialog.besuretooffset"
+
+	// Offset
+	OFFSET_INSTRUCTIONS = "offset.instructions"
+	OFFSET_INPUT        = "offset.input"
 
 	// States
 	//// Play
@@ -113,6 +136,7 @@ const (
 	NOTE_COLOR_AURORA    = "note.color.aurora"
 	NOTE_COLOR_ARORUA    = "note.color.arorua"
 	NOTE_COLOR_HAMBURGER = "note.color.hamburger"
+	NOTE_COLOR_CLASSIC   = "note.color.classic"
 
 	// Erors
 	ERROR_USERNAME_REQUIRED   = "error.login.username.required"

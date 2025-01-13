@@ -53,18 +53,102 @@ func (t Track) IsPressed() bool {
 	return t.Active || t.StaleActive
 }
 
-func (t *Track) CheckInput(currentTime int64) {
+func (t *Track) Update(currentTime int64, travelTime int64, maxTime int64) HitRating {
 	if !t.Active && !t.StaleActive {
-		if input.K.AreAny(TrackNameToKeys[t.Name], input.JustPressed) {
+		if input.JustActioned(t.Name.Action()) {
 			t.Active = true
-			return
 		}
 	}
 
 	if t.StaleActive || t.Active {
-		if !input.K.AreAny(TrackNameToKeys[t.Name], input.Held) {
+		if input.NotActioned(t.Name.Action()) {
 			t.Active = false
 			t.StaleActive = false
 		}
 	}
+
+	hit := None
+
+	// Reset active notes
+	notes := make([]*Note, 0, len(t.ActiveNotes))
+
+	// Only update notes that are currently visible
+	for _, n := range t.ActiveNotes {
+		n.Update(currentTime, travelTime)
+
+		if n.IsHoldNote() {
+			if n.WasReleased() {
+				continue
+			}
+
+			if !n.WasHit() && t.Active && !t.StaleActive {
+				if n.Hit(currentTime, score) {
+					hit = n.HitRating
+					t.StaleActive = true
+					notes = append(notes, n)
+					continue
+				}
+			}
+
+			if !t.Active && !t.StaleActive && !n.WasReleased() {
+				n.Release(currentTime)
+			}
+		} else {
+			if n.WasHit() {
+				continue
+			}
+
+			if t.Active && !t.StaleActive {
+				if n.Hit(currentTime, score) {
+					hit = n.HitRating
+					t.StaleActive = true
+					continue
+				}
+			}
+		}
+
+		// Note not yet reached the out of bounds window
+		windowEnd := n.Target + LatestWindow
+		if n.IsHoldNote() {
+			windowEnd = n.TargetRelease + LatestWindow
+		}
+		if currentTime < windowEnd {
+			notes = append(notes, n)
+			continue
+		}
+
+		// Drop expired notes
+		if n.IsHoldNote() && t.Active {
+			// u good
+			n.Release(currentTime)
+			continue
+		}
+		n.Miss(score)
+	}
+
+	// Add new approaching notes
+	if t.NextNoteIndex < len(t.AllNotes) {
+		for i := t.NextNoteIndex; i < len(t.AllNotes); i++ {
+			note := t.AllNotes[i]
+			if note.Target > maxTime {
+				break
+			}
+			notes = append(notes, note)
+			t.NextNoteIndex = i + 1
+		}
+
+	}
+
+	t.ActiveNotes = notes
+
+	// dont stay active if no notes in window
+	if t.Active && !t.StaleActive {
+		for _, n := range t.ActiveNotes {
+			if n.InWindow(currentTime-EarliestWindow, currentTime+LatestWindow) {
+				return hit
+			}
+		}
+		t.StaleActive = true
+	}
+	return hit
 }

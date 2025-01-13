@@ -27,7 +27,6 @@ func NewLoginState() *LoginState {
 	s.modal.SetCenter(ui.Point{X: 0.5, Y: 0.5})
 	s.modal.SetOnLogin(s.handleLogin)
 	s.modal.SetOnContinue(func() {
-		external.PlayOffline()
 		s.SetNextState(types.GameStateTitle, nil)
 	})
 	return s
@@ -83,6 +82,7 @@ func (s *LoginState) handleLogin(username, password string) {
 }
 
 func (s *LoginState) Update() error {
+	s.BaseGameState.Update()
 	s.modal.Update()
 	return nil
 }

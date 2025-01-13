@@ -12,188 +12,127 @@ import (
 )
 
 const (
-	offsetCenter     = 2000 // The ms center tick of the offset test sound
-	inputDelayFrames = 100
-	updateRate       = 1.0 / 240.0 // 240Hz fixed update rate
-	maxSteps         = 3
-	maxOffset        = 1000
-	minOffset        = -1000
-	maxHitDiffs      = 15   // Increased for better averaging
-	maxAutoAdj       = 5    // Reduced for smoother adjustments
-	hitWindowMs      = 200  // Valid hit window in milliseconds
-	centerThreshold  = 0.01 // Threshold for center tick playback
-
-	// Weights for different timing windows
-	perfectWeight = 1.0
-	goodWeight    = 0.8
-	badWeight     = 0.5
+	offsetTravelTime int64   = 1500
+	centerWindow     float64 = 0.01
 )
 
 type Offset struct {
 	types.BaseGameState
 
-	startTime        time.Time // Renamed from anchorTime for clarity
-	elapsedTime      int64
-	backwards        bool
-	travelTime       int64
-	playedCenterTick bool
-	initAudioOffset  int64
-	initInputOffset  int64
-
-	AutoAdjustInput bool
-	AutoAdjustAudio bool
+	bgmWasPlaying   bool
+	cb              func()
+	startTime       time.Time // Renamed from anchorTime for clarity
+	elapsedTime     int64
+	backwards       bool
+	travelTime      int64
+	playedTick      bool
+	initAudioOffset int64
+	initInputOffset int64
 
 	NoteProgress float64
+	CenterWindow float64
 	AudioOffset  int64
 	InputOffset  int64
 	HitDiff      int64
-	hitDiffs     []weightedHit
 }
 
-// weightedHit stores hit timing data with its weight for adjustment
-type weightedHit struct {
-	diff   int64
-	weight float64
-	time   time.Time
-}
-
-func NewOffsetState() *Offset {
-	if !user.S().PromptedOffsetCheck {
-		user.S().PromptedOffsetCheck = true
-		user.Save()
+func NewOffsetState(args *FloatStateArgs) *Offset {
+	bgmWasPlaying := false
+	if audio.GetBGM() != nil && audio.GetBGM().IsPlaying() {
+		audio.FadeOutBGM()
+		bgmWasPlaying = true
 	}
+
+	// Gotta have some volume...
+	if user.S().SFXVolume < 0.5 {
+		audio.SetSFXVolume(0.5)
+	}
+
 	aOffset := int64(user.S().AudioOffset)
 	iOffset := int64(user.S().InputOffset)
 
 	now := time.Now()
 	state := &Offset{
+		bgmWasPlaying:   bgmWasPlaying,
+		cb:              args.Cb,
 		AudioOffset:     aOffset,
 		InputOffset:     iOffset,
 		initAudioOffset: aOffset,
 		initInputOffset: iOffset,
-		travelTime:      2000,
 		NoteProgress:    0.5,
+		CenterWindow:    centerWindow,
+		travelTime:      offsetTravelTime,
 		startTime:       now,
-		hitDiffs:        make([]weightedHit, 0, maxHitDiffs),
 	}
 
 	return state
 }
 
-// getHitWeight returns a weight based on timing accuracy
-func getHitWeight(diff int64) float64 {
-	hitRating := types.GetHitRating(diff)
-	switch hitRating {
-	case types.Perfect:
-		return perfectWeight
-	case types.Good:
-		return goodWeight
-	case types.Bad:
-		return goodWeight
-	default:
-		return 0
-	}
+func resetVolume() {
+	audio.SetSFXVolume(user.S().SFXVolume)
 }
 
-// GetHitDiff calculates the timing difference with improved accuracy
-func (s *Offset) GetHitDiff(hitTime int64) int64 {
-	// Calculate the expected hit times for top, center, and bottom positions
-	// Remove input offset from hit time since it's already added
-	actualHitTime := hitTime - s.InputOffset
-
-	// Adjust travel time for audio offset
-	adjustedTravelTime := s.travelTime - s.AudioOffset
-
-	targetTimes := []int64{
-		adjustedTravelTime,     // Top
-		adjustedTravelTime / 2, // Center
-		0,                      // Bottom
-	}
-
-	// Find the closest target time
-	var closestDiff int64
-	minAbsDiff := int64(math.MaxInt64)
-
-	for _, target := range targetTimes {
-		diff := actualHitTime - target
-		absDiff := abs(diff)
-
-		if absDiff < minAbsDiff {
-			minAbsDiff = absDiff
-			closestDiff = diff
-		}
-	}
-
-	// Only return valid hits within the hit window
-	if minAbsDiff <= hitWindowMs {
-		return closestDiff
-	}
-	return 0 // Invalid hit
+func (s *Offset) getCenterTime() int64 {
+	return (s.travelTime / 2) + s.AudioOffset
 }
 
-// autoAdjustOffset uses a weighted moving average for smoother adjustments
-func (s *Offset) autoAdjustOffset() int64 {
-	if len(s.hitDiffs) == 0 {
-		return 0
+func (s *Offset) handleInput() error {
+	if input.JustActioned(input.ActionUp) {
+		s.AudioOffset += 5
+	} else if input.JustActioned(input.ActionDown) {
+		s.AudioOffset -= 5
+	} else if input.JustActioned(input.ActionLeft) {
+		s.InputOffset -= 5
+	} else if input.JustActioned(input.ActionRight) {
+		s.InputOffset += 5
+	} else if input.K.Is(ebiten.KeySpace, input.JustPressed) {
+		hitTime := s.elapsedTime + s.InputOffset
+		s.HitDiff = s.getCenterTime() - hitTime
+	} else if input.K.Is(ebiten.KeyR, input.JustPressed) {
+		s.resetOffsets()
+	} else if input.K.Is(ebiten.Key0, input.JustPressed) {
+		s.AudioOffset = 0
+		s.InputOffset = 0
+	} else if input.JustActioned(input.ActionSelect) {
+		resetVolume()
+		audio.PlaySFX(audio.SFXSelect)
+		return s.saveAndExit()
+	} else if input.JustActioned(input.ActionBack) {
+		resetVolume()
+		return s.exit()
 	}
 
-	// Remove old hits
-	now := time.Now()
-	validHits := make([]weightedHit, 0, len(s.hitDiffs))
-	for _, hit := range s.hitDiffs {
-		if now.Sub(hit.time) < 30*time.Second {
-			validHits = append(validHits, hit)
-		}
+	return nil
+}
+
+func (s *Offset) resetOffsets() {
+	s.AudioOffset = s.initAudioOffset
+	s.InputOffset = s.initInputOffset
+}
+
+func (s *Offset) saveAndExit() error {
+	user.S().AudioOffset = s.AudioOffset
+	user.S().InputOffset = s.InputOffset
+	if s.cb != nil {
+		s.cb()
 	}
-	s.hitDiffs = validHits
+	return s.exit()
+}
 
-	if len(s.hitDiffs) == 0 {
-		return 0
+func (s *Offset) exit() error {
+	audio.StopAll()
+	if s.bgmWasPlaying {
+		audio.FadeInBGM()
 	}
-
-	// Calculate weighted average
-	var weightedSum float64
-	var totalWeight float64
-
-	for _, hit := range s.hitDiffs {
-		if s.AutoAdjustAudio {
-			// For audio offset:
-			// If hit is late (positive), we need negative adjustment
-			// If hit is early (negative), we need positive adjustment
-			weightedSum -= float64(hit.diff) * hit.weight
-		} else {
-			// For input offset:
-			// If hit is late (positive), we need negative adjustment to compensate
-			// If hit is early (negative), we need positive adjustment to compensate
-			weightedSum -= float64(hit.diff) * hit.weight // Same as audio!
-		}
-		totalWeight += hit.weight
-	}
-
-	if totalWeight == 0 {
-		return 0
-	}
-
-	// Calculate adjustment with dynamic scaling
-	adjustment := int64(weightedSum / totalWeight)
-
-	// Scale adjustment based on magnitude of error
-	scale := math.Min(1.0, math.Max(0.2, math.Abs(float64(adjustment))/100.0))
-	adjustment = int64(float64(adjustment) * scale)
-
-	// Apply maximum adjustment limit
-	if adjustment > maxAutoAdj {
-		adjustment = maxAutoAdj
-	} else if adjustment < -maxAutoAdj {
-		adjustment = -maxAutoAdj
-	}
-
-	return adjustment
+	s.SetNextState(types.GameStateBack, nil)
+	return nil
 }
 
 func (s *Offset) Update() error {
+	s.BaseGameState.Update()
 	now := time.Now()
-	progress := float64(now.Sub(s.startTime).Milliseconds()) / float64(s.travelTime)
+	elapsed := now.Sub(s.startTime).Milliseconds()
+	progress := float64(elapsed) / float64(s.travelTime)
 	if s.backwards {
 		progress = 1 - progress
 	}
@@ -203,135 +142,47 @@ func (s *Offset) Update() error {
 		progress = math.Max(0, math.Min(1, progress))
 		s.backwards = progress > 0
 		s.startTime = now
-		s.playedCenterTick = false
-	} else if math.Abs(progress-0.5) < centerThreshold && !s.playedCenterTick {
-		audio.StopAll()
-		audio.PlaySFXWithOffset(audio.SFXOffset, offsetCenter+s.AudioOffset)
-		s.playedCenterTick = true
+		s.playedTick = false
+	}
+
+	if !s.playedTick {
+		tickAtProgress := ((float64(s.travelTime/2) + float64(s.AudioOffset)) / float64(s.travelTime))
+
+		if s.backwards {
+			tickAtProgress = 1 - tickAtProgress
+		}
+
+		// Check if current progress is within threshold of either tick point
+		diff := math.Abs(progress - tickAtProgress)
+
+		if diff <= s.CenterWindow {
+			audio.PlaySFX(audio.SFXHat)
+			s.playedTick = true
+		}
 	}
 
 	s.NoteProgress = progress
-	s.elapsedTime = now.Sub(s.startTime).Milliseconds()
+	s.elapsedTime = elapsed
 
-	// Handle input with improved key checking
 	if err := s.handleInput(); err != nil {
 		return err
 	}
 
 	// Ensure offsets stay within bounds
-	s.AudioOffset = clamp(s.AudioOffset, minOffset, maxOffset)
-	s.InputOffset = clamp(s.InputOffset, minOffset, maxOffset)
+	s.AudioOffset = clamp(s.AudioOffset, -s.travelTime, s.travelTime)
+	s.InputOffset = clamp(s.InputOffset, -s.travelTime, s.travelTime)
 
 	return nil
 }
 
-func (s *Offset) handleInput() error {
-	if checkPress(ebiten.KeyArrowUp) {
-		s.AudioOffset += 5
-	} else if checkPress(ebiten.KeyArrowDown) {
-		s.AudioOffset -= 5
-	} else if checkPress(ebiten.KeyArrowLeft) {
-		s.InputOffset -= 5
-	} else if checkPress(ebiten.KeyArrowRight) {
-		s.InputOffset += 5
-	} else if input.K.Is(ebiten.KeySpace, input.JustPressed) {
-		hitTime := s.elapsedTime
-		s.HitDiff = s.GetHitDiff(hitTime)
-
-		if s.HitDiff != 0 { // Only process valid hits
-			weight := getHitWeight(s.HitDiff)
-			hit := weightedHit{
-				diff:   s.HitDiff,
-				weight: weight,
-				time:   time.Now(),
-			}
-
-			s.hitDiffs = append(s.hitDiffs, hit)
-			if len(s.hitDiffs) > maxHitDiffs {
-				s.hitDiffs = s.hitDiffs[1:]
-			}
-
-			if s.AutoAdjustAudio || s.AutoAdjustInput {
-				adjustment := s.autoAdjustOffset()
-				if s.AutoAdjustAudio {
-					s.AudioOffset += adjustment
-				} else {
-					s.InputOffset += adjustment
-				}
-			}
-		}
-	} else if input.K.Is(ebiten.KeyR, input.JustPressed) {
-		s.resetOffsets()
-	} else if input.K.Is(ebiten.Key0, input.JustPressed) {
-		s.AudioOffset = 0
-		s.InputOffset = 0
-	} else if input.K.Is(ebiten.KeyEnter, input.JustPressed) {
-		return s.saveAndExit()
-	} else if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
-		return s.exit()
-	} else if input.K.Is(ebiten.KeyA, input.JustPressed) {
-		s.toggleAudioAdjust()
-	} else if input.K.Is(ebiten.KeyI, input.JustPressed) {
-		s.toggleInputAdjust()
-	}
-
-	return nil
-}
-
-func (s *Offset) resetOffsets() {
-	s.AudioOffset = s.initAudioOffset
-	s.InputOffset = s.initInputOffset
-	s.hitDiffs = make([]weightedHit, 0, maxHitDiffs)
-}
-
-func (s *Offset) saveAndExit() error {
-	user.S().AudioOffset = s.AudioOffset
-	user.S().InputOffset = s.InputOffset
-	return s.exit()
-}
-
-func (s *Offset) exit() error {
-	audio.StopAll()
-	s.SetNextState(types.GameStateBack, nil)
-	return nil
-}
-
-func (s *Offset) toggleAudioAdjust() {
-	s.AutoAdjustAudio = !s.AutoAdjustAudio
-	if s.AutoAdjustAudio {
-		s.AutoAdjustInput = false
-	}
-	s.hitDiffs = make([]weightedHit, 0, maxHitDiffs)
-}
-
-func (s *Offset) toggleInputAdjust() {
-	s.AutoAdjustInput = !s.AutoAdjustInput
-	if s.AutoAdjustInput {
-		s.AutoAdjustAudio = false
-	}
-	s.hitDiffs = make([]weightedHit, 0, maxHitDiffs)
-}
-
-// Helper functions
-func abs(x int64) int64 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
-func clamp(value, min, max int64) int64 {
-	if value < min {
+func clamp(val, min, max int64) int64 {
+	if val < min {
 		return min
 	}
-	if value > max {
+	if val > max {
 		return max
 	}
-	return value
-}
-
-func checkPress(key ebiten.Key) bool {
-	return input.K.Is(key, input.JustPressed) || input.K.IsKeyHeldFor(key, inputDelayFrames)
+	return val
 }
 
 func (s *Offset) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {}

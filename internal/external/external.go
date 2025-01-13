@@ -19,7 +19,7 @@ var (
 	Register       = M.Register
 	GetLeaderboard = M.GetLeaderboard
 	AddScore       = M.AddScore
-	PlayOffline    = M.PlayOffline
+	GetScore       = M.GetScore
 )
 
 // Opens browser to URL

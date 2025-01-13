@@ -24,8 +24,9 @@ type PathCache struct {
 	renderHeight int
 	resolution   int // How many steps to cache (e.g., 100 for 1% increments)
 
-	cache map[PathCacheKey]*CachedPath
-	cbs   []*func()
+	isBuilding bool
+	cache      map[PathCacheKey]*CachedPath
+	cbs        []*func()
 }
 
 func InitPathCache() {
@@ -62,44 +63,24 @@ func (c *PathCache) GetResolution() int {
 
 func (c *PathCache) SetResolution(resolution int) {
 	c.resolution = resolution
-	c.Clear(c.renderWidth, c.renderHeight)
 }
 
-// for if we're changing something fundamental about the paths
-// but render size is the same:
-//   - note color
-func (c *PathCache) ForceClear() {
-	// ok fine fine, I'll clear it
+func (c *PathCache) Clear() {
 	c.cache = make(map[PathCacheKey]*CachedPath)
 	if c.cbs != nil {
 		for _, cb := range c.cbs {
 			(*cb)()
 		}
 	}
-}
-
-// If same render size or empty cache, no need to clear
-// Resolution is currently tied directly to render size,
-// so we don't need to clear if resolution changes
-func (c *PathCache) Clear(renderWidth, renderHeight int) {
-	if len(c.cache) == 0 {
-		return
-	} else if c.renderWidth == renderWidth && c.renderHeight == renderHeight {
-		return
-	}
-	c.cache = make(map[PathCacheKey]*CachedPath)
-	if c.cbs != nil {
-		for _, cb := range c.cbs {
-			(*cb)()
-		}
-	}
-	return
 }
 
 func (c *PathCache) Get(key *PathCacheKey) *CachedPath {
 	if key == nil {
 		return nil
 	}
+
+	// Can modify all notes here.
+
 	return c.cache[*key]
 }
 
@@ -108,4 +89,12 @@ func (c *PathCache) Set(key *PathCacheKey, path *CachedPath) {
 		return
 	}
 	c.cache[*key] = path
+}
+
+func (c *PathCache) SetIsBuilding(isBuilding bool) {
+	c.isBuilding = isBuilding
+}
+
+func (c *PathCache) IsBuilding() bool {
+	return c.isBuilding
 }

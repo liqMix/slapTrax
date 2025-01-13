@@ -1,7 +1,8 @@
 locale: "English"
-title: "Ebiten Winter Game Jam 2024"
+title: "slapTrax"
 
 # General
+loading: "Loading..."
 exit: "Exit"
 back: "Back"
 save: "Save"
@@ -14,7 +15,15 @@ guest: "Guest"
 difficulties: "Difficulties"
 corner: "Corner"
 center: "Center"
-leaderboard: "Top Scores"
+leaderboard: "Top Slappers"
+
+# Actions
+action.back: "Back"
+action.select: "Select"
+action.up: "Up"
+action.down: "Down"
+action.left: "Left"
+action.right: "Right"
 
 # Difficulties
 difficulty.easy: "Easy"
@@ -48,7 +57,7 @@ state.howtoplay: "How to Play"
 # Login
 login.text.offline: "Offline Mode"
 login.text.online: "Online Mode"
-login.login: "Login"
+login.login: "Login/Register"
 login.logout: "Logout"
 login.username: "Username"
 login.password: "Password"
@@ -77,6 +86,14 @@ settings.game.theme: "Theme"
 settings.game.audiooffset: "Audio Offset"
 settings.game.inputoffset: "Input Offset"
 settings.game.lanespeed: "Speed"
+settings.game.notewidth: "Note Width"
+settings.game.keyconfig: "Key Config"
+settings.game.edgeplayarea: "Max Play Area"
+
+keyconfig.default: "Default"
+keyconfig.default.desc: "(with arrow keys and the navvies)"
+keyconfig.reduced: "Reduced"
+keyconfig.reduced.desc: "(for smol keyboards)"
 
 # Audio Settings
 settings.audio: "Audio"
@@ -92,12 +109,17 @@ settings.access.nohiteffect: "Disable Hit Effects"
 settings.access.nolaneeffect: "Disable Lane Effects"
 
 # Dialogs
-dialog.newplayer: "It looks like you haven't set your offsets yet.\nThis is important for the game to work correctly.\nIf your timing seems to be off, please adjust them in the settings."
-dialog.howtoplay: ""
+dialog.howtoplay: "The goal of the game is to get the highest score by hitting all notes in the song.\nEach note travels towards you on a lane.\nThese lanes are associated with keys in the same area of your keyboard.\nPress any key in that section on time with the note to get the best score.\nLate or early hits result in less score for that note."
+dialog.besuretologin: "Don't forget to login to progress your rank!"
+dialog.besuretooffset: "If you are having trouble hitting notes try adjusting your offsets in the settings."
 
 # Play State
 state.play.restart: "Restart"
 state.play.pause: "Pause"
+
+# Offset
+offset.instructions: "<b>Audio Offset\nAdjusts when the music is played\nOnly affects visuals\n\n<b>Input Offset\nAdjusts when your hits are registered\nOnly affects input\n\nIf you notice the notes are out of sync with the music you hear,\nadjust your AUDIO OFFSET accordingly:\nIf the notes are arriving at the hit line BEFORE the beat:\nDECREASE your AUDIO OFFSET to play the music earlier\nIf the notes are arriving at the hit line AFTER the beat:\nINCREASE your AUDIO OFFSET to play the music later\n\nIf you notice you are getting BAD and MISS hits\nwhen you are hitting the notes exactly on time:\nAdjust your INPUT OFFSET"
+offset.input: "HIT: SPACEBAR\n\n\nAUDIO OFFSET:\nINCREASE: UP ARROW\nDECREASE: DOWN ARROW\n\n\nINPUT OFFSET:\nINCREASE: RIGHT ARROW\nDECREASE: LEFT ARROW\n\n\nNote:\nIf you're unsure, check the title logo for audio/visual sync."
 
 # Themes
 theme.standard: "Standard"

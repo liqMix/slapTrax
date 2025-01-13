@@ -67,8 +67,8 @@ func (d *Debugster) Draw(screen *ebiten.Image) {
 	// Draw FPS
 	rX, rY := display.Window.RenderSize()
 	wX, wY := ebiten.WindowSize()
-	offset := 20
-	y := offset
+	offset := 15
+	y := 300
 	debugPrints := []string{
 		fmt.Sprintf("Render Size: %v, %v", rX, rY),
 		fmt.Sprintf("Window Size: %v, %v", wX, wY),

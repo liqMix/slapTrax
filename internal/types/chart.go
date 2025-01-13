@@ -25,8 +25,9 @@ var noteToTrack = map[uint8]TrackName{
 }
 
 type Chart struct {
-	TotalNotes int
-	Tracks     []*Track
+	TotalNotes     int
+	TotalHoldNotes int
+	Tracks         []*Track
 }
 
 func NewChart(song *Song, data []byte) (*Chart, error) {
@@ -54,10 +55,10 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 	if string(headerChunk.ID[:]) != "MThd" {
 		return nil, errors.New("invalid MIDI file: missing MThd header")
 	}
-	logger.Debug("MIDI Header: length %d bytes", headerChunk.Length)
-	logger.Debug("Format: %d", headerChunk.Format)
-	logger.Debug("Tracks: %d", headerChunk.Tracks)
-	logger.Debug("Division: %d", headerChunk.Division)
+	// logger.Debug("MIDI Header: length %d bytes", headerChunk.Length)
+	// logger.Debug("Format: %d", headerChunk.Format)
+	// logger.Debug("Tracks: %d", headerChunk.Tracks)
+	// logger.Debug("Division: %d", headerChunk.Division)
 
 	// Midi junk to get timing
 	ticksPerQuarter := float64(headerChunk.Division)
@@ -88,7 +89,7 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 			return nil, errors.New("invalid MIDI file: missing MTrk header")
 		}
 
-		logger.Debug("Track %d: length %d bytes", trackNum, trackHeader.Length)
+		// logger.Debug("Track %d: length %d bytes", trackNum, trackHeader.Length)
 
 		// Track 0 is usually metadata/tempo - skip it (for now... maybe we can use this instead of songmeta for bpm)
 		if trackNum == 0 {
@@ -237,6 +238,12 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 		track := NewTrack(name, notes[name], beatInterval)
 		chart.Tracks = append(chart.Tracks, track)
 		chart.TotalNotes += len(notes[name])
+		for _, note := range notes[name] {
+			if note.IsHoldNote() {
+				chart.TotalHoldNotes++
+			}
+		}
+
 	}
 
 	if chart.TotalNotes == 0 {

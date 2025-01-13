@@ -2,7 +2,6 @@ package audio
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 )
 
 type channels struct {
-	sfx            *resound.DSPChannel
 	bgm            *resound.DSPChannel
 	song           *resound.DSPChannel
 	previewPrev    *resound.DSPChannel
@@ -27,7 +25,6 @@ type channels struct {
 }
 
 type players struct {
-	sfx            []*resound.Player
 	bgm            *resound.Player
 	song           *resound.Player
 	previewCurrent *resound.Player
@@ -41,8 +38,10 @@ type previewStatus struct {
 }
 
 type audioMan struct {
-	players  *players
-	channels *channels
+	audioProperties resound.AudioProperties
+	sfxCache        *SFXPlayerCache
+	players         *players
+	channels        *channels
 
 	previewStatus *previewStatus
 	volume        *Volume
@@ -61,31 +60,35 @@ const sampleRate = 48000
 func InitAudioManager(v *Volume) {
 	logger.Info("Initializing audio manager...")
 	audio.NewContext(sampleRate)
+	audioProperties := resound.NewAudioProperties()
+
+	sfxCache, err := NewSFXPlayerCache(audioProperties, v.SFX)
+	if err != nil {
+		panic("Error initializing SFX cache: " + err.Error())
+	}
 
 	manager = &audioMan{
+		audioProperties: audioProperties,
+
+		sfxCache: sfxCache,
 		channels: newChannels(v),
-		players: &players{
-			sfx: make([]*resound.Player, 0),
-		},
-		volume: v,
+		players:  &players{},
+		volume:   v,
 	}
 }
 
 func newChannels(v *Volume) *channels {
-	sfx := resound.NewDSPChannel()
 	bgm := resound.NewDSPChannel()
 	song := resound.NewDSPChannel()
 	previewPrev := resound.NewDSPChannel()
 	previewCurrent := resound.NewDSPChannel()
 
-	sfx.AddEffect("volume", effects.NewVolume().SetStrength(v.SFX))
 	bgm.AddEffect("volume", effects.NewVolume().SetStrength(v.BGM))
 	song.AddEffect("volume", effects.NewVolume().SetStrength(v.Song))
 	previewPrev.AddEffect("volume", effects.NewVolume().SetStrength(v.Song))
 	previewCurrent.AddEffect("volume", effects.NewVolume().SetStrength(v.Song))
 
 	return &channels{
-		sfx:            sfx,
 		bgm:            bgm,
 		song:           song,
 		previewPrev:    previewPrev,
@@ -93,14 +96,49 @@ func newChannels(v *Volume) *channels {
 	}
 }
 
-func getPlayer(path string) (*resound.Player, error) {
+func getVolumeEffect(c *resound.DSPChannel) *effects.Volume {
+	if effect, ok := c.Effects["volume"]; !ok {
+		return nil
+	} else {
+		return effect.(*effects.Volume)
+	}
+}
+
+func SetBGMVolume(v float64) {
+	manager.volume.BGM = v
+	if manager.channels.bgm != nil {
+		getVolumeEffect(manager.channels.bgm).SetStrength(v)
+	}
+}
+
+func SetSFXVolume(v float64) {
+	manager.volume.SFX = v
+	if manager.sfxCache != nil {
+		manager.sfxCache.SetVolume(v)
+	}
+}
+
+func SetSongVolume(v float64) {
+	manager.volume.Song = v
+	if manager.channels.song != nil {
+		getVolumeEffect(manager.channels.song).SetStrength(v)
+	}
+	if manager.channels.previewCurrent != nil {
+		getVolumeEffect(manager.channels.previewCurrent).SetStrength(v)
+	}
+	if manager.channels.previewPrev != nil {
+		getVolumeEffect(manager.channels.previewPrev).SetStrength(v)
+	}
+}
+
+func getStream(path string) (io.ReadSeeker, error) {
 	b, err := assets.GetAudio(path)
 	if err != nil {
 		return nil, err
 	}
+
 	reader := bytes.NewReader(b)
 	ext := assets.AudioExtFromPath(path)
-
 	var stream io.ReadSeeker
 	switch ext {
 	case assets.Wav:
@@ -114,44 +152,127 @@ func getPlayer(path string) (*resound.Player, error) {
 		return nil, err
 	}
 
-	return resound.NewPlayer(stream)
+	return stream, nil
 }
 
-func play(path string, c *resound.DSPChannel, players *[]*resound.Player) error {
-	player, err := getPlayer(path)
+func getPlayer(path string, c *resound.DSPChannel) (*resound.Player, error) {
+	stream, err := getStream(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	volume := getVolumeEffect(c)
+	if volume != nil {
+		prop, err := manager.audioProperties.Get(path).Analyze(stream, 0)
+		if err != nil {
+			logger.Error("Error analyzing song (%s): %v", path, err)
+		} else {
+			volume.SetNormalizationFactor(prop.Normalization)
+		}
+	}
+
+	player, err := resound.NewPlayer(stream)
+	if err != nil {
+		return nil, err
+	}
+
 	player.SetDSPChannel(c)
-	player.Play()
-	if players != nil {
-		*players = append(*players, player)
-	}
-	return nil
+	return player, nil
 }
 
 func PlaySFX(sfx SFXCode) {
-	if err := play(sfx.Path(), manager.channels.sfx, &manager.players.sfx); err != nil {
-		logger.Error("Error playing SFX: %v", err)
-	}
-}
-
-func PlaySFXWithOffset(sfx SFXCode, offset int64) {
-	player, err := getPlayer(sfx.Path())
-	if err != nil {
-		logger.Error("Error playing SFX with offset: %v", err)
+	if manager.volume.SFX == 0 {
 		return
 	}
-	player.SetDSPChannel(manager.channels.sfx)
-	player.SetPosition(time.Duration(offset) * time.Millisecond)
-	player.Play()
-	manager.players.sfx = append(manager.players.sfx, player)
+	manager.sfxCache.PlaySound(sfx)
+}
+
+func PlayTrackSFX(trackName types.TrackName) {
+	if manager.volume.SFX == 0 {
+		return
+	}
+	manager.sfxCache.PlayTrackSound(trackName)
+}
+
+func GetBGM() *resound.Player {
+	return manager.players.bgm
 }
 
 func PlayBGM(bgmCode BGMCode) {
-	path := bgmCode.Path()
-	if err := play(path, manager.channels.bgm, nil); err != nil {
-		logger.Error("Error playing BGM: %v", err)
+	var volume *effects.Volume
+
+	if manager.players.bgm == nil {
+		path := bgmCode.Path()
+		stream, err := getStream(path)
+		if err != nil {
+			logger.Error("Error getting stream for BGM: %s", path)
+			return
+		}
+		volume = getVolumeEffect(manager.channels.bgm)
+
+		if volume != nil {
+			prop, err := manager.audioProperties.Get(path).Analyze(stream, 0)
+			if err != nil {
+				logger.Error("Error analyzing song (%s): %v", path, err)
+			} else {
+				volume.SetNormalizationFactor(prop.Normalization)
+			}
+			volume.StartFade(0, manager.volume.BGM, config.AUDIO_FADE_S*2)
+		}
+		length, err := stream.Seek(0, io.SeekEnd)
+		if err != nil {
+			logger.Error("Error getting length of BGM: %s", path)
+			return
+		}
+		stream.Seek(0, io.SeekStart)
+
+		loop := audio.NewInfiniteLoop(stream, length)
+		player, err := resound.NewPlayer(loop)
+		if err != nil {
+			logger.Error("Error creating player for BGM: %s", path)
+			return
+		}
+
+		player.SetDSPChannel(manager.channels.bgm)
+		manager.players.bgm = player
+	}
+
+	if !manager.players.bgm.IsPlaying() {
+		if volume == nil {
+			volume := getVolumeEffect(manager.channels.bgm)
+			if volume != nil {
+				volume.StartFade(0, manager.volume.BGM, config.AUDIO_FADE_S*2)
+			}
+		}
+		manager.players.bgm.Play()
+	}
+}
+
+func GetBGMPositionMS() int64 {
+	if manager.players.bgm != nil {
+		return manager.players.bgm.Position().Milliseconds()
+	}
+	return 0
+}
+
+func FadeInBGM() {
+	if manager.players.bgm != nil {
+		effect := getVolumeEffect(manager.channels.bgm)
+		if effect != nil {
+			effect.StartFade(0, manager.volume.BGM, config.AUDIO_FADE_S)
+		}
+		if !manager.players.bgm.IsPlaying() {
+			manager.players.bgm.Play()
+		}
+	}
+}
+
+func FadeOutBGM() {
+	if manager.players.bgm != nil {
+		effect := getVolumeEffect(manager.channels.bgm)
+		if effect != nil {
+			effect.StartFade(-1, 0, config.AUDIO_FADE_S)
+		}
 	}
 }
 
@@ -168,13 +289,12 @@ func fadeCurrentPreview(start float64, end float64) {
 	effect.StartFade(start, end, config.AUDIO_FADE_S)
 }
 
-// TODO: fade?
 func PlaySongPreview(s *types.Song) {
 	startPosition := s.PreviewStart
 	endPosition := s.PreviewStart + config.SONG_PREVIEW_LENGTH
-	player, err := getPlayer(s.AudioPath)
+	player, err := getPlayer(s.AudioPath, manager.channels.previewCurrent)
 	if err != nil {
-		fmt.Printf("Error playing song preview: %v\n", err)
+		logger.Error("Error playing song preview: %v\n", err)
 		return
 	}
 
@@ -207,64 +327,28 @@ func PlaySongPreview(s *types.Song) {
 	player.Play()
 }
 
-func getVolumeEffect(c *resound.DSPChannel) *effects.Volume {
-	if effect, ok := c.Effects["volume"]; !ok {
-		return nil
-	} else {
-		return effect.(*effects.Volume)
+func GetSongPreviewPositionMS() int64 {
+	if manager.players.previewCurrent != nil {
+		return manager.players.previewCurrent.Position().Milliseconds()
 	}
+	return 0
 }
 
-func SetVolume(v *Volume) {
-	manager.volume = v
-	if manager.channels.bgm != nil {
-		getVolumeEffect(manager.channels.bgm).SetStrength(v.BGM)
-	}
-	if manager.channels.song != nil {
-		getVolumeEffect(manager.channels.song).SetStrength(v.Song)
-	}
-	if manager.channels.sfx != nil {
-		getVolumeEffect(manager.channels.sfx).SetStrength(v.SFX)
-	}
-	if manager.channels.previewCurrent != nil {
-		getVolumeEffect(manager.channels.previewCurrent).SetStrength(v.Song)
-	}
-	if manager.channels.previewPrev != nil {
-		getVolumeEffect(manager.channels.previewPrev).SetStrength(v.Song)
-	}
-}
-
-func StopSFX() {
-	for _, player := range manager.players.sfx {
-		player.Pause()
-		player.Close()
-	}
-}
-
-func StopBGM() {
-	if manager.players.bgm != nil && manager.players.bgm.IsPlaying() {
-		manager.players.bgm.Pause()
-		manager.players.bgm.Close()
-	}
-}
-
-// TODO: collect these into something like audio.Song.InitSong()...
+// Song
 func InitSong(s *types.Song) {
-	player, err := getPlayer(s.AudioPath)
+	player, err := getPlayer(s.AudioPath, manager.channels.song)
 	if err != nil {
-		fmt.Printf("Error preparing song: %v\n", err)
+		logger.Error("Error initializing song (%s): %v", s.AudioPath, err)
 		return
 	}
-	player.SetDSPChannel(manager.channels.song)
 	manager.players.song = player
-
 }
 
 func CurrentSongPositionMS() int64 {
 	if manager.players.song != nil {
-		return manager.players.song.Position().Milliseconds() + config.INHERENT_OFFSET
+		return manager.players.song.Position().Milliseconds()
 	}
-	panic("No song playing!")
+	return 0
 }
 
 func IsSongPlaying() bool {
@@ -280,6 +364,7 @@ func PlaySong() {
 		}
 	}
 }
+
 func PauseSong() {
 	if manager.players.song != nil && manager.players.song.IsPlaying() {
 		manager.players.song.Pause()
@@ -298,6 +383,18 @@ func SetSongPositionMS(ms int) {
 	}
 	if manager.players.song != nil {
 		manager.players.song.SetPosition(time.Duration(ms) * time.Millisecond)
+	}
+}
+
+// Stop
+func StopSFX() {
+	manager.sfxCache.StopAll()
+}
+
+func StopBGM() {
+	if manager.players.bgm != nil && manager.players.bgm.IsPlaying() {
+		manager.players.bgm.Pause()
+		manager.players.bgm.Close()
 	}
 }
 
@@ -372,14 +469,9 @@ func Update() {
 	if manager.previewStatus != nil {
 		updateSongPreview()
 	}
-
-	for _, player := range manager.players.sfx {
-		if player == nil {
-			continue
-		}
-
-		if !player.IsPlaying() {
-			player.Close()
+	if manager.players.bgm != nil {
+		if manager.players.bgm.Volume() == 0 {
+			manager.players.bgm.Pause()
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/l"
 	"github.com/tinne26/etxt"
 )
@@ -11,13 +12,14 @@ import (
 type Element struct {
 	Component
 
-	image *ebiten.Image
-	text  string
-
-	imageScale float64
-	imageWidth float64
+	text           string
+	baseImage      *ebiten.Image
+	baseImageScale float64
+	imageScale     float64
+	imageWidth     float64
 
 	textOptions      *TextOptions
+	renderTextScale  float64
 	textBold         bool
 	invertHoverColor bool
 }
@@ -29,7 +31,8 @@ func NewElement() *Element {
 			center: &Point{},
 			size:   &Point{},
 		},
-		textOptions: textOpts,
+		textOptions:     textOpts,
+		renderTextScale: 1,
 	}
 	return e
 }
@@ -44,9 +47,15 @@ func (e *Element) SetText(text string) {
 func (e *Element) SetTextScale(scale float64) {
 	e.textOptions.Scale = scale
 }
+func (e *Element) SetRenderTextScale(scale float64) {
+	e.renderTextScale = scale
+}
 
 func (e *Element) SetTextColor(color color.RGBA) {
 	e.textOptions.Color = color
+}
+func (e *Element) SetTextAlign(align etxt.Align) {
+	e.textOptions.Align = align
 }
 
 func (e *Element) InvertHoverColor() {
@@ -57,20 +66,41 @@ func (e *Element) GetText() string {
 	return e.text
 }
 
+func (e *Element) GetImageSize() (int, int) {
+	if e.baseImage == nil {
+		return 0, 0
+	}
+	return e.baseImage.Bounds().Dx(), e.baseImage.Bounds().Dy()
+}
+func (e *Element) SetImageScale(scale float64) {
+	if e.baseImage == nil {
+		return
+	}
+	e.imageScale = e.baseImageScale * scale
+}
+
 func (e *Element) SetTextBold(b bool) {
 	e.textBold = b
+}
+
+func (e *Element) refreshImage() *ebiten.Image {
+	img := ebiten.NewImageFromImage(e.baseImage)
+	width, _ := e.GetSize().ToRender()
+	scale := width / float64(img.Bounds().Dx())
+
+	e.baseImageScale = scale
+	e.imageScale = scale
+	e.imageWidth = PointFromRender(float64(img.Bounds().Dx()), 0).X
+	cache.Image.Set(e.GetId(), img)
+	return img
 }
 
 func (e *Element) SetImage(img *ebiten.Image) {
 	if img == nil {
 		return
 	}
-
-	width, _ := e.GetSize().ToRender()
-	scale := width / float64(img.Bounds().Dx())
-	e.image = img
-	e.imageScale = scale
-	e.imageWidth = PointFromRender(float64(img.Bounds().Dx()), 0).X
+	e.baseImage = img
+	e.refreshImage()
 }
 
 const hoverScale = 1.25
@@ -90,7 +120,7 @@ func (e *Element) DrawMarkers(screen *ebiten.Image, opts *ebiten.DrawImageOption
 	}
 
 	width := TextWidth(textOpts, hoverMarkerLeft)
-	if e.image != nil {
+	if e.baseImage != nil {
 		width += e.imageWidth * e.imageScale
 	} else {
 		width += TextWidth(textOpts, e.text)
@@ -100,26 +130,29 @@ func (e *Element) DrawMarkers(screen *ebiten.Image, opts *ebiten.DrawImageOption
 }
 
 func (e *Element) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	if e.hidden || (e.image == nil && len(e.text) == 0) {
+	if e.hidden || (e.baseImage == nil && len(e.text) == 0) {
 		return
 	}
 
 	center := e.GetCenter()
 
-	if e.image != nil {
-		DrawImageAt(screen, e.image, center, e.imageScale, opts)
+	if e.baseImage != nil {
+		img, ok := cache.Image.Get(e.GetId())
+		if !ok {
+			img = e.refreshImage()
+		}
+		DrawImageAt(screen, img, center, e.imageScale, opts)
 	} else {
-		textScale := e.textOptions.Scale
-		textClr := e.textOptions.Color
+		renderScale := e.renderTextScale
 		if e.hovered {
-			textScale *= hoverScale
+			renderScale *= hoverScale
 		}
 
 		// Plain draw
 		textOpts := &TextOptions{
-			Align: etxt.Center,
-			Scale: textScale,
-			Color: textClr,
+			Align: e.textOptions.Align,
+			Scale: e.textOptions.Scale * renderScale,
+			Color: e.textOptions.Color,
 		}
 		DrawTextAt(screen, e.text, center, textOpts, opts)
 		if e.textBold {

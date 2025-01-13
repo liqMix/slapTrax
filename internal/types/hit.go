@@ -33,9 +33,9 @@ func (r HitTiming) String() string {
 }
 
 func GetHitTiming(diff int64) HitTiming {
-	if diff > 0 {
+	if diff > int64(Perfect) {
 		return HitTimingEarly
-	} else if diff < 0 {
+	} else if diff < int64(-Perfect) {
 		return HitTimingLate
 	}
 	return HitTimingNone
@@ -84,6 +84,8 @@ func (r HitRating) Color() GameColor {
 	case Good:
 		return Yellow
 	case Bad:
+		return Orange
+	case Miss:
 		return Red
 	}
 	return White
@@ -101,9 +103,9 @@ func (r HitRating) Window(early bool) float64 {
 	case Perfect:
 		return 60
 	case Good:
-		return 100 * scale
+		return 70 * scale
 	case Bad:
-		return 150 * scale
+		return 120 * scale
 	}
 	return 0
 }

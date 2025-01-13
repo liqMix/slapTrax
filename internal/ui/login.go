@@ -117,7 +117,7 @@ func (m *LoginModal) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	// Draw error if any
 	if m.errorText != "" {
 		errorColor := color.RGBA{255, 100, 100, 255}
-		pos := &Point{X: m.center.X, Y: 0.9}
+		pos := &Point{X: m.center.X, Y: 0.15}
 		textOpts := GetDefaultTextOptions()
 		textOpts.Color = errorColor
 		DrawTextAt(screen, m.errorText, pos, textOpts, opts)

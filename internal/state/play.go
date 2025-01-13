@@ -5,7 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
@@ -18,12 +18,11 @@ type PlayArgs struct {
 
 type Play struct {
 	types.BaseGameState
-	Song       *types.Song
-	Difficulty types.Difficulty
-	Tracks     []*types.Track
-	Score      *types.Score
-	Chart      *types.Chart
-
+	Song        *types.Song
+	Difficulty  types.Difficulty
+	Tracks      []*types.Track
+	Score       *types.Score
+	Chart       *types.Chart
 	startTime   time.Time
 	elapsedTime int64
 	countTicks  []int64
@@ -59,6 +58,8 @@ func NewPlayState(args *PlayArgs) *Play {
 		startTime:   time.Now(),
 		countTicks:  song.GetCountdownTicks(false),
 	}
+	p.SetAction(input.ActionBack, p.pause)
+	p.SetNotNavigable()
 	return p
 }
 
@@ -66,12 +67,20 @@ func (p *Play) GetTravelTime() int64 {
 	return int64(travelTime / user.S().LaneSpeed)
 }
 
-func (p *Play) restart() {
-	audio.StopAll()
-	p.SetNextState(types.GameStatePlay, &PlayArgs{
-		Song:       p.Song,
-		Difficulty: p.Difficulty,
-	})
+func (p *Play) pause() {
+	p.SetNextState(types.GameStatePause,
+		&PauseArgs{
+			Song:       p.Song,
+			Difficulty: p.Difficulty,
+			Cb: func() {
+				p.countTicks = p.Song.GetCountdownTicks(true)
+				p.startTime = time.Now()
+				if p.elapsedTime >= user.S().AudioOffset {
+					audio.SetSongPositionMS(int(p.elapsedTime - p.getGracePeriod()))
+					audio.ResumeSong()
+				}
+			},
+		})
 }
 
 func (p *Play) CurrentTime() int64 {
@@ -83,64 +92,38 @@ func (p *Play) MaxTrackTime() int64 {
 }
 
 func (p *Play) getGracePeriod() int64 {
-	if currentPos := audio.CurrentSongPositionMS(); currentPos < 0 {
+	if currentPos := audio.CurrentSongPositionMS(); currentPos <= 0 {
 		return p.Song.GetBeatInterval() * 8
 	}
 	return p.Song.GetBeatInterval() * 4
 }
 
-func (p *Play) getOffsetTime() int64 {
-	return user.S().AudioOffset + config.INHERENT_OFFSET
-}
-
 func (p *Play) inGracePeriod() bool {
-	// Account for offets
-	offsetStartTime := p.getOffsetTime()
-
-	// Determine the grace period
-	gracePeriod := offsetStartTime + p.getGracePeriod()
-
 	// Determine current time based off grace period,
 	// will be negative until the song starts
-	p.elapsedTime = time.Since(p.startTime).Milliseconds() - gracePeriod
+	p.elapsedTime = time.Since(p.startTime).Milliseconds() - p.getGracePeriod()
 
 	// Play the starting ticks
-	if len(p.countTicks) > 1 && p.elapsedTime >= (p.countTicks[0]+offsetStartTime) {
+	if len(p.countTicks) > 1 && p.elapsedTime >= (p.countTicks[0]+user.S().AudioOffset) {
 		audio.PlaySFX(audio.SFXHat)
 		p.countTicks = p.countTicks[1:]
 	}
 
 	// Start the audio when the elapsed time is equal to the offset start time
-	if p.elapsedTime >= offsetStartTime {
+	if p.elapsedTime >= user.S().AudioOffset {
+		input.K.ForceReset()
 		audio.PlaySong()
 		return false
 	}
 	return true
 }
 
-func (p *Play) handleAction(action PlayAction) {
-	switch action {
-	case RestartAction:
-		p.restart()
-	case PauseAction:
-		audio.PauseSong()
-		p.SetNextState(types.GameStatePause,
-			&PauseArgs{
-				song:       p.Song,
-				difficulty: p.Difficulty,
-
-				cb: func() {
-					offsetTime := p.getOffsetTime()
-					p.countTicks = p.Song.GetCountdownTicks(true)
-					p.startTime = time.Now()
-					audio.SetSongPositionMS(int(p.elapsedTime + offsetTime))
-				},
-			})
-		return
-	}
-}
-
 func (p *Play) Update() error {
+	p.BaseGameState.Update()
+	if cache.Path.IsBuilding() {
+		return nil
+	}
+
 	if !audio.IsSongPlaying() {
 		if !p.inGracePeriod() {
 			stillPlaying := false
@@ -162,13 +145,10 @@ func (p *Play) Update() error {
 
 	// Update the tracks
 	for _, track := range p.Tracks {
-		p.updateTrack(track, p.elapsedTime, p.Score)
-	}
-
-	// Handle input
-	for action, keys := range PlayActions {
-		if input.K.AreAny(keys, input.JustPressed) {
-			p.handleAction(action)
+		activeBefore := track.Active
+		track.Update(p.elapsedTime, p.GetTravelTime(), p.MaxTrackTime())
+		if !activeBefore && track.Active {
+			audio.PlayTrackSFX(track.Name)
 		}
 	}
 

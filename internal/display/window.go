@@ -1,11 +1,9 @@
 package display
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
 	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
@@ -35,12 +33,6 @@ func InitWindow() {
 
 		fixedRenderScale: true,
 	}
-}
-
-func (w *window) ClearCaches() {
-	fmt.Println("Clearing caches")
-	cache.Image.Clear(w.renderWidth, w.renderHeight)
-	cache.Path.Clear(w.renderWidth, w.renderHeight)
 }
 
 func (w *window) Refresh() {
@@ -105,7 +97,6 @@ func (w *window) SetRenderScale(s float64) {
 	if w.renderScale == s {
 		return
 	}
-	w.ClearCaches()
 	w.renderScale = s
 }
 
@@ -116,7 +107,6 @@ func (w *window) SetRenderSize(width, height int) {
 
 	w.renderWidth = width
 	w.renderHeight = height
-	w.ClearCaches()
 	w.SetDisplaySize(w.displayWidth, w.displayHeight)
 }
 

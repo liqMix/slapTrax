@@ -22,7 +22,7 @@ func NewTextInput(placeholder string) *TextInput {
 	ti := &TextInput{
 		Element:     *NewElement(),
 		placeholder: placeholder,
-		maxLength:   16,
+		maxLength:   8,
 	}
 	ti.SetTrigger(func() {
 		ti.SetFocused(true)

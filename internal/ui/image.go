@@ -1,14 +1,11 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func DrawImageAt(screen *ebiten.Image, img *ebiten.Image, center *Point, scale float64, opts *ebiten.DrawImageOptions) {
 	if img == nil || screen == nil {
-		fmt.Println("img or screen is nil")
 		return
 	}
 	x, y := center.ToRender()

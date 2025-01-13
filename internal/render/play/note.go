@@ -8,6 +8,7 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
 	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 func (r *Play) addNotePath(track *types.Track) {
@@ -74,6 +75,7 @@ func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathO
 
 	// Calculate line width with depth consideration
 	width := (opts.lineWidth * progress) / float32(display.Window.RenderScale()) * 1.5
+	width *= user.S().NoteWidth
 	if opts.isLarge {
 		width *= opts.largeWidthRatio
 	}
@@ -117,6 +119,7 @@ func (r *Play) addHoldPaths(track types.TrackName, note *types.Note) {
 		if pt == nil {
 			continue
 		}
+
 		x, y = getPointPosition(notePoints[i], progress)
 		endX, endY = getPointPosition(notePoints[i], releaseProgress)
 		holdPaths[i].MoveTo(x, y)

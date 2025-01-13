@@ -8,6 +8,7 @@ import (
 	"github.com/liqmix/ebiten-holiday-2024/internal/display"
 	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
 	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/ebiten-holiday-2024/internal/user"
 )
 
 // Rebuild reconstructs the entire vector path cache
@@ -18,7 +19,11 @@ func RebuildVectorCache() {
 	cache.Path.SetResolution(resolution)
 	logger.Info("Rebuilding vector cache at %dx%d, with %d resolution", renderWidth, renderHeight, resolution)
 	startTime := time.Now()
-
+	if user.S().EdgePlayArea {
+		applyEdgeLayout()
+	} else {
+		applyDefaultLayout()
+	}
 	buildNoteCache(resolution)
 	buildJudgementLineCache()
 

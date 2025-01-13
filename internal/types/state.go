@@ -1,6 +1,9 @@
 package types
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/l"
+import (
+	"github.com/liqmix/ebiten-holiday-2024/internal/input"
+	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+)
 
 type GameState string
 
@@ -20,6 +23,7 @@ const (
 	GameStateBack                GameState = l.BACK
 	GameStateExit                GameState = l.EXIT
 	GameStateHowToPlay           GameState = "howtoplay"
+	GameStateKeyConfig           GameState = l.SETTINGS_GAME_KEY_CONFIG
 )
 
 func (gs GameState) String() string {
@@ -27,14 +31,25 @@ func (gs GameState) String() string {
 }
 
 type BaseGameState struct {
-	NextState     GameState
-	NextStateArgs interface{}
-	Active        bool
-	floats        bool
+	NextState        GameState
+	NextStateArgs    interface{}
+	Active           bool
+	AvailableActions []input.Action
+	actions          map[input.Action]func()
+	floats           bool
+	notNavigable     bool
 }
 
 func (s *BaseGameState) SetActive(active bool) {
 	s.Active = active
+}
+
+func (s *BaseGameState) SetAction(action input.Action, f func()) {
+	if s.actions == nil {
+		s.actions = make(map[input.Action]func())
+		s.AvailableActions = append(s.AvailableActions, action)
+	}
+	s.actions[action] = f
 }
 
 func (s *BaseGameState) Floats() bool {
@@ -56,4 +71,32 @@ func (s *BaseGameState) HasNextState() bool {
 
 func (s *BaseGameState) GetNextState() (GameState, interface{}) {
 	return s.NextState, s.NextStateArgs
+}
+
+func (s *BaseGameState) CheckActions() input.Action {
+	action := input.ActionUnknown
+	for _, a := range s.AvailableActions {
+		if input.JustActioned(a) {
+			if f, ok := s.actions[a]; ok {
+				f()
+				if action == input.ActionUnknown {
+					action = a
+				}
+			}
+		}
+	}
+	return action
+}
+
+func (s *BaseGameState) SetNotNavigable() {
+	s.notNavigable = true
+}
+
+func (s *BaseGameState) IsNavigable() bool {
+	return !s.notNavigable
+}
+
+func (s *BaseGameState) Update() error {
+	s.CheckActions()
+	return nil
 }

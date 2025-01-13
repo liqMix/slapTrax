@@ -1,28 +1,40 @@
 locale: "日本語"
-title: "Ebiten 冬のゲームジャム2024"
+title: "スラップトラックス"
 
 # General
+loading: "読み込み中..."
 exit: "終了"
 back: "戻る"
 save: "保存"
 cancel: "キャンセル"
+continue: "続ける"
 off: "オフ"
 on: "オン"
 chart: "譜面"
+guest: "ゲスト"
 difficulties: "難易度"
-corner: "隅"
-center: "中央"
+corner: "コーナー"
+center: "センター"
+leaderboard: "トッププレイヤー"
+
+# Actions
+action.back: "戻る"
+action.select: "選択"
+action.up: "上"
+action.down: "下"
+action.left: "左"
+action.right: "右"
 
 # Difficulties
-difficulty.easy: "簡単"
-difficulty.medium: "普通"
-difficulty.hard: "最難"
+difficulty.easy: "イージー"
+difficulty.medium: "ノーマル"
+difficulty.hard: "ハード"
 difficulty.unknown: "????"
 
 # Hit Judgments
 hit.perfect: "パーフェクト"
-hit.good: "良い"
-hit.bad: "悪い"
+hit.good: "グッド"
+hit.bad: "バッド"
 hit.miss: "ミス"
 
 # Song Information
@@ -39,19 +51,20 @@ state.offset: "オフセット調整"
 state.song.selection: "曲選択"
 state.difficulty.selection: "難易度選択"
 state.login: "ログイン"
-state.result: "結果"
+state.result: "リザルト"
+state.howtoplay: "遊び方"
 
 # Login
 login.text.offline: "オフラインモード"
 login.text.online: "オンラインモード"
-login.save.local: "ローカル保存"
-login.guest: "ゲストとしてプレイ"
-login.login: "ログイン"
+login.login: "ログイン/登録"
+login.logout: "ログアウト"
 login.username: "ユーザー名"
 login.password: "パスワード"
+login.continue: "オフラインで続ける"
 
 # Graphics Settings
-settings.gfx: "グラフィックス"
+settings.gfx: "グラフィック"
 settings.gfx.fullscreen: "フルスクリーン"
 settings.gfx.fixedrender: "固定描画サイズ"
 settings.gfx.vsync: "垂直同期"
@@ -72,7 +85,15 @@ settings.game.locale: "言語"
 settings.game.theme: "テーマ"
 settings.game.audiooffset: "音声オフセット"
 settings.game.inputoffset: "入力オフセット"
-settings.game.lanespeed: "速度"
+settings.game.lanespeed: "レーンスピード"
+settings.game.notewidth: "ノート幅"
+settings.game.keyconfig: "キー設定"
+settings.game.edgeplayarea: "最大プレイエリア"
+
+keyconfig.default: "デフォルト"
+keyconfig.default.desc: "（矢印キーとナビキー使用）"
+keyconfig.reduced: "簡易設定"
+keyconfig.reduced.desc: "（小さいキーボード用）"
 
 # Audio Settings
 settings.audio: "オーディオ"
@@ -83,13 +104,22 @@ settings.audio.songpreviewvolume: "プレビュー音量"
 
 # Accessibility Settings
 settings.access: "アクセシビリティ"
-settings.access.noholdnotes: "ホールドノート無効化"
-settings.access.nohiteffect: "ヒットエフェクト無効化"
-settings.access.nolaneeffect: "レーンエフェクト無効化"
+settings.access.noholdnotes: "ホールドノート無効"
+settings.access.nohiteffect: "ヒットエフェクト無効"
+settings.access.nolaneeffect: "レーンエフェクト無効"
+
+# Dialogs
+dialog.howtoplay: "このゲームの目標は、曲中のすべてのノートを叩いて最高スコアを目指すことです。\n各ノートはレーン上をあなたに向かって流れてきます。\nこれらのレーンはキーボードの同じ領域のキーと対応しています。\nノートのタイミングに合わせてその領域の任意のキーを押すと、最高スコアが得られます。\n遅すぎたり早すぎたりするとそのノートのスコアが下がります。"
+dialog.besuretologin: "ランクを上げるためにログインを忘れずに！"
+dialog.besuretooffset: "ノートを叩くのが難しい場合は、設定でオフセットを調整してみてください。"
 
 # Play State
 state.play.restart: "リスタート"
 state.play.pause: "一時停止"
+
+# Offset
+offset.instructions: "<b>音声オフセット\n音楽の再生タイミングを調整します\n表示にのみ影響します\n\n<b>入力オフセット\nヒット判定のタイミングを調整します\n入力にのみ影響します\n\nノートが聞こえる音楽と同期していないと感じる場合は、\n音声オフセットを適切に調整してください：\nノートが拍よりも前にヒットラインに到達する場合：\n音声オフセットを減らして音楽を早く再生\nノートが拍よりも後にヒットラインに到達する場合：\n音声オフセットを増やして音楽を遅く再生\n\n正確なタイミングでノートを叩いているのに\nバッドやミスの判定が出る場合：\n入力オフセットを調整してください"
+offset.input: "ヒット：スペースバー\n\n\n音声オフセット：\n増加：上矢印\n減少：下矢印\n\n\n入力オフセット：\n増加：右矢印\n減少：左矢印\n\n\n注意：\n不確かな場合は、タイトルロゴで音声と映像の同期を確認してください。"
 
 # Themes
 theme.standard: "スタンダード"
@@ -101,11 +131,11 @@ color.black: "黒"
 
 # Note Colors
 note.color.default: "デフォルト"
-note.color.mono: "モノクロ"
-note.color.dusk: "夕暮れ"
-note.color.dawn: "夜明け"
+note.color.mono: "モノクローム"
+note.color.dusk: "ダスク"
+note.color.dawn: "ドーン"
 note.color.aurora: "オーロラ"
-note.color.arorua: "ラローオ"
+note.color.arorua: "アロルア"
 note.color.custom: "カスタム"
 note.color.hamburger: "ハンバーガー"
 

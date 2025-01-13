@@ -100,11 +100,24 @@ func (g *UIGroup) getNext() int {
 			return i
 		}
 	}
+	// then traverses from the beginning of the list to the current index
+	for i := 0; i < g.currentIdx; i++ {
+		if !g.items[i].IsDisabled() {
+			return i
+		}
+	}
 	return g.currentIdx
 }
 
 func (g *UIGroup) getPrev() int {
 	for i := g.currentIdx - 1; i >= 0; i-- {
+		if !g.items[i].IsDisabled() {
+			return i
+		}
+	}
+
+	// then traverses from the end of the list to the current index
+	for i := len(g.items) - 1; i > g.currentIdx; i-- {
 		if !g.items[i].IsDisabled() {
 			return i
 		}
@@ -160,26 +173,23 @@ func (g *UIGroup) Update() {
 	// Move through buttons with arrow keys
 	if input.K.Is(downKey, input.JustPressed) {
 		g.usingKeyboard = true
-		if g.currentIdx < len(g.items)-1 {
-			next := g.getNext()
-			if next == g.currentIdx {
-				return
-			}
-			g.Select(next)
-			sfxCode = audio.SFXSelectDown
+		next := g.getNext()
+		if next == g.currentIdx {
+			return
 		}
+		g.Select(next)
+		sfxCode = audio.SFXNext
 	} else if input.K.Is(upKey, input.JustPressed) {
 		g.usingKeyboard = true
-		if g.currentIdx > 0 {
-			prev := g.getPrev()
-			if prev == g.currentIdx {
-				return
-			}
-			g.Select(prev)
-			sfxCode = audio.SFXSelectUp
+		prev := g.getPrev()
+		if prev == g.currentIdx {
+			return
 		}
+		g.Select(prev)
+		sfxCode = audio.SFXPrev
 	} else if input.K.Is(ebiten.KeyEnter, input.JustPressed) {
 		g.usingKeyboard = true
+		sfxCode = audio.SFXSelect
 		g.items[g.currentIdx].Trigger()
 	}
 

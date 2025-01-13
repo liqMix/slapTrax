@@ -20,7 +20,7 @@ var (
 	tabStart       = ui.Point{X: 0.25, Y: 0.15}
 	tabOffset      = 0.1
 
-	optionsStart  = ui.Point{X: 0.5, Y: 0.25}
+	optionsStart  = ui.Point{X: 0.5, Y: 0.28}
 	optionsOffset = 0.1
 )
 
@@ -66,7 +66,12 @@ func (s *Settings) Refresh() {
 	g.SetCenter(tabCenter)
 	s.createAccessOptions(g)
 	s.tabs.Add(l.String(l.SETTINGS_ACCESS), g)
-	s.tabs.SetCenter(ui.Point{X: 0.5, Y: 0.15}, ui.Point{X: 0.15, Y: 0.2}, 0.05)
+
+	s.tabs.SetCenter(
+		ui.Point{X: 0.5, Y: 0.15},
+		ui.Point{X: 0.15, Y: 0.2},
+		0.07,
+	)
 }
 
 func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
@@ -93,6 +98,8 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		isFixed := !display.Window.IsFixedRenderScale()
 		display.Window.SetFixedRenderScale(isFixed)
 		user.S().FixedRenderScale = isFixed
+		cache.Clear()
+		s.clearingCache = false
 	})
 	// Render size
 	renderSize := ui.NewValueElement()
@@ -126,6 +133,8 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		user.S().RenderWidth = w
 		user.S().RenderHeight = h
 		display.Window.SetRenderSize(w, h)
+		cache.Clear()
+		s.clearingCache = false
 	})
 	group.Add(renderSize)
 	optionPos.Y += optionsOffset
@@ -135,16 +144,18 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_GFX_FULLSCREEN))
 	b.SetGetValueText(func() string {
-		if ebiten.IsFullscreen() {
+		if user.S().Fullscreen {
 			return l.String(l.ON)
 		}
 		return l.String(l.OFF)
 	})
 	b.SetTrigger(func() {
-		display.Window.SetFullscreen(!ebiten.IsFullscreen())
-		user.S().Fullscreen = ebiten.IsFullscreen()
+		user.S().Fullscreen = !user.S().Fullscreen
+		display.Window.SetFullscreen(user.S().Fullscreen)
+		fixedRender.SetHidden(!user.S().Fullscreen)
 
-		fixedRender.SetHidden(!ebiten.IsFullscreen())
+		cache.Clear()
+		s.clearingCache = false
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -182,9 +193,8 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 			centerNoteColorB.SetHidden(true)
 			cornerNoteColorB.SetHidden(true)
 		}
-		// Gotta clear the vector cache
-		s.clearingCache = true
 
+		s.clearingCache = true
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -216,7 +226,6 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		user.S().CenterNoteColor = types.HexFromColor(colors[centerIdx].C())
 		centerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CenterNoteColor))
 
-		// Gotta clear the vector cache
 		s.clearingCache = true
 	})
 	group.Add(centerNoteColorB)
@@ -235,7 +244,6 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		user.S().CornerNoteColor = types.HexFromColor(colors[cornerIdx].C())
 		cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CornerNoteColor))
 
-		// Gotta clear the vector cache
 		s.clearingCache = true
 
 	})
@@ -293,11 +301,13 @@ func (s *Settings) createAudioOptions(group *ui.UIGroup) {
 			if *v.value > 1.0 {
 				*v.value = 0
 			}
-			audio.SetVolume(&audio.Volume{
-				BGM:  user.S().BGMVolume,
-				SFX:  user.S().SFXVolume,
-				Song: user.S().SongVolume,
-			})
+			if i == 0 {
+				audio.SetBGMVolume(*v.value)
+			} else if i == 1 {
+				audio.SetSFXVolume(*v.value)
+			} else if i == 2 {
+				audio.SetSongVolume(*v.value)
+			}
 		})
 		group.Add(v.button)
 		optionPos.Y += optionsOffset
@@ -309,6 +319,47 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 		X: optionsStart.X,
 		Y: optionsStart.Y,
 	}
+	var b *ui.ValueElement
+
+	keyConfig := ui.NewValueElement()
+	keyConfig.SetCenter(optionPos)
+	keyConfig.SetLabel(l.String(l.SETTINGS_GAME_KEY_CONFIG))
+	keyConfig.SetGetValueText(func() string {
+		return l.String(input.TrackKeyConfig(user.S().KeyConfig).String())
+	})
+	keyConfig.SetTrigger(func() {
+		s.SetNextState(types.GameStateKeyConfig, &FloatStateArgs{
+			Cb: func() {
+				keyConfig.Refresh()
+			},
+		})
+	})
+	group.Add(keyConfig)
+	optionPos.Y += optionsOffset
+
+	// Note width
+	noteWidths := []float32{1.0, 1.25, 1.5, 2.0, 0.5, 0.75}
+	currentWidthIdx := 0
+	for i, width := range noteWidths {
+		if user.S().NoteWidth == width {
+			currentWidthIdx = i
+			break
+		}
+	}
+	noteWidth := ui.NewValueElement()
+	noteWidth.SetCenter(optionPos)
+	noteWidth.SetLabel(l.String(l.SETTINGS_GAME_NOTEWIDTH))
+	noteWidth.SetGetValueText(func() string {
+		size := noteWidths[currentWidthIdx]
+		return fmt.Sprintf("%.2fx", size)
+	})
+	noteWidth.SetTrigger(func() {
+		currentWidthIdx = (currentWidthIdx + 1) % len(noteWidths)
+		user.S().NoteWidth = noteWidths[currentWidthIdx]
+		s.clearingCache = true
+	})
+	group.Add(noteWidth)
+	optionPos.Y += optionsOffset
 
 	// Lane Speed
 	laneSpeeds := []float64{0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0}
@@ -319,7 +370,7 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 			break
 		}
 	}
-	b := ui.NewValueElement()
+	b = ui.NewValueElement()
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_GAME_LANESPEED))
 	b.SetGetValueText(func() string {
@@ -333,39 +384,59 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	group.Add(b)
 	optionPos.Y += optionsOffset
 
-	// Offsets
+	// Edge play area
 	b = ui.NewValueElement()
 	b.SetCenter(optionPos)
-	b.SetLabel(l.String(l.SETTINGS_GAME_AUDIOOFFSET))
+	b.SetLabel(l.String(l.SETTINGS_GAME_EDGEPLAYAREA))
 	b.SetGetValueText(func() string {
-		return fmt.Sprintf("%dms", user.S().AudioOffset)
+		if user.S().EdgePlayArea {
+			return l.String(l.ON)
+		}
+		return l.String(l.OFF)
 	})
 	b.SetTrigger(func() {
-		s.SetNextState(types.GameStateOffset, &FloatStateArgs{
-			onClose: func() {
-				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_AUDIOOFFSET), user.S().AudioOffset))
-				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_INPUTOFFSET), user.S().InputOffset))
-			},
-		})
+		user.S().EdgePlayArea = !user.S().EdgePlayArea
+		s.clearingCache = true
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
 
-	b = ui.NewValueElement()
-	b.SetCenter(optionPos)
-	b.SetLabel(l.String(l.SETTINGS_GAME_INPUTOFFSET))
-	b.SetGetValueText(func() string {
+	// Offsets
+	audioOffset := ui.NewValueElement()
+	inputOffset := ui.NewValueElement()
+	audioGetValue := func() string {
+		return fmt.Sprintf("%dms", user.S().AudioOffset)
+	}
+	inputGetValue := func() string {
 		return fmt.Sprintf("%dms", user.S().InputOffset)
-	})
-	b.SetTrigger(func() {
+	}
+
+	audioOffset.SetCenter(optionPos)
+	audioOffset.SetLabel(l.String(l.SETTINGS_GAME_AUDIOOFFSET))
+	audioOffset.SetGetValueText(audioGetValue)
+	audioOffset.SetTrigger(func() {
 		s.SetNextState(types.GameStateOffset, &FloatStateArgs{
-			onClose: func() {
-				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_AUDIOOFFSET), user.S().AudioOffset))
-				b.SetLabel(fmt.Sprintf("%s: %dms", l.String(l.SETTINGS_GAME_INPUTOFFSET), user.S().InputOffset))
+			Cb: func() {
+				audioOffset.Refresh()
+				inputOffset.Refresh()
 			},
 		})
 	})
-	group.Add(b)
+	optionPos.Y += optionsOffset
+
+	inputOffset.SetCenter(optionPos)
+	inputOffset.SetLabel(l.String(l.SETTINGS_GAME_INPUTOFFSET))
+	inputOffset.SetGetValueText(inputGetValue)
+	inputOffset.SetTrigger(func() {
+		s.SetNextState(types.GameStateOffset, &FloatStateArgs{
+			Cb: func() {
+				audioOffset.Refresh()
+				inputOffset.Refresh()
+			},
+		})
+	})
+	group.Add(audioOffset)
+	group.Add(inputOffset)
 }
 
 func (s *Settings) createAccessOptions(group *ui.UIGroup) {
@@ -373,7 +444,9 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 		X: optionsStart.X,
 		Y: optionsStart.Y,
 	}
-	b := ui.NewValueElement()
+	var b *ui.ValueElement
+
+	b = ui.NewValueElement()
 	b.SetCenter(optionPos)
 	b.SetLabel(l.String(l.SETTINGS_ACCESS_NOHOLDNOTES))
 	b.SetGetValueText(func() string {
@@ -399,6 +472,7 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S().DisableHitEffects = !user.S().DisableHitEffects
+		s.clearingCache = true
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -414,18 +488,22 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S().DisableLaneEffects = !user.S().DisableLaneEffects
+		s.clearingCache = true
 	})
 	group.Add(b)
+	optionPos.Y += optionsOffset
 }
 
 func (s *Settings) Update() error {
-	if s.clearingCache {
-		cache.Path.ForceClear()
-		s.clearingCache = false
-	}
+	s.BaseGameState.Update()
 
 	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
 		user.Save()
+
+		if s.clearingCache {
+			cache.Clear()
+			s.clearingCache = false
+		}
 		s.SetNextState(types.GameStateBack, nil)
 	}
 	s.tabs.Update()

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"image/color"
 	"time"
+
+	"github.com/liqmix/ebiten-holiday-2024/internal/config"
 )
 
 var l = new()
@@ -105,6 +107,9 @@ func (l *logger) EndTimer(name string) {
 }
 
 func (l *logger) emit(m *Message) {
+	if config.DISABLE_LOGGER {
+		return
+	}
 	m.Time = time.Now()
 	m.Color = m.Level.uiColor()
 	fmt.Printf("%s %s \033[0m %s\n", m.Level.terminalColor(), m.Level.string(), m.Message)

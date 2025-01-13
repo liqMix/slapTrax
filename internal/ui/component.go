@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/ebiten-holiday-2024/internal/input"
 )
@@ -71,6 +72,7 @@ type Clickable interface {
 }
 
 type Component struct {
+	id     string
 	center *Point
 	size   *Point
 
@@ -85,6 +87,12 @@ type Component struct {
 	trigger func()
 }
 
+func (c *Component) GetId() string {
+	if c.id == "" {
+		c.id = uuid.New().String()
+	}
+	return c.id
+}
 func (c *Component) SetCenter(center Point) { c.center = &center }
 func (c *Component) GetCenter() *Point      { return c.center }
 

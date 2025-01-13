@@ -12,6 +12,10 @@ import (
 func ColorFromHex(hex string) color.RGBA {
 	defaultC := White.C()
 
+	if hex == "" {
+		return defaultC
+	}
+
 	var c color.RGBA = color.RGBA{}
 	c.A = 0xff
 	if hex[0] != '#' {
@@ -63,7 +67,7 @@ var (
 	Red       GameColor = GameColor(color.RGBA{200, 50, 50, 255})
 	Green     GameColor = GameColor(color.RGBA{50, 205, 50, 255})
 	Purple    GameColor = GameColor(color.RGBA{150, 30, 150, 255})
-	Pink      GameColor = GameColor(color.RGBA{255, 200, 200, 255})
+	Pink      GameColor = GameColor(color.RGBA{200, 145, 145, 255})
 )
 
 var AllGameColors = []GameColor{
@@ -125,12 +129,14 @@ const (
 	NoteColorThemeAurora                   = l.NOTE_COLOR_AURORA
 	NoteColorThemeArorua                   = l.NOTE_COLOR_ARORUA
 	NoteColorThemeHamburger                = l.NOTE_COLOR_HAMBURGER
+	NoteColorThemeClassic                  = l.NOTE_COLOR_CLASSIC
 	NoteColorThemeCustom                   = l.NOTE_COLOR_CUSTOM
 )
 
 func AllNoteColorThemes() []NoteColorTheme {
 	return []NoteColorTheme{
 		NoteColorThemeDefault,
+		NoteColorThemeClassic,
 		NoteColorThemeDusk,
 		NoteColorThemeDawn,
 		NoteColorThemeAurora,
@@ -143,6 +149,10 @@ func AllNoteColorThemes() []NoteColorTheme {
 
 var themeToColors = map[NoteColorTheme]map[TrackType]color.RGBA{
 	NoteColorThemeDefault: {
+		TrackTypeCenter: Red.C(),
+		TrackTypeCorner: Orange.C(),
+	},
+	NoteColorThemeClassic: {
 		TrackTypeCenter: Yellow.C(),
 		TrackTypeCorner: Orange.C(),
 	},
@@ -176,11 +186,13 @@ func (t NoteColorTheme) CenterColor() color.RGBA {
 	if t == NoteColorThemeCustom {
 		return ColorFromHex(user.S().CenterNoteColor)
 	}
-	return themeToColors[t][TrackTypeCenter]
+	c := themeToColors[t][TrackTypeCenter]
+	return c
 }
 func (t NoteColorTheme) CornerColor() color.RGBA {
 	if t == NoteColorThemeCustom {
 		return ColorFromHex(user.S().CornerNoteColor)
 	}
-	return themeToColors[t][TrackTypeCorner]
+	c := themeToColors[t][TrackTypeCorner]
+	return c
 }

@@ -13,7 +13,7 @@ type SongSelector struct {
 	maxIdx int
 }
 
-const maxDisplayedItems = 10
+const maxDisplayedItems = 15
 
 func NewSongSelector() *SongSelector {
 	return &SongSelector{
@@ -21,8 +21,6 @@ func NewSongSelector() *SongSelector {
 	}
 }
 
-// We'll draw the selected item centered at position.
-// Previous and next items will be drawn above and below the selected item with opacity on their distance
 func (s *SongSelector) Update() {
 	s.UIGroup.Update()
 	if s.GetCenter() == nil {
