@@ -1,6 +1,6 @@
 package play
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/ui"
+import "github.com/liqmix/slaptrax/internal/ui"
 
 func OscillateWindowOffset(currentTime int64) {
 	ChangeWindowOffset(0.05 + (0.01 * float64(currentTime%1000) / 1000))

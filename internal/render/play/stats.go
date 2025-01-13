@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/slaptrax/internal/types"
+	"github.com/liqmix/slaptrax/internal/ui"
 	"github.com/tinne26/etxt"
 )
 

@@ -3,7 +3,7 @@ package types
 import (
 	"sort"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
+	"github.com/liqmix/slaptrax/internal/input"
 )
 
 type Track struct {

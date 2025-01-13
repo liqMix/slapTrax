@@ -4,7 +4,7 @@ import (
 	err "errors"
 	"fmt"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 type AppError string

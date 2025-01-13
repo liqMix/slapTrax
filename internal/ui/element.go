@@ -4,8 +4,8 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/slaptrax/internal/cache"
+	"github.com/liqmix/slaptrax/internal/l"
 	"github.com/tinne26/etxt"
 )
 

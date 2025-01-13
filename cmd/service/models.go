@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -4,15 +4,15 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal"
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
-	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal"
+	"github.com/liqmix/slaptrax/internal/assets"
+	"github.com/liqmix/slaptrax/internal/audio"
+	"github.com/liqmix/slaptrax/internal/cache"
+	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/input"
+	"github.com/liqmix/slaptrax/internal/l"
+	"github.com/liqmix/slaptrax/internal/logger"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 func main() {

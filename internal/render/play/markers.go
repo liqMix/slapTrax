@@ -3,8 +3,8 @@ package play
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/slaptrax/internal/types"
+	"github.com/liqmix/slaptrax/internal/ui"
 )
 
 func (r *Play) drawMeasureMarkers(screen *ebiten.Image) {

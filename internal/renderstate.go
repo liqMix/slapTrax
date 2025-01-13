@@ -3,11 +3,11 @@ package internal
 import (
 	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
-	"github.com/liqmix/ebiten-holiday-2024/internal/render"
-	"github.com/liqmix/ebiten-holiday-2024/internal/state"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/slaptrax/internal/cache"
+	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/render"
+	"github.com/liqmix/slaptrax/internal/state"
+	"github.com/liqmix/slaptrax/internal/types"
 )
 
 type RenderState struct {

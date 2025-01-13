@@ -1,7 +1,7 @@
 package input
 
 import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 var (

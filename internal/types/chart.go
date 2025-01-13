@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 const (

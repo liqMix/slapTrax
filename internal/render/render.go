@@ -1,9 +1,9 @@
 package render
 
 import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
-	"github.com/liqmix/ebiten-holiday-2024/internal/state"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/state"
+	"github.com/liqmix/slaptrax/internal/types"
 )
 
 func GetRenderer(gs types.GameState, s state.State) display.Renderer {

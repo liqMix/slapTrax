@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/slaptrax/internal/input"
+	"github.com/liqmix/slaptrax/internal/l"
 )
 
 type GameState string

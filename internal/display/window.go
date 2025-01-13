@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 var Window window

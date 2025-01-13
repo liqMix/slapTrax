@@ -1,6 +1,6 @@
 package user
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/external"
+import "github.com/liqmix/slaptrax/internal/external"
 
 var (
 	Current = external.M.GetUser

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/config"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 // Manager handles all user state including auth and settings

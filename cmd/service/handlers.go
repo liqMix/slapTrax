@@ -9,7 +9,7 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gin-gonic/gin"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 func getClientIP(c *gin.Context) string {

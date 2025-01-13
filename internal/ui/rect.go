@@ -5,7 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/slaptrax/internal/types"
 )
 
 func DrawFilledRect(screen *ebiten.Image, center *Point, size *Point, color color.RGBA) {

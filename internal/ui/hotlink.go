@@ -2,8 +2,8 @@ package ui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/external"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
+	"github.com/liqmix/slaptrax/internal/external"
+	"github.com/liqmix/slaptrax/internal/types"
 )
 
 type HotLink struct {

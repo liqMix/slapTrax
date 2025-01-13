@@ -3,7 +3,7 @@ package ui
 import (
 	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
+	"github.com/liqmix/slaptrax/internal/input"
 )
 
 type Positionable interface {

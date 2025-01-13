@@ -3,8 +3,8 @@ package types
 import (
 	"image/color"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/input"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 type TrackName int

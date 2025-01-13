@@ -1,8 +1,8 @@
 package play
 
 import (
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/ui"
 )
 
 func getNoteWidth() float32 {

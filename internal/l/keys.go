@@ -1,6 +1,6 @@
 package l
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/assets"
+import "github.com/liqmix/slaptrax/internal/assets"
 
 const (
 	LOCALE = "locale" // The current locale name in locale language

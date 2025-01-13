@@ -1,6 +1,6 @@
 package play
 
-import "github.com/liqmix/ebiten-holiday-2024/internal/ui"
+import "github.com/liqmix/slaptrax/internal/ui"
 
 var (
 	//// Overall

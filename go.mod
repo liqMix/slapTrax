@@ -1,4 +1,4 @@
-module github.com/liqmix/ebiten-holiday-2024
+module github.com/liqmix/slaptrax
 
 go 1.22.4
 

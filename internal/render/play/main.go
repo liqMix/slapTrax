@@ -2,12 +2,12 @@ package play
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
-	"github.com/liqmix/ebiten-holiday-2024/internal/state"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/cache"
+	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/state"
+	"github.com/liqmix/slaptrax/internal/types"
+	"github.com/liqmix/slaptrax/internal/ui"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 // The default renderer for the play state.

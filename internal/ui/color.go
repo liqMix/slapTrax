@@ -3,8 +3,8 @@ package ui
 import (
 	"image/color"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/types"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 func BrightenColor(c color.RGBA, scale float32) color.RGBA {

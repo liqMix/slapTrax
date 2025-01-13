@@ -2,7 +2,7 @@ package input
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
+	"github.com/liqmix/slaptrax/internal/display"
 )
 
 type mouse struct {

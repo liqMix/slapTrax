@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/l"
+	"github.com/liqmix/slaptrax/internal/logger"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 func ColorFromHex(hex string) color.RGBA {

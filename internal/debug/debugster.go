@@ -7,9 +7,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/input"
+	"github.com/liqmix/slaptrax/internal/ui"
 )
 
 const maxTimes = 50

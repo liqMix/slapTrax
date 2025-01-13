@@ -2,8 +2,8 @@ package ui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
+	"github.com/liqmix/slaptrax/internal/audio"
+	"github.com/liqmix/slaptrax/internal/input"
 )
 
 type UIGroup struct {

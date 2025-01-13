@@ -13,7 +13,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 //go:embed songs/**/*.yaml songs/**/*.png songs/**/*.mid

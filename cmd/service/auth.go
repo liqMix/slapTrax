@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	jwtSecretKey   = []byte("itsmysecretandyoucanthaveit191219")
+	jwtSecretKey   = []byte("itsmysecretandyoucanthaveit")
 	accessTokenTTL = 15 * time.Minute
 )
 

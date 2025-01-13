@@ -5,7 +5,7 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/slaptrax/internal/config"
 )
 
 var l = new()

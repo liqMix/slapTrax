@@ -2,8 +2,8 @@ package input
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/assets"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
+	"github.com/liqmix/slaptrax/internal/assets"
+	"github.com/liqmix/slaptrax/internal/l"
 )
 
 type Action int

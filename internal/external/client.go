@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/config"
+	"github.com/liqmix/slaptrax/internal/config"
 )
 
 // APIClient handles all server communication

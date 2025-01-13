@@ -3,8 +3,8 @@ package types
 import (
 	"math"
 
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
-	"github.com/liqmix/ebiten-holiday-2024/internal/user"
+	"github.com/liqmix/slaptrax/internal/logger"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 type MarkerType int

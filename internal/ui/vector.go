@@ -6,8 +6,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/liqmix/ebiten-holiday-2024/internal/cache"
-	"github.com/liqmix/ebiten-holiday-2024/internal/display"
+	"github.com/liqmix/slaptrax/internal/cache"
+	"github.com/liqmix/slaptrax/internal/display"
 )
 
 // Create a 1x1 white image as the base texture

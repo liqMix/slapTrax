@@ -6,7 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/liqmix/ebiten-holiday-2024/internal/logger"
+	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/tinne26/etxt/font"
 	"golang.org/x/image/font/sfnt"
 	"gopkg.in/yaml.v2"

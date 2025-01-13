@@ -4,11 +4,11 @@ import (
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/ebiten-holiday-2024/internal/audio"
-	"github.com/liqmix/ebiten-holiday-2024/internal/input"
-	"github.com/liqmix/ebiten-holiday-2024/internal/l"
-	"github.com/liqmix/ebiten-holiday-2024/internal/types"
-	"github.com/liqmix/ebiten-holiday-2024/internal/ui"
+	"github.com/liqmix/slaptrax/internal/audio"
+	"github.com/liqmix/slaptrax/internal/input"
+	"github.com/liqmix/slaptrax/internal/l"
+	"github.com/liqmix/slaptrax/internal/types"
+	"github.com/liqmix/slaptrax/internal/ui"
 )
 
 var lastIdx = 0
