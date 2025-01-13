@@ -22,14 +22,14 @@ jobs:
       - name: Build Web binary
         working-directory: cmd/game
         shell: bash
-        run: GOOS=js GOARCH=wasm go build -o ../../web/ebihack24.wasm
+        run: GOOS=js GOARCH=wasm go build -o ../../web/slapTrax.wasm
       - name: Copy WASM exec script
         shell: bash
         run: cp $(go env GOROOT)/misc/wasm/wasm_exec.js web/.
       - name: Upload Web build
         uses: actions/upload-artifact@v3
         with:
-          name: ebihack24--web
+          name: slapTrax-web
           path: |
             web/
             LICENSE.md
