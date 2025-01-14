@@ -31,7 +31,7 @@ func main() {
 		Exec("go", "build", "-o", "slapboard", "./cmd/service")
 	Task("build-web").
 		Env("GOOS=js", "GOARCH=wasm").
-		Exec("go", "build", "-o", "web/holiday24.wasm", "./cmd/game").
+		Exec("go", "build", "-o", "web/slapTrax.wasm", "./cmd/game").
 		Exec("go", "env", "GOROOT").
 		Result(func(i interface{}) {
 			goRoot := strings.TrimSpace(i.(string))
