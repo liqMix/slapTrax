@@ -68,7 +68,7 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 	minHoldDuration := int64(msPerTick * (ticksPerQuarter / 2))
 
 	// Vars to track current state
-	var currentTs int64 = 0
+	var currentTs float64 = 0.0
 	var running uint8 = 0
 
 	activeTracks := make(map[TrackName]int64)
@@ -115,7 +115,7 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 				}
 				return nil, err
 			}
-			currentTs += int64(float64(delta) * msPerTick)
+			currentTs += float64(delta) * msPerTick
 
 			// Read event type
 			var eventType uint8
@@ -185,12 +185,12 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 				if ok {
 					// Note on with velocity > 0 starts a note
 					if command == noteOn && velocity > 0 {
-						activeTracks[trackName] = currentTs
+						activeTracks[trackName] = int64(currentTs)
 					} else {
 						// Otherwise end the note (if it's active)
 						if active, ok := activeTracks[trackName]; ok {
-							release := currentTs
-							if (currentTs - active) <= minHoldDuration {
+							release := int64(currentTs)
+							if (int64(currentTs) - active) <= minHoldDuration {
 								release = 0
 							}
 							notes[trackName] = append(notes[trackName], NewNote(trackName, active, release))
@@ -208,8 +208,8 @@ func NewChart(song *Song, data []byte) (*Chart, error) {
 
 	// End any remaining notes
 	for trackName, target := range activeTracks {
-		release := currentTs
-		if (currentTs - target) <= minHoldDuration {
+		release := int64(currentTs)
+		if (int64(currentTs) - target) <= minHoldDuration {
 			release = 0
 		}
 		notes[trackName] = append(notes[trackName], NewNote(trackName, target, release))
