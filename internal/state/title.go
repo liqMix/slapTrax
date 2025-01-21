@@ -387,6 +387,9 @@ func NewTitleState() *Title {
 		if i == 0 {
 			bmager.SetTrigger(beats.BeatPosition{Numerator: i, Denominator: 4}, func() {
 				state.anim.Pulse()
+				c := state.namesOne.GetTextColor()
+				state.namesOne.SetTextColor(state.namesTwo.GetTextColor())
+				state.namesTwo.SetTextColor(c)
 			})
 		}
 		if i%2 == 0 {

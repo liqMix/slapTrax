@@ -54,6 +54,10 @@ func (e *Element) SetRenderTextScale(scale float64) {
 func (e *Element) SetTextColor(color color.RGBA) {
 	e.textOptions.Color = color
 }
+func (e *Element) GetTextColor() color.RGBA {
+	return e.textOptions.Color
+}
+
 func (e *Element) SetTextAlign(align etxt.Align) {
 	e.textOptions.Align = align
 }
