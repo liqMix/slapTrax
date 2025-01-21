@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/input"
 	"github.com/liqmix/slaptrax/internal/l"
 )
@@ -97,6 +98,9 @@ func (s *BaseGameState) IsNavigable() bool {
 }
 
 func (s *BaseGameState) Update() error {
+	if cache.Path.IsBuilding() {
+		return nil
+	}
 	s.CheckActions()
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/audio"
-	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/input"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/user"
@@ -120,9 +119,6 @@ func (p *Play) inGracePeriod() bool {
 
 func (p *Play) Update() error {
 	p.BaseGameState.Update()
-	if cache.Path.IsBuilding() {
-		return nil
-	}
 
 	if !audio.IsSongPlaying() {
 		if !p.inGracePeriod() {
