@@ -122,3 +122,81 @@ jobs:
           slapTrax-lin.tar.gz
           slapTrax-mac.tar.gz
           slapTrax.exe
+
+  deploy-win:
+    name: Deploy Windows build to itch.io
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: build-win
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: slapTrax-win
+    - uses: josephbmanley/butler-publish-itchio-action@master
+      env:
+        BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+        CHANNEL: windows
+        ITCH_GAME: slaptrax
+        ITCH_USER: liqmix
+        PACKAGE: slapTrax.exe
+        VERSION: ${{github.ref_name}}
+
+  deploy-mac:
+    name: Deploy MacOs build to itch.io
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: build-mac
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: slapTrax-mac
+    - name: Extract tarball
+      shell: bash
+      run: tar -zxvf slapTrax-mac.tar.gz
+    - uses: josephbmanley/butler-publish-itchio-action@master
+      env:
+        BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+        CHANNEL: mac
+        ITCH_GAME: slaptrax
+        ITCH_USER: liqmix
+        PACKAGE: slapTrax
+        VERSION: ${{github.ref_name}}
+
+  deploy-lin:
+    name: Deploy Linux build to itch.io
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: build-lin
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: slapTrax-lin
+    - name: Extract tarball
+      shell: bash
+      run: tar -zxvf slapTrax-lin.tar.gz
+    - uses: josephbmanley/butler-publish-itchio-action@master
+      env:
+        BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+        CHANNEL: linux
+        ITCH_GAME: slaptrax
+        ITCH_USER: liqmix
+        PACKAGE: slapTrax
+        VERSION: ${{github.ref_name}}
+
+  deploy-web:
+    name: Deploy Web build to itch.io
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: build-web
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: slapTrax-web
+    - uses: josephbmanley/butler-publish-itchio-action@master
+      env:
+        BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+        CHANNEL: web
+        ITCH_GAME: slaptrax
+        ITCH_USER: liqmix
+        PACKAGE: web
+        VERSION: ${{github.ref_name}}
