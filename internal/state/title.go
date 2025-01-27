@@ -197,8 +197,8 @@ func NewTitleState() *Title {
 	howToPlay := ui.NewElement()
 	howToPlay.SetCenter(center)
 	howToPlay.SetSize(buttonSize)
-	howToPlay.SetTextScale(textScale)
 	howToPlay.SetText(l.String(l.STATE_HOW_TO_PLAY))
+	howToPlay.SetTextScale(textScale)
 	howToPlay.SetTrigger(func() {
 		state.SetNextState(types.GameStateHowToPlay, nil)
 	})
@@ -276,6 +276,7 @@ func NewTitleState() *Title {
 		//lol
 		play.SetText(l.String(l.STATE_PLAY))
 		settings.SetText(l.String(l.STATE_SETTINGS))
+		howToPlay.SetText(l.String(l.STATE_HOW_TO_PLAY))
 		exit.SetText(l.String(l.EXIT))
 		if login != nil {
 			if loginState == external.StateOnline {
