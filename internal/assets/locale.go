@@ -156,13 +156,13 @@ func validateLocale(locale *Locale) {
 		return
 	}
 
-	logger.Info("Validating locale %s", locale.LocaleCode)
-	allKeys := defaultLocale.keyPairs
-	for _, key := range allKeys {
-		if _, ok := locale.keyPairs[key]; !ok {
-			logger.Warn("\tMissing key %s in locale %s\n", key, locale.LocaleCode)
-		}
-	}
+	// logger.Info("Validating locale %s", locale.LocaleCode)
+	// allKeys := defaultLocale.keyPairs
+	// for _, key := range allKeys {
+	// 	if _, ok := locale.keyPairs[key]; !ok {
+	// 		logger.Warn("\tMissing key %s in locale %s\n", key, locale.LocaleCode)
+	// 	}
+	// }
 }
 
 func SetLocale(l string) error {
