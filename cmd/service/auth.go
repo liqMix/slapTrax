@@ -12,7 +12,7 @@ import (
 
 var (
 	jwtSecretKey   = []byte("itsmysecretandyoucanthaveit")
-	accessTokenTTL = 15 * time.Minute
+	accessTokenTTL = 24 * time.Hour
 )
 
 type LoginCredentials struct {
