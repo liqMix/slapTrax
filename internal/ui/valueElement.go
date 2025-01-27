@@ -70,7 +70,7 @@ func (kie *KeyboardInputElement) Update() {
 				kie.input = kie.input[:len(kie.input)-1]
 			} else if key == ebiten.KeyEnter {
 				kie.editing = false
-			} else if key == ebiten.KeyEscape {
+			} else if key == ebiten.KeyEscape || key == ebiten.KeyF1 {
 				kie.editing = false
 				kie.input = ""
 			}

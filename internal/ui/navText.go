@@ -24,7 +24,15 @@ func NewNavText() *NavText {
 		input.ActionLeft,
 		input.ActionRight,
 	} {
-		navText += spacingText + l.String(a.String()) + ": " + a.Key()[0].String()
+		keys := a.Key()
+		keyText := ""
+		for i, k := range keys {
+			if i > 0 {
+				keyText += " or "
+			}
+			keyText += k.String()
+		}
+		navText += spacingText + l.String(a.String()) + ": " + keyText
 	}
 	navText += spacingText
 	textOpts := GetDefaultTextOptions()

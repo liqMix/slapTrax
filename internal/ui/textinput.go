@@ -55,7 +55,7 @@ func (t *TextInput) Update() {
 		t.SetText(t.text[:len(t.text)-1])
 	}
 
-	if input.K.AreAny([]ebiten.Key{ebiten.KeyEnter, ebiten.KeyEscape}, input.JustPressed) ||
+	if input.K.AreAny([]ebiten.Key{ebiten.KeyEnter, ebiten.KeyEscape, ebiten.KeyF1}, input.JustPressed) ||
 		input.M.Is(ebiten.MouseButtonLeft, input.JustPressed) {
 		t.SetFocused(false)
 	}

@@ -416,7 +416,7 @@ func (s *Title) Update() error {
 	s.namesOne.SetRenderTextScale(scale)
 	s.namesTwo.SetRenderTextScale(scale)
 
-	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
+	if input.K.Is(ebiten.KeyEscape, input.JustPressed) || input.K.Is(ebiten.KeyF1, input.JustPressed)  {
 		return ebiten.Termination
 	}
 	return nil

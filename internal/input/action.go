@@ -29,7 +29,7 @@ const (
 )
 
 var actionToKey = map[Action][]ebiten.Key{
-	ActionBack:        {ebiten.KeyEscape},
+	ActionBack:        {ebiten.KeyEscape, ebiten.KeyF1},
 	ActionSelect:      {ebiten.KeyEnter},
 	ActionUp:          {ebiten.KeyArrowUp},
 	ActionDown:        {ebiten.KeyArrowDown},
@@ -118,7 +118,6 @@ func SetTrackKeys(config TrackKeyConfig) {
 			ebiten.Key3,
 			ebiten.Key4,
 
-			ebiten.KeyF1,
 			ebiten.KeyF2,
 			ebiten.KeyF3,
 			ebiten.KeyF4,
@@ -222,7 +221,6 @@ func SetTrackKeys(config TrackKeyConfig) {
 			ebiten.Key3,
 			ebiten.Key4,
 
-			ebiten.KeyF1,
 			ebiten.KeyF2,
 			ebiten.KeyF3,
 			ebiten.KeyF4,

@@ -497,7 +497,7 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 func (s *Settings) Update() error {
 	s.BaseGameState.Update()
 
-	if input.K.Is(ebiten.KeyEscape, input.JustPressed) {
+	if input.K.Is(ebiten.KeyEscape, input.JustPressed) || input.K.Is(ebiten.KeyF1, input.JustPressed) {
 		user.Save()
 
 		if s.clearingCache {
