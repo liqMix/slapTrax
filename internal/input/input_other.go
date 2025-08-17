@@ -3,9 +3,15 @@
 
 package input
 
-func applyOSHook (k *keyboard) {
+func applyOSHook(k *keyboard) error {
+	// noops
+	return nil
+}
+
+func removeOSHook(k *keyboard) {
 	// noops
 }
-func removeOSHook(k *keyboard) {
+
+func (k *keyboard) Cleanup() {
 	// noops
 }
