@@ -222,6 +222,22 @@ func (m *Manager) Logout() {
 	m.loginState = StateOffline
 }
 
+func (m *Manager) RefreshSession() error {
+	if m.session == nil {
+		return fmt.Errorf("no session to refresh")
+	}
+
+	tokens, err := m.storage.client.Refresh(m.session.RefreshToken)
+	if err != nil {
+		return fmt.Errorf("failed to refresh session: %w", err)
+	}
+
+	m.session.AccessToken = tokens.AccessToken
+	m.session.RefreshToken = tokens.RefreshToken
+	m.session.ExpiresAt = time.Now().Add(24 * time.Hour)
+	return nil
+}
+
 // SaveSettings persists current settings
 func (m *Manager) SaveSettings() error {
 	if m.currentUser == nil || m.currentUser.Settings == nil {
