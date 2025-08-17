@@ -32,7 +32,9 @@ func main() {
 		SFX:  user.S().SFXVolume,
 		Song: user.S().SongVolume,
 	})
+
 	input.InitInput()
+	defer input.Close()
 
 	// Ebiten setup
 	ebiten.SetWindowSize(user.S().ScreenWidth, user.S().ScreenHeight)

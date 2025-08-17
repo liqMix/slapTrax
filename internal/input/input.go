@@ -11,6 +11,10 @@ var (
 		M.update()
 		K.update()
 	}
+	Close = func() {
+		K.Cleanup()
+		K.close()
+	}
 	JustActioned = func(a Action) bool {
 		keys, ok := actionToKey[a]
 		if !ok {

@@ -1,24 +1,35 @@
 package input
 
 import (
+	"runtime"
+	"sync"
+
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 const (
 	bitsPerWord = 64
-	numWords    = 4 // Supports up to 256 keys
+	numWords    = 4
 )
 
 type bimts [numWords]uint64
+
 type keyboard struct {
+	justPressed  []ebiten.Key
+	justReleased []ebiten.Key
+
 	pressedBits  bimts
 	releasedBits bimts
 	heldBits     bimts
 
 	watchedKeys map[ebiten.Key]int64
 
-	runes []rune
+	isFocused bool
+	runes     []rune
+	osHook    uintptr
+	m         sync.RWMutex
+	cleanup   sync.Once
 }
 
 func getBitPosition(key ebiten.Key) (wordIndex, bitOffset int) {
@@ -27,34 +38,57 @@ func getBitPosition(key ebiten.Key) (wordIndex, bitOffset int) {
 }
 
 func newKeyboard() *keyboard {
-	return &keyboard{
-		watchedKeys: make(map[ebiten.Key]int64),
-		runes:       make([]rune, 16),
+	keys := &keyboard{
+		justPressed:  make([]ebiten.Key, 0, 16),
+		justReleased: make([]ebiten.Key, 0, 16),
+		watchedKeys:  make(map[ebiten.Key]int64),
+		runes:        make([]rune, 16),
 	}
+	if err := applyOSHook(keys); err != nil {
+		logger.Error("Failed to apply hook: %v", err)
+	}
+	// Last-resort cleanup if all else fails
+	runtime.SetFinalizer(keys, func(k *keyboard) {
+		if k.osHook != 0 {
+			logger.Warn("Keyboard hook not cleaned up properly, finalizer triggered")
+			k.close()
+		}
+	})
+	return keys
 }
 
 func (k *keyboard) update() {
+	k.isFocused = ebiten.IsFocused()
+
+	if !k.isFocused {
+		return
+	}
+
 	// Clear all bits
 	for j := range k.pressedBits {
 		k.pressedBits[j] = 0
 		k.releasedBits[j] = 0
 	}
 
-	pressed := inpututil.AppendJustPressedKeys(nil)
-	for _, key := range pressed {
+	k.m.Lock()
+	for _, key := range k.justPressed {
 		wordIdx, bitOff := getBitPosition(key)
 		if wordIdx < numWords {
 			k.pressedBits[wordIdx] |= 1 << bitOff
 		}
 	}
 
-	released := inpututil.AppendJustReleasedKeys(nil)
-	for _, key := range released {
+	for _, key := range k.justReleased {
 		wordIdx, bitOff := getBitPosition(key)
 		if wordIdx < numWords {
 			k.releasedBits[wordIdx] |= 1 << bitOff
 		}
 	}
+
+	// Clear just pressed and released keys
+	k.justPressed = k.justPressed[:0]
+	k.justReleased = k.justReleased[:0]
+	k.m.Unlock()
 
 	// Update held bits
 	for j := range k.heldBits {
@@ -67,6 +101,10 @@ func (k *keyboard) update() {
 			k.watchedKeys[key]++
 		}
 	}
+}
+
+func (k *keyboard) close() {
+	removeOSHook(k)
 }
 
 func (k *keyboard) Runes() []rune {
