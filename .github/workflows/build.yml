@@ -6,9 +6,9 @@ jobs:
     name: Build Windows binary
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: '1.22'
     - name: Build Windows exe
@@ -16,7 +16,7 @@ jobs:
       shell: bash
       run: go build -o ../../slapTrax.exe
     - name: Upload Windows exe
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: slapTrax-win
         path: |
@@ -27,9 +27,9 @@ jobs:
     name: Build MacOS binary
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: '1.22'
     - name: Build Mac exe
@@ -40,7 +40,7 @@ jobs:
       shell: bash
       run: tar -zcvf slapTrax-mac.tar.gz slapTrax LICENSE.md
     - name: Upload Mac exe
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: slapTrax-mac
         path: slapTrax-mac.tar.gz
@@ -49,9 +49,9 @@ jobs:
     name: Build Linux binary
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: '1.22'
     - name: Install dependencies
@@ -65,7 +65,7 @@ jobs:
       shell: bash
       run: tar -zcvf slapTrax-lin.tar.gz slapTrax LICENSE.md
     - name: Upload Linux exe
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: slapTrax-lin
         path: slapTrax-lin.tar.gz
@@ -74,9 +74,9 @@ jobs:
     name: Build Web binary
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: '1.22'
     - name: Build Web binary
@@ -87,7 +87,7 @@ jobs:
       shell: bash
       run: cp $(go env GOROOT)/misc/wasm/wasm_exec.js web/.
     - name: Upload Web build
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: slapTrax-web
         path: |
@@ -99,21 +99,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-lin, build-mac, build-win]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download Windows binary
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: slapTrax-win
     - name: Download Linux binary
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: slapTrax-lin
     - name: Download Mac binary
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: slapTrax-mac
     - name: Upload beta testing bundle
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: slapTrax-bundle
         path: |
@@ -129,7 +129,7 @@ jobs:
     needs: build-win
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: slapTrax-win
     - uses: josephbmanley/butler-publish-itchio-action@master
@@ -147,7 +147,7 @@ jobs:
     needs: build-mac
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: slapTrax-mac
     - name: Extract tarball
@@ -168,7 +168,7 @@ jobs:
     needs: build-lin
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: slapTrax-lin
     - name: Extract tarball
@@ -189,7 +189,7 @@ jobs:
     needs: build-web
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: slapTrax-web
     - uses: josephbmanley/butler-publish-itchio-action@master
