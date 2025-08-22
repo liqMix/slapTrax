@@ -12,8 +12,7 @@ var (
 		K.update()
 	}
 	Close = func() {
-		K.Cleanup()
-		K.close()
+		K.close() // This now uses sync.Once, so calling Cleanup() separately is redundant
 	}
 	JustActioned = func(a Action) bool {
 		keys, ok := actionToKey[a]

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal"
 	"github.com/liqmix/slaptrax/internal/assets"
@@ -46,6 +44,7 @@ func main() {
 	// Do the game thing
 	game := internal.NewGame()
 	if err := ebiten.RunGame(game); err != nil {
-		log.Fatal(err)
+		logger.Error("Game error: %v", err)
+		return
 	}
 }

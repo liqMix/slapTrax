@@ -51,7 +51,9 @@ func newKeyboard() *keyboard {
 	runtime.SetFinalizer(keys, func(k *keyboard) {
 		if k.osHook != 0 {
 			logger.Warn("Keyboard hook not cleaned up properly, finalizer triggered")
-			k.close()
+			k.cleanup.Do(func() {
+				removeOSHook(k)
+			})
 		}
 	})
 	return keys
@@ -104,7 +106,9 @@ func (k *keyboard) update() {
 }
 
 func (k *keyboard) close() {
-	removeOSHook(k)
+	k.cleanup.Do(func() {
+		removeOSHook(k)
+	})
 }
 
 func (k *keyboard) Runes() []rune {

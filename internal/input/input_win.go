@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -73,15 +75,15 @@ var keyMap = map[uint32]ebiten.Key{
 	0x08: ebiten.KeyBackspace,
 	0x09: ebiten.KeyTab,
 	0x0D: ebiten.KeyEnter,
-	0x10: ebiten.KeyShift,   // Left Shift
-	0xA0: ebiten.KeyShift,   // Left Shift (specific)
-	0xA1: ebiten.KeyShift,   // Right Shift
-	0x11: ebiten.KeyControl, // Left Control
-	0xA2: ebiten.KeyControl, // Left Control (specific)
-	0xA3: ebiten.KeyControl, // Right Control
-	0x12: ebiten.KeyAlt,     // Left Alt
-	0xA4: ebiten.KeyAlt,     // Left Alt (specific)
-	0xA5: ebiten.KeyAlt,     // Right Alt
+	0x10: ebiten.KeyShift,
+	0xA0: ebiten.KeyShift,
+	0xA1: ebiten.KeyShift,
+	0x11: ebiten.KeyControl,
+	0xA2: ebiten.KeyControl,
+	0xA3: ebiten.KeyControl,
+	0x12: ebiten.KeyAlt,
+	0xA4: ebiten.KeyAlt,
+	0xA5: ebiten.KeyAlt,
 	0x14: ebiten.KeyCapsLock,
 	0x1B: ebiten.KeyEscape,
 	0x20: ebiten.KeySpace,
@@ -118,118 +120,230 @@ var keyMap = map[uint32]ebiten.Key{
 	0x90: ebiten.KeyNumLock,
 
 	// Special characters
-	0xBA: ebiten.KeySemicolon,    // ;
-	0xBB: ebiten.KeyEqual,        // =
-	0xBC: ebiten.KeyComma,        // ,
-	0xBD: ebiten.KeyMinus,        // -
-	0xBE: ebiten.KeyPeriod,       // .
-	0xBF: ebiten.KeySlash,        // /
-	0xC0: ebiten.KeyGraveAccent,  // `
-	0xDB: ebiten.KeyLeftBracket,  // [
-	0xDC: ebiten.KeyBackslash,    // \
-	0xDD: ebiten.KeyRightBracket, // ]
-	0xDE: ebiten.KeyApostrophe,   // '
+	0xBA: ebiten.KeySemicolon,
+	0xBB: ebiten.KeyEqual,
+	0xBC: ebiten.KeyComma,
+	0xBD: ebiten.KeyMinus,
+	0xBE: ebiten.KeyPeriod,
+	0xBF: ebiten.KeySlash,
+	0xC0: ebiten.KeyGraveAccent,
+	0xDB: ebiten.KeyLeftBracket,
+	0xDC: ebiten.KeyBackslash,
+	0xDD: ebiten.KeyRightBracket,
+	0xDE: ebiten.KeyApostrophe,
 
 	// Windows/Meta keys
-	0x5B: ebiten.KeyMeta, // Left Windows key
-	0x5C: ebiten.KeyMeta, // Right Windows key
+	0x5B: ebiten.KeyMeta, // Left Windows
+	0x5C: ebiten.KeyMeta, // Right Windows
+	0x5D: ebiten.KeyMenu, // Application/Menu key
 }
 
+// Additional virtual key codes for reference (not mapped to ebiten keys)
+// You might want to track these separately if needed:
+var systemKeys = map[uint32]string{
+	0x2A: "Print",
+	0x2F: "Help",
+	0x5F: "Sleep",
+	0xA6: "BrowserBack",
+	0xA7: "BrowserForward",
+	0xA8: "BrowserRefresh",
+	0xA9: "BrowserStop",
+	0xAA: "BrowserSearch",
+	0xAB: "BrowserFavorites",
+	0xAC: "BrowserHome",
+	0xAD: "VolumeMute",
+	0xAE: "VolumeDown",
+	0xAF: "VolumeUp",
+	0xB0: "MediaNext",
+	0xB1: "MediaPrev",
+	0xB2: "MediaStop",
+	0xB3: "MediaPlay",
+}
+
+const (
+	WH_KEYBOARD_LL = 13
+	WM_KEYDOWN     = 0x0100
+	WM_KEYUP       = 0x0101
+	WM_SYSKEYDOWN  = 0x0104
+	WM_SYSKEYUP    = 0x0105
+	WM_QUIT        = 0x0012
+)
+
 var (
-	// Global reference to prevent GC issues
-	globalKeyboard *keyboard
-	hookCallback   uintptr
+	globalKeyboard   *keyboard
+	hookCallback     uintptr
+	messageThreadID  uintptr
+	hookHandle       uintptr
+	isShuttingDown   int32
+	hookReady        chan bool
+	hookShutdownDone chan bool
 )
 
 func applyOSHook(k *keyboard) error {
 	logger.Debug("Initializing Windows keyboard hook")
 
+	// Initialize channels
+	hookReady = make(chan bool, 1)
+	hookShutdownDone = make(chan bool, 1)
+
 	// Store global reference
 	globalKeyboard = k
+	atomic.StoreInt32(&isShuttingDown, 0)
 
-	// Lock thread for Windows message processing
+	// Start hook in a separate goroutine to avoid blocking
+	go hookThread(k)
+
+	// Wait for hook to be ready or timeout
+	select {
+	case success := <-hookReady:
+		if !success {
+			return syscall.Errno(1) // Generic error
+		}
+		logger.Debug("Hook installed successfully")
+	case <-time.After(5 * time.Second):
+		logger.Error("Timeout waiting for hook installation")
+		return syscall.Errno(1)
+	}
+
+	// Setup cleanup handlers
+	setupCleanupHandlers(k)
+
+	return nil
+}
+
+func hookThread(k *keyboard) {
+	// Lock this goroutine to its OS thread
 	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
 	user32 := syscall.NewLazyDLL("user32.dll")
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
 
 	procSetWindowsHookEx := user32.NewProc("SetWindowsHookExW")
-	procCallNextHookEx := user32.NewProc("CallNextHookEx")
+	procGetCurrentThreadId := kernel32.NewProc("GetCurrentThreadId")
 	procGetModuleHandle := kernel32.NewProc("GetModuleHandleW")
+
+	// Get current thread ID
+	threadID, _, _ := procGetCurrentThreadId.Call()
+	messageThreadID = threadID
 
 	// Get module handle
 	moduleHandle, _, _ := procGetModuleHandle.Call(0)
 
-	next := func(nCode int, wParam, lParam uintptr) uintptr {
-		ret, _, _ := procCallNextHookEx.Call(k.osHook, uintptr(nCode), wParam, lParam)
-		return ret
-	}
-
-	// Create callback and store reference
-	hookCallback = syscall.NewCallback(func(nCode int, wParam, lParam uintptr) uintptr {
-		// Safety check
-		if globalKeyboard == nil {
-			return next(nCode, wParam, lParam)
-		}
-
-		logger.Debug("Keyboard hook called: nCode=%d, wParam=%d", nCode, wParam)
-
-		if !k.isFocused || nCode < 0 {
-			return next(nCode, wParam, lParam)
-		}
-
-		kb := (*struct {
-			VkCode      uint32
-			ScanCode    uint32
-			Flags       uint32
-			Time        uint32
-			DwExtraInfo uintptr
-		})(unsafe.Pointer(lParam))
-
-		k.m.Lock()
-		defer k.m.Unlock()
-
-		switch wParam {
-		case 256: // WM_KEYDOWN
-			key := keyMap[kb.VkCode]
-			logger.Debug("Key pressed: %d %s", kb.VkCode, key)
-			k.justPressed = append(k.justPressed, key)
-		case 257: // WM_KEYUP
-			key := keyMap[kb.VkCode]
-			logger.Debug("Key released: %d %s", kb.VkCode, key)
-			k.justReleased = append(k.justReleased, key)
-		default:
-			return next(nCode, wParam, lParam)
-		}
-
-		// Block the key event
-		return 1
-	})
+	// Create callback
+	hookCallback = syscall.NewCallback(lowLevelKeyboardProc)
 
 	// Install hook
 	hook, _, err := procSetWindowsHookEx.Call(
-		13, // WH_KEYBOARD_LL
+		WH_KEYBOARD_LL,
 		hookCallback,
 		moduleHandle,
 		0,
 	)
 
 	if hook == 0 {
-		return err
+		logger.Error("Failed to install hook: %v", err)
+		hookReady <- false
+		return
 	}
 
+	hookHandle = hook
 	k.osHook = hook
 
-	// Setup cleanup handlers
-	setupCleanupHandlers(k)
+	// Notify that hook is ready
+	hookReady <- true
 
-	// Start message pump in separate goroutine
-	go messageLoop(k)
+	// Run message loop
+	messageLoop()
 
-	return nil
+	// Cleanup after message loop exits
+	cleanupHook(k)
+
+	// Notify shutdown is complete
+	select {
+	case hookShutdownDone <- true:
+	default:
+	}
 }
 
-func messageLoop(k *keyboard) {
+func lowLevelKeyboardProc(nCode int, wParam, lParam uintptr) uintptr {
+	user32 := syscall.NewLazyDLL("user32.dll")
+	procCallNextHookEx := user32.NewProc("CallNextHookEx")
+
+	// Always pass through if shutting down
+	if atomic.LoadInt32(&isShuttingDown) == 1 {
+		ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
+		return ret
+	}
+
+	// Pass through if we should
+	if globalKeyboard == nil || nCode < 0 || !globalKeyboard.isFocused {
+		ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
+		return ret
+	}
+
+	kb := (*struct {
+		VkCode      uint32
+		ScanCode    uint32
+		Flags       uint32
+		Time        uint32
+		DwExtraInfo uintptr
+	})(unsafe.Pointer(lParam))
+
+	// Block ALL keys when focused, not just mapped ones
+	// This prevents any system shortcuts from triggering
+
+	// Special handling for critical system combinations
+	// You might want to allow Escape or a specific quit combo
+	if kb.VkCode == 0x1B { // Escape key
+		// Could implement a "hold Escape for 2 seconds to quit" here
+	}
+
+	// Map the key if we recognize it
+	key, exists := keyMap[kb.VkCode]
+	if !exists {
+		// If not recognized, check system keys
+		if name, ok := systemKeys[kb.VkCode]; ok {
+			logger.Debug("Unmapped system key pressed: %s (VK=0x%X)", name, kb.VkCode)
+			return 1 // Block the key
+		}
+		logger.Debug("Unmapped key pressed: VK=0x%X", kb.VkCode)
+		return 1 // Block unmapped keys too
+	}
+
+	// Handle the key
+	globalKeyboard.m.Lock()
+	defer globalKeyboard.m.Unlock()
+
+	switch wParam {
+	case WM_KEYDOWN, WM_SYSKEYDOWN:
+		logger.Debug("Key pressed: VK=0x%X, Key=%s (msg=0x%X)", kb.VkCode, key, wParam)
+		// Prevent duplicate entries in justPressed
+		for _, existingKey := range globalKeyboard.justPressed {
+			if existingKey == key {
+				return 1 // Already in the list, just block
+			}
+		}
+		globalKeyboard.justPressed = append(globalKeyboard.justPressed, key)
+		return 1 // Block the key
+	case WM_KEYUP, WM_SYSKEYUP:
+		logger.Debug("Key released: VK=0x%X, Key=%s (msg=0x%X)", kb.VkCode, key, wParam)
+		// Prevent duplicate entries in justReleased
+		for _, existingKey := range globalKeyboard.justReleased {
+			if existingKey == key {
+				return 1 // Already in the list, just block
+			}
+		}
+		globalKeyboard.justReleased = append(globalKeyboard.justReleased, key)
+		return 1 // Block the key
+	}
+
+	// Pass through other messages
+	ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
+	return ret
+}
+
+func messageLoop() {
 	user32 := syscall.NewLazyDLL("user32.dll")
 	procGetMessage := user32.NewProc("GetMessageW")
 	procTranslateMessage := user32.NewProc("TranslateMessage")
@@ -245,13 +359,19 @@ func messageLoop(k *keyboard) {
 	}
 
 	var msg MSG
-	for k.osHook != 0 {
+	for {
 		ret, _, _ := procGetMessage.Call(
 			uintptr(unsafe.Pointer(&msg)),
 			0, 0, 0,
 		)
 
-		if ret == 0 || ret == uintptr(0xFFFFFFFF) {
+		if ret == 0 { // WM_QUIT
+			logger.Debug("Received WM_QUIT")
+			break
+		}
+
+		if ret == ^uintptr(0) { // Error
+			logger.Error("GetMessage error")
 			break
 		}
 
@@ -261,28 +381,83 @@ func messageLoop(k *keyboard) {
 }
 
 func removeOSHook(k *keyboard) {
-	k.cleanup.Do(func() {
-		if k.osHook != 0 {
-			logger.Debug("Removing Windows keyboard hook")
+	// Set shutdown flag
+	atomic.StoreInt32(&isShuttingDown, 1)
 
-			user32 := syscall.NewLazyDLL("user32.dll")
-			procUnhookWindowsHookEx := user32.NewProc("UnhookWindowsHookEx")
+	// Post quit message to the message thread
+	if messageThreadID != 0 {
+		user32 := syscall.NewLazyDLL("user32.dll")
+		procPostThreadMessage := user32.NewProc("PostThreadMessageW")
 
-			ret, _, err := procUnhookWindowsHookEx.Call(k.osHook)
-			if ret == 0 {
-				logger.Error("Failed to unhook: %v", err)
-			} else {
-				logger.Debug("Hook removed successfully")
+		ret, _, err := procPostThreadMessage.Call(
+			messageThreadID,
+			WM_QUIT,
+			0,
+			0,
+		)
+
+		if ret == 0 {
+			logger.Error("Failed to post quit message: %v", err)
+			// Force cleanup if we can't post the message
+			if hookHandle != 0 {
+				cleanupHookForce()
 			}
-
-			k.osHook = 0
-			globalKeyboard = nil
-			hookCallback = 0
-
-			// Unlock OS thread
-			runtime.UnlockOSThread()
+		} else {
+			// Wait for clean shutdown with timeout
+			select {
+			case <-hookShutdownDone:
+				logger.Debug("Hook shutdown completed cleanly")
+			case <-time.After(1 * time.Second):
+				logger.Warn("Hook shutdown timeout, forcing cleanup")
+				cleanupHookForce()
+			}
 		}
-	})
+	}
+}
+
+func cleanupHook(k *keyboard) {
+	if k.osHook != 0 {
+		logger.Debug("Removing Windows keyboard hook")
+
+		user32 := syscall.NewLazyDLL("user32.dll")
+		procUnhookWindowsHookEx := user32.NewProc("UnhookWindowsHookEx")
+
+		ret, _, err := procUnhookWindowsHookEx.Call(k.osHook)
+		if ret == 0 {
+			logger.Error("Failed to unhook: %v", err)
+		} else {
+			logger.Debug("Hook removed successfully")
+		}
+
+		// Clear all global state
+		k.osHook = 0
+		hookHandle = 0
+		globalKeyboard = nil
+		hookCallback = 0
+		messageThreadID = 0
+		
+		// Clear the finalizer since we've cleaned up properly
+		runtime.SetFinalizer(k, nil)
+	}
+}
+
+func cleanupHookForce() {
+	if hookHandle != 0 {
+		user32 := syscall.NewLazyDLL("user32.dll")
+		procUnhookWindowsHookEx := user32.NewProc("UnhookWindowsHookEx")
+
+		ret, _, err := procUnhookWindowsHookEx.Call(hookHandle)
+		if ret == 0 {
+			logger.Error("Failed to force unhook: %v", err)
+		} else {
+			logger.Debug("Force unhook successful")
+		}
+
+		hookHandle = 0
+		globalKeyboard = nil
+		hookCallback = 0
+		messageThreadID = 0
+	}
 }
 
 func setupCleanupHandlers(k *keyboard) {
@@ -292,19 +467,19 @@ func setupCleanupHandlers(k *keyboard) {
 
 	go func() {
 		<-sigChan
-		logger.Debug("Received termination signal, cleaning up hook...")
+		logger.Debug("Received termination signal")
 		removeOSHook(k)
 		os.Exit(0)
 	}()
 
-	// Windows-specific console handler for Ctrl+C, Ctrl+Break, close button
+	// Windows console handler
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
 	procSetConsoleCtrlHandler := kernel32.NewProc("SetConsoleCtrlHandler")
 
 	consoleHandler := syscall.NewCallback(func(ctrlType uint32) uintptr {
 		logger.Debug("Console control event: %d", ctrlType)
-		removeOSHook(k)
-		return 1 // Handled
+		go removeOSHook(k) // Don't block the console handler
+		return 1
 	})
 
 	procSetConsoleCtrlHandler.Call(consoleHandler, 1)
@@ -312,5 +487,20 @@ func setupCleanupHandlers(k *keyboard) {
 
 // Cleanup function to call from main game loop
 func (k *keyboard) Cleanup() {
-	removeOSHook(k)
+	k.cleanup.Do(func() {
+		removeOSHook(k)
+	})
+}
+
+// Alternative: Consider using Raw Input instead
+// This is a cleaner approach that only captures input when focused
+func useRawInputInstead(k *keyboard) error {
+	// Raw Input is less invasive and doesn't block other applications
+	// It automatically only captures when your window has focus
+	// See: https://docs.microsoft.com/en-us/windows/win32/inputdev/raw-input
+
+	// This would be a better long-term solution
+	// Example implementation would go here
+
+	return nil
 }
