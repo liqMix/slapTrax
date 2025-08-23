@@ -14,6 +14,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/logger"
+	"golang.org/x/sys/windows/registry"
 )
 
 var keyMap = map[uint32]ebiten.Key{
@@ -182,6 +183,12 @@ var (
 func applyOSHook(k *keyboard) error {
 	logger.Debug("Initializing Windows keyboard hook")
 
+	// Disable Windows+L shortcut via registry
+	if err := disableWinLShortcut(); err != nil {
+		logger.Warn("Failed to disable Windows+L shortcut: %v", err)
+		// Continue anyway - the keyboard hook might still help
+	}
+
 	// Initialize channels
 	hookReady = make(chan bool, 1)
 	hookShutdownDone = make(chan bool, 1)
@@ -197,11 +204,15 @@ func applyOSHook(k *keyboard) error {
 	select {
 	case success := <-hookReady:
 		if !success {
+			// Restore Windows+L shortcut on failure
+			enableWinLShortcut()
 			return syscall.Errno(1) // Generic error
 		}
 		logger.Debug("Hook installed successfully")
 	case <-time.After(5 * time.Second):
 		logger.Error("Timeout waiting for hook installation")
+		// Restore Windows+L shortcut on timeout
+		enableWinLShortcut()
 		return syscall.Errno(1)
 	}
 
@@ -429,6 +440,11 @@ func cleanupHook(k *keyboard) {
 			logger.Debug("Hook removed successfully")
 		}
 
+		// Restore Windows+L shortcut
+		if err := enableWinLShortcut(); err != nil {
+			logger.Warn("Failed to restore Windows+L shortcut: %v", err)
+		}
+
 		// Clear all global state
 		k.osHook = 0
 		hookHandle = 0
@@ -451,6 +467,11 @@ func cleanupHookForce() {
 			logger.Error("Failed to force unhook: %v", err)
 		} else {
 			logger.Debug("Force unhook successful")
+		}
+
+		// Restore Windows+L shortcut even on force cleanup
+		if err := enableWinLShortcut(); err != nil {
+			logger.Warn("Failed to restore Windows+L shortcut during force cleanup: %v", err)
 		}
 
 		hookHandle = 0
@@ -502,5 +523,77 @@ func useRawInputInstead(k *keyboard) error {
 	// This would be a better long-term solution
 	// Example implementation would go here
 
+	return nil
+}
+
+// Registry key management for Windows+L shortcut
+var (
+	registryKey     = `SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`
+	registryValue   = "DisableLockWorkstation"
+	originalValue   uint32
+	hadOriginalKey  bool
+)
+
+// disableWinLShortcut disables the Windows+L shortcut via registry
+func disableWinLShortcut() error {
+	logger.Debug("Disabling Windows+L shortcut via registry")
+	
+	// Open or create the registry key
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, registryKey, registry.ALL_ACCESS)
+	if err != nil {
+		return err
+	}
+	defer key.Close()
+	
+	// Check if the value already exists and store original
+	val, _, err := key.GetIntegerValue(registryValue)
+	if err == nil {
+		originalValue = uint32(val)
+		hadOriginalKey = true
+		logger.Debug("Found existing DisableLockWorkstation value: %d", originalValue)
+	} else {
+		hadOriginalKey = false
+		logger.Debug("No existing DisableLockWorkstation value found")
+	}
+	
+	// Set the value to 1 to disable Windows+L
+	err = key.SetDWordValue(registryValue, 1)
+	if err != nil {
+		return err
+	}
+	
+	logger.Debug("Successfully disabled Windows+L shortcut")
+	return nil
+}
+
+// enableWinLShortcut restores the Windows+L shortcut via registry
+func enableWinLShortcut() error {
+	logger.Debug("Restoring Windows+L shortcut via registry")
+	
+	key, err := registry.OpenKey(registry.CURRENT_USER, registryKey, registry.ALL_ACCESS)
+	if err != nil {
+		logger.Debug("Could not open registry key for restoration: %v", err)
+		return nil // Don't fail if we can't restore
+	}
+	defer key.Close()
+	
+	if hadOriginalKey {
+		// Restore original value
+		err = key.SetDWordValue(registryValue, originalValue)
+		if err != nil {
+			logger.Error("Failed to restore original DisableLockWorkstation value: %v", err)
+		} else {
+			logger.Debug("Restored original DisableLockWorkstation value: %d", originalValue)
+		}
+	} else {
+		// Delete the value since it didn't exist before
+		err = key.DeleteValue(registryValue)
+		if err != nil {
+			logger.Error("Failed to delete DisableLockWorkstation value: %v", err)
+		} else {
+			logger.Debug("Removed DisableLockWorkstation value")
+		}
+	}
+	
 	return nil
 }
