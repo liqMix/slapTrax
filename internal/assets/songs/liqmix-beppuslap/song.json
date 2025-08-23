@@ -1,0 +1,2965 @@
+{
+  "$schema": "https://slaptrax.dev/schema/song/v2.json",
+  "version": 2,
+  "metadata": {
+    "title": "beppuSLAP!",
+    "title_link": "",
+    "artist": "liqMix",
+    "artist_link": "",
+    "album": "slapTrax",
+    "album_link": "",
+    "year": 2024,
+    "bpm": 99,
+    "preview_start": 0,
+    "charted_by": "liqMix",
+    "charted_by_link": "https://github.com/liqMix",
+    "version": "1.0.0",
+    "difficulty_range": [
+      10,
+      10
+    ]
+  },
+  "audio": {
+    "file": "audio.ogg"
+  },
+  "visual": {
+    "art": "art.png"
+  },
+  "charts": {
+    "10": {
+      "name": "Difficulty 10",
+      "difficulty": 10,
+      "note_count": 724,
+      "hold_count": 17,
+      "max_combo": 741,
+      "tracks": {
+        "left_top": [
+          {
+            "time": 3333,
+            "type": "tap"
+          },
+          {
+            "time": 5757,
+            "type": "tap"
+          },
+          {
+            "time": 7196,
+            "type": "hold",
+            "duration": 304
+          },
+          {
+            "time": 7878,
+            "type": "tap"
+          },
+          {
+            "time": 9583,
+            "type": "tap"
+          },
+          {
+            "time": 13030,
+            "type": "tap"
+          },
+          {
+            "time": 15454,
+            "type": "tap"
+          },
+          {
+            "time": 16893,
+            "type": "tap"
+          },
+          {
+            "time": 17575,
+            "type": "tap"
+          },
+          {
+            "time": 22727,
+            "type": "tap"
+          },
+          {
+            "time": 25151,
+            "type": "tap"
+          },
+          {
+            "time": 26590,
+            "type": "tap"
+          },
+          {
+            "time": 27272,
+            "type": "tap"
+          },
+          {
+            "time": 28977,
+            "type": "tap"
+          },
+          {
+            "time": 29356,
+            "type": "tap"
+          },
+          {
+            "time": 31704,
+            "type": "tap"
+          },
+          {
+            "time": 32121,
+            "type": "tap"
+          },
+          {
+            "time": 32537,
+            "type": "tap"
+          },
+          {
+            "time": 33522,
+            "type": "tap"
+          },
+          {
+            "time": 34053,
+            "type": "tap"
+          },
+          {
+            "time": 37045,
+            "type": "tap"
+          },
+          {
+            "time": 37272,
+            "type": "tap"
+          },
+          {
+            "time": 37499,
+            "type": "tap"
+          },
+          {
+            "time": 38068,
+            "type": "tap"
+          },
+          {
+            "time": 47651,
+            "type": "tap"
+          },
+          {
+            "time": 48068,
+            "type": "tap"
+          },
+          {
+            "time": 48749,
+            "type": "tap"
+          },
+          {
+            "time": 49242,
+            "type": "tap"
+          },
+          {
+            "time": 49999,
+            "type": "tap"
+          },
+          {
+            "time": 50189,
+            "type": "tap"
+          },
+          {
+            "time": 52727,
+            "type": "tap"
+          },
+          {
+            "time": 53219,
+            "type": "tap"
+          },
+          {
+            "time": 56439,
+            "type": "tap"
+          },
+          {
+            "time": 56666,
+            "type": "tap"
+          },
+          {
+            "time": 56893,
+            "type": "tap"
+          },
+          {
+            "time": 57462,
+            "type": "tap"
+          },
+          {
+            "time": 58181,
+            "type": "tap"
+          },
+          {
+            "time": 58446,
+            "type": "tap"
+          },
+          {
+            "time": 58787,
+            "type": "tap"
+          },
+          {
+            "time": 61893,
+            "type": "tap"
+          },
+          {
+            "time": 62045,
+            "type": "tap"
+          },
+          {
+            "time": 62159,
+            "type": "tap"
+          },
+          {
+            "time": 66136,
+            "type": "tap"
+          },
+          {
+            "time": 66363,
+            "type": "tap"
+          },
+          {
+            "time": 66590,
+            "type": "tap"
+          },
+          {
+            "time": 67159,
+            "type": "tap"
+          },
+          {
+            "time": 72121,
+            "type": "tap"
+          },
+          {
+            "time": 72575,
+            "type": "tap"
+          },
+          {
+            "time": 78371,
+            "type": "tap"
+          },
+          {
+            "time": 78825,
+            "type": "tap"
+          },
+          {
+            "time": 80643,
+            "type": "tap"
+          },
+          {
+            "time": 80833,
+            "type": "tap"
+          },
+          {
+            "time": 83219,
+            "type": "tap"
+          },
+          {
+            "time": 83674,
+            "type": "tap"
+          },
+          {
+            "time": 85530,
+            "type": "tap"
+          },
+          {
+            "time": 85757,
+            "type": "tap"
+          },
+          {
+            "time": 86212,
+            "type": "tap"
+          },
+          {
+            "time": 87159,
+            "type": "tap"
+          },
+          {
+            "time": 88484,
+            "type": "tap"
+          },
+          {
+            "time": 91515,
+            "type": "tap"
+          },
+          {
+            "time": 93333,
+            "type": "tap"
+          },
+          {
+            "time": 96590,
+            "type": "tap"
+          },
+          {
+            "time": 96818,
+            "type": "tap"
+          },
+          {
+            "time": 98219,
+            "type": "tap"
+          },
+          {
+            "time": 98787,
+            "type": "tap"
+          },
+          {
+            "time": 99090,
+            "type": "tap"
+          },
+          {
+            "time": 99696,
+            "type": "tap"
+          },
+          {
+            "time": 99999,
+            "type": "tap"
+          },
+          {
+            "time": 100909,
+            "type": "tap"
+          },
+          {
+            "time": 101212,
+            "type": "tap"
+          },
+          {
+            "time": 117575,
+            "type": "tap"
+          },
+          {
+            "time": 117765,
+            "type": "tap"
+          },
+          {
+            "time": 120492,
+            "type": "tap"
+          },
+          {
+            "time": 120795,
+            "type": "tap"
+          },
+          {
+            "time": 122424,
+            "type": "tap"
+          },
+          {
+            "time": 122613,
+            "type": "tap"
+          },
+          {
+            "time": 124204,
+            "type": "tap"
+          },
+          {
+            "time": 124431,
+            "type": "tap"
+          },
+          {
+            "time": 124659,
+            "type": "tap"
+          },
+          {
+            "time": 125340,
+            "type": "tap"
+          },
+          {
+            "time": 126969,
+            "type": "tap"
+          },
+          {
+            "time": 128901,
+            "type": "tap"
+          },
+          {
+            "time": 129280,
+            "type": "tap"
+          },
+          {
+            "time": 129583,
+            "type": "tap"
+          },
+          {
+            "time": 130492,
+            "type": "tap"
+          },
+          {
+            "time": 132007,
+            "type": "tap"
+          },
+          {
+            "time": 132424,
+            "type": "tap"
+          },
+          {
+            "time": 133674,
+            "type": "tap"
+          },
+          {
+            "time": 133901,
+            "type": "tap"
+          },
+          {
+            "time": 134053,
+            "type": "tap"
+          },
+          {
+            "time": 139090,
+            "type": "tap"
+          },
+          {
+            "time": 141515,
+            "type": "tap"
+          },
+          {
+            "time": 142954,
+            "type": "tap"
+          },
+          {
+            "time": 143636,
+            "type": "tap"
+          },
+          {
+            "time": 145340,
+            "type": "tap"
+          },
+          {
+            "time": 146969,
+            "type": "tap"
+          }
+        ],
+        "left_bottom": [
+          {
+            "time": 795,
+            "type": "tap"
+          },
+          {
+            "time": 1098,
+            "type": "tap"
+          },
+          {
+            "time": 1515,
+            "type": "tap"
+          },
+          {
+            "time": 2727,
+            "type": "tap"
+          },
+          {
+            "time": 6553,
+            "type": "tap"
+          },
+          {
+            "time": 10492,
+            "type": "tap"
+          },
+          {
+            "time": 10795,
+            "type": "tap"
+          },
+          {
+            "time": 11212,
+            "type": "tap"
+          },
+          {
+            "time": 12424,
+            "type": "tap"
+          },
+          {
+            "time": 16250,
+            "type": "tap"
+          },
+          {
+            "time": 20189,
+            "type": "tap"
+          },
+          {
+            "time": 20492,
+            "type": "tap"
+          },
+          {
+            "time": 20909,
+            "type": "tap"
+          },
+          {
+            "time": 22121,
+            "type": "tap"
+          },
+          {
+            "time": 25946,
+            "type": "tap"
+          },
+          {
+            "time": 29886,
+            "type": "tap"
+          },
+          {
+            "time": 30189,
+            "type": "tap"
+          },
+          {
+            "time": 30606,
+            "type": "tap"
+          },
+          {
+            "time": 31931,
+            "type": "tap"
+          },
+          {
+            "time": 33825,
+            "type": "tap"
+          },
+          {
+            "time": 34280,
+            "type": "tap"
+          },
+          {
+            "time": 34507,
+            "type": "tap"
+          },
+          {
+            "time": 35946,
+            "type": "tap"
+          },
+          {
+            "time": 36363,
+            "type": "tap"
+          },
+          {
+            "time": 36590,
+            "type": "tap"
+          },
+          {
+            "time": 36818,
+            "type": "tap"
+          },
+          {
+            "time": 38295,
+            "type": "tap"
+          },
+          {
+            "time": 38522,
+            "type": "tap"
+          },
+          {
+            "time": 38787,
+            "type": "hold",
+            "duration": 1212
+          },
+          {
+            "time": 40833,
+            "type": "tap"
+          },
+          {
+            "time": 42689,
+            "type": "tap"
+          },
+          {
+            "time": 43636,
+            "type": "hold",
+            "duration": 1212
+          },
+          {
+            "time": 45681,
+            "type": "tap"
+          },
+          {
+            "time": 47462,
+            "type": "tap"
+          },
+          {
+            "time": 47803,
+            "type": "tap"
+          },
+          {
+            "time": 48371,
+            "type": "tap"
+          },
+          {
+            "time": 49090,
+            "type": "tap"
+          },
+          {
+            "time": 49393,
+            "type": "tap"
+          },
+          {
+            "time": 49545,
+            "type": "tap"
+          },
+          {
+            "time": 49696,
+            "type": "tap"
+          },
+          {
+            "time": 50606,
+            "type": "tap"
+          },
+          {
+            "time": 50795,
+            "type": "tap"
+          },
+          {
+            "time": 52121,
+            "type": "tap"
+          },
+          {
+            "time": 52310,
+            "type": "tap"
+          },
+          {
+            "time": 52878,
+            "type": "tap"
+          },
+          {
+            "time": 54545,
+            "type": "tap"
+          },
+          {
+            "time": 54734,
+            "type": "tap"
+          },
+          {
+            "time": 55151,
+            "type": "tap"
+          },
+          {
+            "time": 55340,
+            "type": "tap"
+          },
+          {
+            "time": 55757,
+            "type": "tap"
+          },
+          {
+            "time": 55984,
+            "type": "tap"
+          },
+          {
+            "time": 56212,
+            "type": "tap"
+          },
+          {
+            "time": 57689,
+            "type": "tap"
+          },
+          {
+            "time": 57916,
+            "type": "tap"
+          },
+          {
+            "time": 59090,
+            "type": "tap"
+          },
+          {
+            "time": 59318,
+            "type": "tap"
+          },
+          {
+            "time": 59583,
+            "type": "tap"
+          },
+          {
+            "time": 59886,
+            "type": "tap"
+          },
+          {
+            "time": 60492,
+            "type": "tap"
+          },
+          {
+            "time": 60795,
+            "type": "tap"
+          },
+          {
+            "time": 61098,
+            "type": "tap"
+          },
+          {
+            "time": 61401,
+            "type": "tap"
+          },
+          {
+            "time": 61704,
+            "type": "tap"
+          },
+          {
+            "time": 62916,
+            "type": "tap"
+          },
+          {
+            "time": 63901,
+            "type": "tap"
+          },
+          {
+            "time": 64053,
+            "type": "tap"
+          },
+          {
+            "time": 64545,
+            "type": "tap"
+          },
+          {
+            "time": 65151,
+            "type": "tap"
+          },
+          {
+            "time": 65454,
+            "type": "tap"
+          },
+          {
+            "time": 65681,
+            "type": "tap"
+          },
+          {
+            "time": 65909,
+            "type": "tap"
+          },
+          {
+            "time": 67386,
+            "type": "tap"
+          },
+          {
+            "time": 67613,
+            "type": "tap"
+          },
+          {
+            "time": 67878,
+            "type": "hold",
+            "duration": 606
+          },
+          {
+            "time": 72348,
+            "type": "tap"
+          },
+          {
+            "time": 77159,
+            "type": "tap"
+          },
+          {
+            "time": 77462,
+            "type": "tap"
+          },
+          {
+            "time": 77840,
+            "type": "tap"
+          },
+          {
+            "time": 78068,
+            "type": "tap"
+          },
+          {
+            "time": 78598,
+            "type": "tap"
+          },
+          {
+            "time": 79696,
+            "type": "tap"
+          },
+          {
+            "time": 79999,
+            "type": "tap"
+          },
+          {
+            "time": 80416,
+            "type": "tap"
+          },
+          {
+            "time": 81060,
+            "type": "tap"
+          },
+          {
+            "time": 81515,
+            "type": "tap"
+          },
+          {
+            "time": 81704,
+            "type": "tap"
+          },
+          {
+            "time": 82007,
+            "type": "tap"
+          },
+          {
+            "time": 82310,
+            "type": "tap"
+          },
+          {
+            "time": 82689,
+            "type": "tap"
+          },
+          {
+            "time": 82916,
+            "type": "tap"
+          },
+          {
+            "time": 83446,
+            "type": "tap"
+          },
+          {
+            "time": 84545,
+            "type": "tap"
+          },
+          {
+            "time": 84848,
+            "type": "tap"
+          },
+          {
+            "time": 85075,
+            "type": "tap"
+          },
+          {
+            "time": 85303,
+            "type": "tap"
+          },
+          {
+            "time": 85984,
+            "type": "tap"
+          },
+          {
+            "time": 87537,
+            "type": "tap"
+          },
+          {
+            "time": 87765,
+            "type": "tap"
+          },
+          {
+            "time": 88068,
+            "type": "tap"
+          },
+          {
+            "time": 88295,
+            "type": "tap"
+          },
+          {
+            "time": 88977,
+            "type": "tap"
+          },
+          {
+            "time": 89696,
+            "type": "tap"
+          },
+          {
+            "time": 90075,
+            "type": "tap"
+          },
+          {
+            "time": 90606,
+            "type": "tap"
+          },
+          {
+            "time": 90833,
+            "type": "tap"
+          },
+          {
+            "time": 91818,
+            "type": "tap"
+          },
+          {
+            "time": 92386,
+            "type": "tap"
+          },
+          {
+            "time": 92613,
+            "type": "tap"
+          },
+          {
+            "time": 92916,
+            "type": "tap"
+          },
+          {
+            "time": 93143,
+            "type": "tap"
+          },
+          {
+            "time": 93825,
+            "type": "tap"
+          },
+          {
+            "time": 94545,
+            "type": "tap"
+          },
+          {
+            "time": 94924,
+            "type": "tap"
+          },
+          {
+            "time": 95454,
+            "type": "tap"
+          },
+          {
+            "time": 95681,
+            "type": "tap"
+          },
+          {
+            "time": 96363,
+            "type": "tap"
+          },
+          {
+            "time": 97575,
+            "type": "tap"
+          },
+          {
+            "time": 99393,
+            "type": "tap"
+          },
+          {
+            "time": 100606,
+            "type": "tap"
+          },
+          {
+            "time": 101439,
+            "type": "tap"
+          },
+          {
+            "time": 105340,
+            "type": "tap"
+          },
+          {
+            "time": 105757,
+            "type": "tap"
+          },
+          {
+            "time": 106060,
+            "type": "tap"
+          },
+          {
+            "time": 106363,
+            "type": "tap"
+          },
+          {
+            "time": 106666,
+            "type": "hold",
+            "duration": 606
+          },
+          {
+            "time": 115151,
+            "type": "tap"
+          },
+          {
+            "time": 116628,
+            "type": "tap"
+          },
+          {
+            "time": 116856,
+            "type": "tap"
+          },
+          {
+            "time": 117159,
+            "type": "tap"
+          },
+          {
+            "time": 117386,
+            "type": "tap"
+          },
+          {
+            "time": 118787,
+            "type": "tap"
+          },
+          {
+            "time": 119696,
+            "type": "tap"
+          },
+          {
+            "time": 121098,
+            "type": "tap"
+          },
+          {
+            "time": 121477,
+            "type": "tap"
+          },
+          {
+            "time": 121704,
+            "type": "tap"
+          },
+          {
+            "time": 122007,
+            "type": "tap"
+          },
+          {
+            "time": 122234,
+            "type": "tap"
+          },
+          {
+            "time": 123749,
+            "type": "tap"
+          },
+          {
+            "time": 123977,
+            "type": "tap"
+          },
+          {
+            "time": 125568,
+            "type": "tap"
+          },
+          {
+            "time": 126060,
+            "type": "tap"
+          },
+          {
+            "time": 127765,
+            "type": "tap"
+          },
+          {
+            "time": 128068,
+            "type": "tap"
+          },
+          {
+            "time": 128371,
+            "type": "tap"
+          },
+          {
+            "time": 128674,
+            "type": "tap"
+          },
+          {
+            "time": 130795,
+            "type": "tap"
+          },
+          {
+            "time": 131098,
+            "type": "tap"
+          },
+          {
+            "time": 132727,
+            "type": "tap"
+          },
+          {
+            "time": 132954,
+            "type": "tap"
+          },
+          {
+            "time": 133446,
+            "type": "tap"
+          },
+          {
+            "time": 134469,
+            "type": "tap"
+          },
+          {
+            "time": 134772,
+            "type": "tap"
+          },
+          {
+            "time": 135227,
+            "type": "tap"
+          },
+          {
+            "time": 135757,
+            "type": "tap"
+          },
+          {
+            "time": 136553,
+            "type": "tap"
+          },
+          {
+            "time": 136856,
+            "type": "tap"
+          },
+          {
+            "time": 137272,
+            "type": "tap"
+          },
+          {
+            "time": 138484,
+            "type": "tap"
+          },
+          {
+            "time": 142310,
+            "type": "tap"
+          },
+          {
+            "time": 147159,
+            "type": "tap"
+          },
+          {
+            "time": 147272,
+            "type": "tap"
+          },
+          {
+            "time": 147462,
+            "type": "tap"
+          },
+          {
+            "time": 147651,
+            "type": "tap"
+          },
+          {
+            "time": 147878,
+            "type": "hold",
+            "duration": 1212
+          }
+        ],
+        "center_top": [
+          {
+            "time": 3636,
+            "type": "tap"
+          },
+          {
+            "time": 3825,
+            "type": "tap"
+          },
+          {
+            "time": 9090,
+            "type": "tap"
+          },
+          {
+            "time": 9393,
+            "type": "tap"
+          },
+          {
+            "time": 13333,
+            "type": "tap"
+          },
+          {
+            "time": 13522,
+            "type": "tap"
+          },
+          {
+            "time": 23030,
+            "type": "tap"
+          },
+          {
+            "time": 23219,
+            "type": "tap"
+          },
+          {
+            "time": 28484,
+            "type": "tap"
+          },
+          {
+            "time": 28787,
+            "type": "tap"
+          },
+          {
+            "time": 29090,
+            "type": "tap"
+          },
+          {
+            "time": 32310,
+            "type": "tap"
+          },
+          {
+            "time": 32727,
+            "type": "tap"
+          },
+          {
+            "time": 32916,
+            "type": "tap"
+          },
+          {
+            "time": 36060,
+            "type": "tap"
+          },
+          {
+            "time": 37613,
+            "type": "tap"
+          },
+          {
+            "time": 38181,
+            "type": "tap"
+          },
+          {
+            "time": 38636,
+            "type": "tap"
+          },
+          {
+            "time": 42954,
+            "type": "tap"
+          },
+          {
+            "time": 47575,
+            "type": "tap"
+          },
+          {
+            "time": 47727,
+            "type": "tap"
+          },
+          {
+            "time": 52424,
+            "type": "tap"
+          },
+          {
+            "time": 52613,
+            "type": "tap"
+          },
+          {
+            "time": 52803,
+            "type": "tap"
+          },
+          {
+            "time": 55454,
+            "type": "tap"
+          },
+          {
+            "time": 55643,
+            "type": "tap"
+          },
+          {
+            "time": 57007,
+            "type": "tap"
+          },
+          {
+            "time": 57575,
+            "type": "tap"
+          },
+          {
+            "time": 58030,
+            "type": "tap"
+          },
+          {
+            "time": 60606,
+            "type": "tap"
+          },
+          {
+            "time": 60909,
+            "type": "tap"
+          },
+          {
+            "time": 61212,
+            "type": "tap"
+          },
+          {
+            "time": 61515,
+            "type": "tap"
+          },
+          {
+            "time": 61818,
+            "type": "tap"
+          },
+          {
+            "time": 61969,
+            "type": "tap"
+          },
+          {
+            "time": 62424,
+            "type": "tap"
+          },
+          {
+            "time": 62575,
+            "type": "tap"
+          },
+          {
+            "time": 63030,
+            "type": "tap"
+          },
+          {
+            "time": 63333,
+            "type": "tap"
+          },
+          {
+            "time": 63636,
+            "type": "tap"
+          },
+          {
+            "time": 64242,
+            "type": "tap"
+          },
+          {
+            "time": 64848,
+            "type": "tap"
+          },
+          {
+            "time": 66704,
+            "type": "tap"
+          },
+          {
+            "time": 67272,
+            "type": "tap"
+          },
+          {
+            "time": 67727,
+            "type": "tap"
+          },
+          {
+            "time": 86401,
+            "type": "tap"
+          },
+          {
+            "time": 86969,
+            "type": "tap"
+          },
+          {
+            "time": 89393,
+            "type": "tap"
+          },
+          {
+            "time": 91212,
+            "type": "tap"
+          },
+          {
+            "time": 94242,
+            "type": "tap"
+          },
+          {
+            "time": 96098,
+            "type": "tap"
+          },
+          {
+            "time": 96704,
+            "type": "tap"
+          },
+          {
+            "time": 97803,
+            "type": "tap"
+          },
+          {
+            "time": 98977,
+            "type": "tap"
+          },
+          {
+            "time": 99886,
+            "type": "tap"
+          },
+          {
+            "time": 100303,
+            "type": "tap"
+          },
+          {
+            "time": 101098,
+            "type": "tap"
+          },
+          {
+            "time": 104242,
+            "type": "tap"
+          },
+          {
+            "time": 104545,
+            "type": "tap"
+          },
+          {
+            "time": 105643,
+            "type": "tap"
+          },
+          {
+            "time": 115643,
+            "type": "tap"
+          },
+          {
+            "time": 116249,
+            "type": "tap"
+          },
+          {
+            "time": 120606,
+            "type": "tap"
+          },
+          {
+            "time": 120909,
+            "type": "tap"
+          },
+          {
+            "time": 124090,
+            "type": "tap"
+          },
+          {
+            "time": 124318,
+            "type": "tap"
+          },
+          {
+            "time": 125113,
+            "type": "tap"
+          },
+          {
+            "time": 126325,
+            "type": "tap"
+          },
+          {
+            "time": 126856,
+            "type": "tap"
+          },
+          {
+            "time": 128181,
+            "type": "tap"
+          },
+          {
+            "time": 129886,
+            "type": "tap"
+          },
+          {
+            "time": 130189,
+            "type": "tap"
+          },
+          {
+            "time": 131401,
+            "type": "tap"
+          },
+          {
+            "time": 132310,
+            "type": "tap"
+          },
+          {
+            "time": 132613,
+            "type": "tap"
+          },
+          {
+            "time": 133219,
+            "type": "tap"
+          },
+          {
+            "time": 133560,
+            "type": "tap"
+          },
+          {
+            "time": 134280,
+            "type": "tap"
+          },
+          {
+            "time": 134696,
+            "type": "tap"
+          },
+          {
+            "time": 134924,
+            "type": "tap"
+          },
+          {
+            "time": 135151,
+            "type": "tap"
+          },
+          {
+            "time": 135378,
+            "type": "tap"
+          },
+          {
+            "time": 135606,
+            "type": "tap"
+          },
+          {
+            "time": 139393,
+            "type": "tap"
+          },
+          {
+            "time": 139583,
+            "type": "tap"
+          },
+          {
+            "time": 144848,
+            "type": "tap"
+          },
+          {
+            "time": 145151,
+            "type": "tap"
+          }
+        ],
+        "center_bottom": [
+          {
+            "time": 0,
+            "type": "tap"
+          },
+          {
+            "time": 1212,
+            "type": "tap"
+          },
+          {
+            "time": 2007,
+            "type": "tap"
+          },
+          {
+            "time": 4128,
+            "type": "hold",
+            "duration": 417
+          },
+          {
+            "time": 4848,
+            "type": "tap"
+          },
+          {
+            "time": 6060,
+            "type": "tap"
+          },
+          {
+            "time": 6856,
+            "type": "tap"
+          },
+          {
+            "time": 8484,
+            "type": "tap"
+          },
+          {
+            "time": 8787,
+            "type": "tap"
+          },
+          {
+            "time": 9696,
+            "type": "tap"
+          },
+          {
+            "time": 10909,
+            "type": "tap"
+          },
+          {
+            "time": 11704,
+            "type": "tap"
+          },
+          {
+            "time": 13825,
+            "type": "hold",
+            "duration": 417
+          },
+          {
+            "time": 14545,
+            "type": "tap"
+          },
+          {
+            "time": 15757,
+            "type": "tap"
+          },
+          {
+            "time": 16553,
+            "type": "tap"
+          },
+          {
+            "time": 18181,
+            "type": "tap"
+          },
+          {
+            "time": 19393,
+            "type": "tap"
+          },
+          {
+            "time": 20606,
+            "type": "tap"
+          },
+          {
+            "time": 21401,
+            "type": "tap"
+          },
+          {
+            "time": 23522,
+            "type": "hold",
+            "duration": 417
+          },
+          {
+            "time": 24242,
+            "type": "tap"
+          },
+          {
+            "time": 25454,
+            "type": "tap"
+          },
+          {
+            "time": 26250,
+            "type": "tap"
+          },
+          {
+            "time": 27878,
+            "type": "tap"
+          },
+          {
+            "time": 28181,
+            "type": "tap"
+          },
+          {
+            "time": 30303,
+            "type": "tap"
+          },
+          {
+            "time": 31098,
+            "type": "tap"
+          },
+          {
+            "time": 33219,
+            "type": "tap"
+          },
+          {
+            "time": 33636,
+            "type": "tap"
+          },
+          {
+            "time": 34393,
+            "type": "tap"
+          },
+          {
+            "time": 37840,
+            "type": "tap"
+          },
+          {
+            "time": 38409,
+            "type": "tap"
+          },
+          {
+            "time": 43106,
+            "type": "tap"
+          },
+          {
+            "time": 51212,
+            "type": "tap"
+          },
+          {
+            "time": 51401,
+            "type": "tap"
+          },
+          {
+            "time": 51818,
+            "type": "tap"
+          },
+          {
+            "time": 52007,
+            "type": "tap"
+          },
+          {
+            "time": 53030,
+            "type": "tap"
+          },
+          {
+            "time": 53636,
+            "type": "tap"
+          },
+          {
+            "time": 53825,
+            "type": "tap"
+          },
+          {
+            "time": 54242,
+            "type": "tap"
+          },
+          {
+            "time": 54431,
+            "type": "tap"
+          },
+          {
+            "time": 54848,
+            "type": "tap"
+          },
+          {
+            "time": 55037,
+            "type": "tap"
+          },
+          {
+            "time": 57234,
+            "type": "tap"
+          },
+          {
+            "time": 57803,
+            "type": "tap"
+          },
+          {
+            "time": 60189,
+            "type": "tap"
+          },
+          {
+            "time": 66931,
+            "type": "tap"
+          },
+          {
+            "time": 67499,
+            "type": "tap"
+          },
+          {
+            "time": 68484,
+            "type": "tap"
+          },
+          {
+            "time": 69696,
+            "type": "tap"
+          },
+          {
+            "time": 70909,
+            "type": "tap"
+          },
+          {
+            "time": 73333,
+            "type": "tap"
+          },
+          {
+            "time": 74545,
+            "type": "tap"
+          },
+          {
+            "time": 75757,
+            "type": "tap"
+          },
+          {
+            "time": 76856,
+            "type": "tap"
+          },
+          {
+            "time": 86098,
+            "type": "tap"
+          },
+          {
+            "time": 86856,
+            "type": "tap"
+          },
+          {
+            "time": 87878,
+            "type": "tap"
+          },
+          {
+            "time": 88787,
+            "type": "tap"
+          },
+          {
+            "time": 90303,
+            "type": "tap"
+          },
+          {
+            "time": 92045,
+            "type": "tap"
+          },
+          {
+            "time": 92727,
+            "type": "tap"
+          },
+          {
+            "time": 93636,
+            "type": "tap"
+          },
+          {
+            "time": 95151,
+            "type": "tap"
+          },
+          {
+            "time": 95871,
+            "type": "tap"
+          },
+          {
+            "time": 96477,
+            "type": "tap"
+          },
+          {
+            "time": 97689,
+            "type": "tap"
+          },
+          {
+            "time": 99280,
+            "type": "tap"
+          },
+          {
+            "time": 99583,
+            "type": "tap"
+          },
+          {
+            "time": 100795,
+            "type": "tap"
+          },
+          {
+            "time": 101666,
+            "type": "tap"
+          },
+          {
+            "time": 105037,
+            "type": "tap"
+          },
+          {
+            "time": 108484,
+            "type": "tap"
+          },
+          {
+            "time": 109696,
+            "type": "tap"
+          },
+          {
+            "time": 110909,
+            "type": "tap"
+          },
+          {
+            "time": 112121,
+            "type": "tap"
+          },
+          {
+            "time": 113333,
+            "type": "tap"
+          },
+          {
+            "time": 114545,
+            "type": "tap"
+          },
+          {
+            "time": 115454,
+            "type": "tap"
+          },
+          {
+            "time": 115946,
+            "type": "tap"
+          },
+          {
+            "time": 116969,
+            "type": "tap"
+          },
+          {
+            "time": 118181,
+            "type": "tap"
+          },
+          {
+            "time": 118371,
+            "type": "tap"
+          },
+          {
+            "time": 119393,
+            "type": "tap"
+          },
+          {
+            "time": 119999,
+            "type": "tap"
+          },
+          {
+            "time": 120189,
+            "type": "tap"
+          },
+          {
+            "time": 121818,
+            "type": "tap"
+          },
+          {
+            "time": 123030,
+            "type": "tap"
+          },
+          {
+            "time": 123219,
+            "type": "tap"
+          },
+          {
+            "time": 123863,
+            "type": "tap"
+          },
+          {
+            "time": 124886,
+            "type": "tap"
+          },
+          {
+            "time": 125795,
+            "type": "tap"
+          },
+          {
+            "time": 127462,
+            "type": "tap"
+          },
+          {
+            "time": 131212,
+            "type": "tap"
+          },
+          {
+            "time": 131704,
+            "type": "tap"
+          },
+          {
+            "time": 132840,
+            "type": "tap"
+          },
+          {
+            "time": 133333,
+            "type": "tap"
+          },
+          {
+            "time": 134621,
+            "type": "tap"
+          },
+          {
+            "time": 134848,
+            "type": "tap"
+          },
+          {
+            "time": 135075,
+            "type": "tap"
+          },
+          {
+            "time": 135303,
+            "type": "tap"
+          },
+          {
+            "time": 135530,
+            "type": "tap"
+          },
+          {
+            "time": 136969,
+            "type": "tap"
+          },
+          {
+            "time": 137765,
+            "type": "tap"
+          },
+          {
+            "time": 139886,
+            "type": "hold",
+            "duration": 417
+          },
+          {
+            "time": 140606,
+            "type": "tap"
+          },
+          {
+            "time": 141818,
+            "type": "tap"
+          },
+          {
+            "time": 142613,
+            "type": "tap"
+          },
+          {
+            "time": 144242,
+            "type": "tap"
+          },
+          {
+            "time": 144545,
+            "type": "tap"
+          }
+        ],
+        "right_top": [
+          {
+            "time": 909,
+            "type": "tap"
+          },
+          {
+            "time": 2348,
+            "type": "tap"
+          },
+          {
+            "time": 3939,
+            "type": "tap"
+          },
+          {
+            "time": 8977,
+            "type": "tap"
+          },
+          {
+            "time": 9280,
+            "type": "tap"
+          },
+          {
+            "time": 10606,
+            "type": "tap"
+          },
+          {
+            "time": 12045,
+            "type": "tap"
+          },
+          {
+            "time": 13636,
+            "type": "tap"
+          },
+          {
+            "time": 20303,
+            "type": "tap"
+          },
+          {
+            "time": 21742,
+            "type": "tap"
+          },
+          {
+            "time": 23333,
+            "type": "tap"
+          },
+          {
+            "time": 28371,
+            "type": "tap"
+          },
+          {
+            "time": 28674,
+            "type": "tap"
+          },
+          {
+            "time": 29469,
+            "type": "tap"
+          },
+          {
+            "time": 30000,
+            "type": "tap"
+          },
+          {
+            "time": 32424,
+            "type": "tap"
+          },
+          {
+            "time": 32651,
+            "type": "tap"
+          },
+          {
+            "time": 33333,
+            "type": "tap"
+          },
+          {
+            "time": 33939,
+            "type": "tap"
+          },
+          {
+            "time": 36931,
+            "type": "tap"
+          },
+          {
+            "time": 37159,
+            "type": "tap"
+          },
+          {
+            "time": 37386,
+            "type": "tap"
+          },
+          {
+            "time": 37727,
+            "type": "tap"
+          },
+          {
+            "time": 42878,
+            "type": "tap"
+          },
+          {
+            "time": 43030,
+            "type": "tap"
+          },
+          {
+            "time": 43522,
+            "type": "tap"
+          },
+          {
+            "time": 47878,
+            "type": "tap"
+          },
+          {
+            "time": 48977,
+            "type": "tap"
+          },
+          {
+            "time": 49621,
+            "type": "tap"
+          },
+          {
+            "time": 50303,
+            "type": "tap"
+          },
+          {
+            "time": 50492,
+            "type": "tap"
+          },
+          {
+            "time": 51515,
+            "type": "tap"
+          },
+          {
+            "time": 51704,
+            "type": "tap"
+          },
+          {
+            "time": 53939,
+            "type": "tap"
+          },
+          {
+            "time": 54128,
+            "type": "tap"
+          },
+          {
+            "time": 54318,
+            "type": "tap"
+          },
+          {
+            "time": 56325,
+            "type": "tap"
+          },
+          {
+            "time": 56553,
+            "type": "tap"
+          },
+          {
+            "time": 56780,
+            "type": "tap"
+          },
+          {
+            "time": 57121,
+            "type": "tap"
+          },
+          {
+            "time": 59393,
+            "type": "tap"
+          },
+          {
+            "time": 59999,
+            "type": "tap"
+          },
+          {
+            "time": 60303,
+            "type": "tap"
+          },
+          {
+            "time": 62310,
+            "type": "tap"
+          },
+          {
+            "time": 62499,
+            "type": "tap"
+          },
+          {
+            "time": 66022,
+            "type": "tap"
+          },
+          {
+            "time": 66249,
+            "type": "tap"
+          },
+          {
+            "time": 66477,
+            "type": "tap"
+          },
+          {
+            "time": 66818,
+            "type": "tap"
+          },
+          {
+            "time": 72234,
+            "type": "tap"
+          },
+          {
+            "time": 81212,
+            "type": "tap"
+          },
+          {
+            "time": 81401,
+            "type": "tap"
+          },
+          {
+            "time": 85416,
+            "type": "tap"
+          },
+          {
+            "time": 85643,
+            "type": "tap"
+          },
+          {
+            "time": 85871,
+            "type": "tap"
+          },
+          {
+            "time": 86666,
+            "type": "tap"
+          },
+          {
+            "time": 91704,
+            "type": "tap"
+          },
+          {
+            "time": 95984,
+            "type": "tap"
+          },
+          {
+            "time": 96212,
+            "type": "tap"
+          },
+          {
+            "time": 97916,
+            "type": "tap"
+          },
+          {
+            "time": 98106,
+            "type": "tap"
+          },
+          {
+            "time": 100189,
+            "type": "tap"
+          },
+          {
+            "time": 101325,
+            "type": "tap"
+          },
+          {
+            "time": 104431,
+            "type": "tap"
+          },
+          {
+            "time": 105946,
+            "type": "tap"
+          },
+          {
+            "time": 106249,
+            "type": "tap"
+          },
+          {
+            "time": 106553,
+            "type": "tap"
+          },
+          {
+            "time": 116060,
+            "type": "tap"
+          },
+          {
+            "time": 119090,
+            "type": "tap"
+          },
+          {
+            "time": 119280,
+            "type": "tap"
+          },
+          {
+            "time": 119583,
+            "type": "tap"
+          },
+          {
+            "time": 119886,
+            "type": "tap"
+          },
+          {
+            "time": 120303,
+            "type": "tap"
+          },
+          {
+            "time": 124545,
+            "type": "tap"
+          },
+          {
+            "time": 124772,
+            "type": "tap"
+          },
+          {
+            "time": 125227,
+            "type": "tap"
+          },
+          {
+            "time": 125454,
+            "type": "tap"
+          },
+          {
+            "time": 126401,
+            "type": "tap"
+          },
+          {
+            "time": 127575,
+            "type": "tap"
+          },
+          {
+            "time": 128787,
+            "type": "tap"
+          },
+          {
+            "time": 130303,
+            "type": "tap"
+          },
+          {
+            "time": 131818,
+            "type": "tap"
+          },
+          {
+            "time": 133787,
+            "type": "tap"
+          },
+          {
+            "time": 133977,
+            "type": "tap"
+          },
+          {
+            "time": 134166,
+            "type": "tap"
+          },
+          {
+            "time": 136666,
+            "type": "tap"
+          },
+          {
+            "time": 138106,
+            "type": "tap"
+          },
+          {
+            "time": 139696,
+            "type": "tap"
+          },
+          {
+            "time": 144734,
+            "type": "tap"
+          },
+          {
+            "time": 145037,
+            "type": "tap"
+          }
+        ],
+        "right_bottom": [
+          {
+            "time": 1704,
+            "type": "tap"
+          },
+          {
+            "time": 3219,
+            "type": "tap"
+          },
+          {
+            "time": 3522,
+            "type": "tap"
+          },
+          {
+            "time": 5643,
+            "type": "tap"
+          },
+          {
+            "time": 5946,
+            "type": "tap"
+          },
+          {
+            "time": 6363,
+            "type": "tap"
+          },
+          {
+            "time": 7537,
+            "type": "tap"
+          },
+          {
+            "time": 7765,
+            "type": "tap"
+          },
+          {
+            "time": 8181,
+            "type": "tap"
+          },
+          {
+            "time": 11401,
+            "type": "tap"
+          },
+          {
+            "time": 12916,
+            "type": "tap"
+          },
+          {
+            "time": 13219,
+            "type": "tap"
+          },
+          {
+            "time": 15340,
+            "type": "tap"
+          },
+          {
+            "time": 15643,
+            "type": "tap"
+          },
+          {
+            "time": 16060,
+            "type": "tap"
+          },
+          {
+            "time": 17272,
+            "type": "tap"
+          },
+          {
+            "time": 17462,
+            "type": "tap"
+          },
+          {
+            "time": 17878,
+            "type": "tap"
+          },
+          {
+            "time": 21098,
+            "type": "tap"
+          },
+          {
+            "time": 22613,
+            "type": "tap"
+          },
+          {
+            "time": 22916,
+            "type": "tap"
+          },
+          {
+            "time": 25037,
+            "type": "tap"
+          },
+          {
+            "time": 25340,
+            "type": "tap"
+          },
+          {
+            "time": 25757,
+            "type": "tap"
+          },
+          {
+            "time": 26969,
+            "type": "tap"
+          },
+          {
+            "time": 27159,
+            "type": "tap"
+          },
+          {
+            "time": 27575,
+            "type": "tap"
+          },
+          {
+            "time": 30795,
+            "type": "tap"
+          },
+          {
+            "time": 31818,
+            "type": "tap"
+          },
+          {
+            "time": 32045,
+            "type": "tap"
+          },
+          {
+            "time": 33030,
+            "type": "tap"
+          },
+          {
+            "time": 34166,
+            "type": "tap"
+          },
+          {
+            "time": 36477,
+            "type": "tap"
+          },
+          {
+            "time": 36704,
+            "type": "tap"
+          },
+          {
+            "time": 37954,
+            "type": "tap"
+          },
+          {
+            "time": 40303,
+            "type": "tap"
+          },
+          {
+            "time": 41212,
+            "type": "hold",
+            "duration": 1212
+          },
+          {
+            "time": 43181,
+            "type": "tap"
+          },
+          {
+            "time": 45151,
+            "type": "tap"
+          },
+          {
+            "time": 46060,
+            "type": "hold",
+            "duration": 1212
+          },
+          {
+            "time": 48181,
+            "type": "tap"
+          },
+          {
+            "time": 48484,
+            "type": "tap"
+          },
+          {
+            "time": 49166,
+            "type": "tap"
+          },
+          {
+            "time": 49318,
+            "type": "tap"
+          },
+          {
+            "time": 49469,
+            "type": "tap"
+          },
+          {
+            "time": 49886,
+            "type": "tap"
+          },
+          {
+            "time": 50909,
+            "type": "tap"
+          },
+          {
+            "time": 51098,
+            "type": "tap"
+          },
+          {
+            "time": 53333,
+            "type": "tap"
+          },
+          {
+            "time": 53522,
+            "type": "tap"
+          },
+          {
+            "time": 55871,
+            "type": "tap"
+          },
+          {
+            "time": 56098,
+            "type": "tap"
+          },
+          {
+            "time": 57348,
+            "type": "tap"
+          },
+          {
+            "time": 58674,
+            "type": "tap"
+          },
+          {
+            "time": 58977,
+            "type": "tap"
+          },
+          {
+            "time": 59204,
+            "type": "tap"
+          },
+          {
+            "time": 59696,
+            "type": "tap"
+          },
+          {
+            "time": 62689,
+            "type": "tap"
+          },
+          {
+            "time": 63219,
+            "type": "tap"
+          },
+          {
+            "time": 63522,
+            "type": "tap"
+          },
+          {
+            "time": 63825,
+            "type": "tap"
+          },
+          {
+            "time": 63977,
+            "type": "tap"
+          },
+          {
+            "time": 64128,
+            "type": "tap"
+          },
+          {
+            "time": 64431,
+            "type": "tap"
+          },
+          {
+            "time": 64734,
+            "type": "tap"
+          },
+          {
+            "time": 65037,
+            "type": "tap"
+          },
+          {
+            "time": 65340,
+            "type": "tap"
+          },
+          {
+            "time": 65568,
+            "type": "tap"
+          },
+          {
+            "time": 65795,
+            "type": "tap"
+          },
+          {
+            "time": 67045,
+            "type": "tap"
+          },
+          {
+            "time": 72462,
+            "type": "tap"
+          },
+          {
+            "time": 72727,
+            "type": "hold",
+            "duration": 606
+          },
+          {
+            "time": 77272,
+            "type": "tap"
+          },
+          {
+            "time": 77575,
+            "type": "tap"
+          },
+          {
+            "time": 77954,
+            "type": "tap"
+          },
+          {
+            "time": 78181,
+            "type": "tap"
+          },
+          {
+            "time": 78484,
+            "type": "tap"
+          },
+          {
+            "time": 78712,
+            "type": "tap"
+          },
+          {
+            "time": 79090,
+            "type": "tap"
+          },
+          {
+            "time": 79280,
+            "type": "tap"
+          },
+          {
+            "time": 79583,
+            "type": "tap"
+          },
+          {
+            "time": 79886,
+            "type": "tap"
+          },
+          {
+            "time": 80303,
+            "type": "tap"
+          },
+          {
+            "time": 80530,
+            "type": "tap"
+          },
+          {
+            "time": 80946,
+            "type": "tap"
+          },
+          {
+            "time": 82121,
+            "type": "tap"
+          },
+          {
+            "time": 82424,
+            "type": "tap"
+          },
+          {
+            "time": 82803,
+            "type": "tap"
+          },
+          {
+            "time": 83030,
+            "type": "tap"
+          },
+          {
+            "time": 83333,
+            "type": "tap"
+          },
+          {
+            "time": 83560,
+            "type": "tap"
+          },
+          {
+            "time": 83939,
+            "type": "tap"
+          },
+          {
+            "time": 84128,
+            "type": "tap"
+          },
+          {
+            "time": 84431,
+            "type": "tap"
+          },
+          {
+            "time": 84734,
+            "type": "tap"
+          },
+          {
+            "time": 84962,
+            "type": "tap"
+          },
+          {
+            "time": 85189,
+            "type": "tap"
+          },
+          {
+            "time": 87272,
+            "type": "tap"
+          },
+          {
+            "time": 87651,
+            "type": "tap"
+          },
+          {
+            "time": 88181,
+            "type": "tap"
+          },
+          {
+            "time": 88409,
+            "type": "tap"
+          },
+          {
+            "time": 89280,
+            "type": "tap"
+          },
+          {
+            "time": 89583,
+            "type": "tap"
+          },
+          {
+            "time": 89962,
+            "type": "tap"
+          },
+          {
+            "time": 90189,
+            "type": "tap"
+          },
+          {
+            "time": 90492,
+            "type": "tap"
+          },
+          {
+            "time": 90719,
+            "type": "tap"
+          },
+          {
+            "time": 90909,
+            "type": "tap"
+          },
+          {
+            "time": 91098,
+            "type": "tap"
+          },
+          {
+            "time": 91401,
+            "type": "tap"
+          },
+          {
+            "time": 91931,
+            "type": "tap"
+          },
+          {
+            "time": 92121,
+            "type": "tap"
+          },
+          {
+            "time": 92499,
+            "type": "tap"
+          },
+          {
+            "time": 93030,
+            "type": "tap"
+          },
+          {
+            "time": 93257,
+            "type": "tap"
+          },
+          {
+            "time": 94128,
+            "type": "tap"
+          },
+          {
+            "time": 94431,
+            "type": "tap"
+          },
+          {
+            "time": 94810,
+            "type": "tap"
+          },
+          {
+            "time": 95037,
+            "type": "tap"
+          },
+          {
+            "time": 95340,
+            "type": "tap"
+          },
+          {
+            "time": 95568,
+            "type": "tap"
+          },
+          {
+            "time": 95757,
+            "type": "tap"
+          },
+          {
+            "time": 98333,
+            "type": "tap"
+          },
+          {
+            "time": 98674,
+            "type": "tap"
+          },
+          {
+            "time": 100492,
+            "type": "tap"
+          },
+          {
+            "time": 101553,
+            "type": "tap"
+          },
+          {
+            "time": 101818,
+            "type": "hold",
+            "duration": 1818
+          },
+          {
+            "time": 104734,
+            "type": "tap"
+          },
+          {
+            "time": 105151,
+            "type": "tap"
+          },
+          {
+            "time": 111515,
+            "type": "hold",
+            "duration": 606
+          },
+          {
+            "time": 115757,
+            "type": "tap"
+          },
+          {
+            "time": 116363,
+            "type": "tap"
+          },
+          {
+            "time": 117272,
+            "type": "tap"
+          },
+          {
+            "time": 117499,
+            "type": "tap"
+          },
+          {
+            "time": 117878,
+            "type": "tap"
+          },
+          {
+            "time": 118068,
+            "type": "tap"
+          },
+          {
+            "time": 118484,
+            "type": "tap"
+          },
+          {
+            "time": 118674,
+            "type": "tap"
+          },
+          {
+            "time": 121212,
+            "type": "tap"
+          },
+          {
+            "time": 122121,
+            "type": "tap"
+          },
+          {
+            "time": 122348,
+            "type": "tap"
+          },
+          {
+            "time": 122727,
+            "type": "tap"
+          },
+          {
+            "time": 122916,
+            "type": "tap"
+          },
+          {
+            "time": 123333,
+            "type": "tap"
+          },
+          {
+            "time": 123522,
+            "type": "tap"
+          },
+          {
+            "time": 124999,
+            "type": "tap"
+          },
+          {
+            "time": 125681,
+            "type": "tap"
+          },
+          {
+            "time": 125909,
+            "type": "tap"
+          },
+          {
+            "time": 127196,
+            "type": "tap"
+          },
+          {
+            "time": 128484,
+            "type": "tap"
+          },
+          {
+            "time": 129393,
+            "type": "tap"
+          },
+          {
+            "time": 129999,
+            "type": "tap"
+          },
+          {
+            "time": 130606,
+            "type": "tap"
+          },
+          {
+            "time": 131515,
+            "type": "tap"
+          },
+          {
+            "time": 133068,
+            "type": "tap"
+          },
+          {
+            "time": 134393,
+            "type": "tap"
+          },
+          {
+            "time": 134545,
+            "type": "tap"
+          },
+          {
+            "time": 134999,
+            "type": "tap"
+          },
+          {
+            "time": 135454,
+            "type": "tap"
+          },
+          {
+            "time": 137462,
+            "type": "tap"
+          },
+          {
+            "time": 138977,
+            "type": "tap"
+          },
+          {
+            "time": 139280,
+            "type": "tap"
+          },
+          {
+            "time": 141401,
+            "type": "tap"
+          },
+          {
+            "time": 141704,
+            "type": "tap"
+          },
+          {
+            "time": 142121,
+            "type": "tap"
+          },
+          {
+            "time": 143333,
+            "type": "tap"
+          },
+          {
+            "time": 143522,
+            "type": "tap"
+          },
+          {
+            "time": 143939,
+            "type": "tap"
+          },
+          {
+            "time": 145454,
+            "type": "hold",
+            "duration": 1212
+          },
+          {
+            "time": 146893,
+            "type": "tap"
+          },
+          {
+            "time": 147045,
+            "type": "tap"
+          },
+          {
+            "time": 147272,
+            "type": "tap"
+          },
+          {
+            "time": 147462,
+            "type": "tap"
+          },
+          {
+            "time": 147651,
+            "type": "tap"
+          },
+          {
+            "time": 147878,
+            "type": "hold",
+            "duration": 1212
+          }
+        ]
+      },
+      "events": []
+    }
+  }
+}

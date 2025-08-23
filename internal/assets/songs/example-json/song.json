@@ -1,0 +1,211 @@
+{
+  "$schema": "https://slaptrax.dev/schema/song/v2.json",
+  "version": 2,
+  "metadata": {
+    "title": "JSON Example Song",
+    "title_link": "https://example.com/song",
+    "artist": "Example Artist",
+    "artist_link": "https://example.com/artist",
+    "album": "Example Album",
+    "album_link": "https://example.com/album",
+    "year": 2024,
+    "bpm": 128,
+    "preview_start": 30000,
+    "duration": 120000,
+    "charted_by": "Chart Author",
+    "charted_by_link": "https://github.com/chartauthor",
+    "version": "1.0.0",
+    "tags": ["example", "demo", "json"],
+    "difficulty_range": [1, 5]
+  },
+  "audio": {
+    "file": "audio.ogg",
+    "preview_duration": 15000,
+    "offset": 0
+  },
+  "visual": {
+    "art": "art.png",
+    "background": "background.png",
+    "theme": "default"
+  },
+  "charts": {
+    "1": {
+      "name": "Easy",
+      "difficulty": 1,
+      "note_count": 48,
+      "hold_count": 4,
+      "max_combo": 52,
+      "tracks": {
+        "left_top": [
+          {"time": 2000, "type": "tap"},
+          {"time": 6000, "type": "tap"},
+          {"time": 10000, "type": "hold", "duration": 1000}
+        ],
+        "left_bottom": [
+          {"time": 4000, "type": "tap"},
+          {"time": 8000, "type": "tap"}
+        ],
+        "center_top": [
+          {"time": 1000, "type": "tap"},
+          {"time": 5000, "type": "tap"},
+          {"time": 9000, "type": "tap"}
+        ],
+        "center_bottom": [
+          {"time": 3000, "type": "tap"},
+          {"time": 7000, "type": "tap"},
+          {"time": 11000, "type": "tap"}
+        ],
+        "right_top": [
+          {"time": 2500, "type": "tap"},
+          {"time": 6500, "type": "tap"}
+        ],
+        "right_bottom": [
+          {"time": 4500, "type": "tap"},
+          {"time": 8500, "type": "tap"},
+          {"time": 12000, "type": "hold", "duration": 2000}
+        ]
+      },
+      "events": [
+        {
+          "time": 0,
+          "type": "bpm_change",
+          "properties": {
+            "bpm": 128
+          }
+        },
+        {
+          "time": 5000,
+          "type": "lane_effect",
+          "target": "all",
+          "effect": "pulse",
+          "duration": 1000,
+          "properties": {
+            "color": "#ff0000",
+            "intensity": 0.8
+          }
+        },
+        {
+          "time": 10000,
+          "type": "background_change",
+          "properties": {
+            "image": "background2.png",
+            "transition": "fade"
+          }
+        }
+      ]
+    },
+    "5": {
+      "name": "Hard",
+      "difficulty": 5,
+      "note_count": 120,
+      "hold_count": 12,
+      "max_combo": 132,
+      "tracks": {
+        "left_top": [
+          {"time": 500, "type": "tap"},
+          {"time": 1500, "type": "tap"},
+          {"time": 2500, "type": "hold", "duration": 500},
+          {"time": 4000, "type": "tap"},
+          {"time": 5000, "type": "tap"},
+          {"time": 6000, "type": "hold", "duration": 1000},
+          {"time": 8000, "type": "tap"},
+          {"time": 9000, "type": "tap"}
+        ],
+        "left_bottom": [
+          {"time": 1000, "type": "tap"},
+          {"time": 2000, "type": "tap"},
+          {"time": 3500, "type": "tap"},
+          {"time": 4500, "type": "tap"},
+          {"time": 5500, "type": "tap"},
+          {"time": 7500, "type": "hold", "duration": 1500},
+          {"time": 10000, "type": "tap"}
+        ],
+        "center_top": [
+          {"time": 750, "type": "tap"},
+          {"time": 1750, "type": "tap"},
+          {"time": 3000, "type": "tap"},
+          {"time": 4250, "type": "tap"},
+          {"time": 5750, "type": "tap"},
+          {"time": 7000, "type": "tap"},
+          {"time": 8250, "type": "tap"},
+          {"time": 9500, "type": "tap"}
+        ],
+        "center_bottom": [
+          {"time": 1250, "type": "tap"},
+          {"time": 2250, "type": "tap"},
+          {"time": 3750, "type": "tap"},
+          {"time": 4750, "type": "tap"},
+          {"time": 6250, "type": "tap"},
+          {"time": 7250, "type": "tap"},
+          {"time": 8750, "type": "tap"},
+          {"time": 9750, "type": "tap"}
+        ],
+        "right_top": [
+          {"time": 600, "type": "tap"},
+          {"time": 1600, "type": "tap"},
+          {"time": 2800, "type": "tap"},
+          {"time": 4100, "type": "tap"},
+          {"time": 5600, "type": "tap"},
+          {"time": 7100, "type": "tap"},
+          {"time": 8600, "type": "tap"},
+          {"time": 9800, "type": "tap"}
+        ],
+        "right_bottom": [
+          {"time": 1100, "type": "tap"},
+          {"time": 2100, "type": "tap"},
+          {"time": 3300, "type": "tap"},
+          {"time": 4600, "type": "tap"},
+          {"time": 6100, "type": "tap"},
+          {"time": 7600, "type": "tap"},
+          {"time": 8100, "type": "tap"},
+          {"time": 9100, "type": "tap"}
+        ]
+      },
+      "events": [
+        {
+          "time": 0,
+          "type": "bpm_change",
+          "properties": {
+            "bpm": 128
+          }
+        },
+        {
+          "time": 2000,
+          "type": "lane_effect",
+          "target": "left_top",
+          "effect": "glow",
+          "duration": 500,
+          "properties": {
+            "color": "#00ff00",
+            "intensity": 1.0
+          }
+        },
+        {
+          "time": 4000,
+          "type": "speed_change",
+          "properties": {
+            "multiplier": 1.5
+          }
+        },
+        {
+          "time": 6000,
+          "type": "particle_effect",
+          "effect": "explosion",
+          "duration": 1000,
+          "properties": {
+            "position": "center",
+            "intensity": 0.7,
+            "particle_count": 50
+          }
+        },
+        {
+          "time": 8000,
+          "type": "speed_change",
+          "properties": {
+            "multiplier": 1.0
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,398 @@
+package types
+
+import (
+	"fmt"
+	"sort"
+	"sync"
+
+	"github.com/liqmix/slaptrax/internal/types/schema"
+)
+
+// Event interface defines the contract for all game events
+type Event interface {
+	// GetTime returns when this event should trigger (in milliseconds)
+	GetTime() int64
+
+	// Execute performs the event action
+	Execute(ctx *EventContext) error
+
+	// GetType returns the event type identifier
+	GetType() string
+
+	// GetDuration returns how long the event lasts (0 for instant events)
+	GetDuration() int64
+
+	// IsActive returns true if the event is currently active
+	IsActive(currentTime int64) bool
+
+	// Reset resets the event to its initial state
+	Reset()
+}
+
+// EventContext provides access to game systems for event execution
+type EventContext struct {
+	CurrentTime int64
+	Song        *Song
+	Chart       *Chart
+
+	// System accessors (will be populated during integration)
+	AudioManager interface{} // TODO: Replace with actual audio manager interface
+	RenderSystem interface{} // TODO: Replace with actual render system interface
+	EffectSystem interface{} // TODO: Replace with actual effect system interface
+}
+
+// BaseEvent provides common functionality for all events
+type BaseEvent struct {
+	Time     int64
+	Duration int64
+	Type     string
+	Active   bool
+	executed bool
+	mu       sync.RWMutex
+}
+
+func (e *BaseEvent) GetTime() int64 {
+	return e.Time
+}
+
+func (e *BaseEvent) GetType() string {
+	return e.Type
+}
+
+func (e *BaseEvent) GetDuration() int64 {
+	return e.Duration
+}
+
+func (e *BaseEvent) IsActive(currentTime int64) bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	if !e.executed && currentTime >= e.Time {
+		return true
+	}
+
+	if e.Duration > 0 {
+		return currentTime >= e.Time && currentTime <= e.Time+e.Duration
+	}
+
+	return false
+}
+
+func (e *BaseEvent) Reset() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.Active = false
+	e.executed = false
+}
+
+func (e *BaseEvent) markExecuted() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.executed = true
+}
+
+// BPMChangeEvent handles tempo changes during gameplay
+type BPMChangeEvent struct {
+	BaseEvent
+	NewBPM int `json:"bpm"`
+}
+
+func NewBPMChangeEvent(time int64, newBPM int) *BPMChangeEvent {
+	return &BPMChangeEvent{
+		BaseEvent: BaseEvent{
+			Time: time,
+			Type: schema.EventTypeBPMChange,
+		},
+		NewBPM: newBPM,
+	}
+}
+
+func (e *BPMChangeEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	// TODO: Implement BPM change logic
+	// This would update the audio manager's tempo
+	return nil
+}
+
+// LaneEffectEvent triggers visual effects on specific tracks
+type LaneEffectEvent struct {
+	BaseEvent
+	Track     string  `json:"track"`
+	Effect    string  `json:"effect"`
+	Color     string  `json:"color,omitempty"`
+	Intensity float32 `json:"intensity,omitempty"`
+}
+
+func NewLaneEffectEvent(time int64, duration int64, track, effect string) *LaneEffectEvent {
+	return &LaneEffectEvent{
+		BaseEvent: BaseEvent{
+			Time:     time,
+			Duration: duration,
+			Type:     schema.EventTypeLaneEffect,
+		},
+		Track:     track,
+		Effect:    effect,
+		Intensity: 1.0,
+	}
+}
+
+func (e *LaneEffectEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	// TODO: Implement lane effect logic
+	// This would trigger visual effects in the render system
+	return nil
+}
+
+// BackgroundChangeEvent changes the background during gameplay
+type BackgroundChangeEvent struct {
+	BaseEvent
+	Image      string `json:"image"`
+	Transition string `json:"transition,omitempty"`
+}
+
+func NewBackgroundChangeEvent(time int64, image, transition string) *BackgroundChangeEvent {
+	return &BackgroundChangeEvent{
+		BaseEvent: BaseEvent{
+			Time: time,
+			Type: schema.EventTypeBackgroundChange,
+		},
+		Image:      image,
+		Transition: transition,
+	}
+}
+
+func (e *BackgroundChangeEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	// TODO: Implement background change logic
+	return nil
+}
+
+// SpeedChangeEvent modifies note travel speed
+type SpeedChangeEvent struct {
+	BaseEvent
+	Multiplier float32 `json:"multiplier"`
+}
+
+func NewSpeedChangeEvent(time int64, multiplier float32) *SpeedChangeEvent {
+	return &SpeedChangeEvent{
+		BaseEvent: BaseEvent{
+			Time: time,
+			Type: schema.EventTypeSpeedChange,
+		},
+		Multiplier: multiplier,
+	}
+}
+
+func (e *SpeedChangeEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	// TODO: Implement speed change logic
+	return nil
+}
+
+// ColorChangeEvent changes track colors
+type ColorChangeEvent struct {
+	BaseEvent
+	Track string `json:"track"`
+	Color string `json:"color"`
+}
+
+func NewColorChangeEvent(time int64, track, color string) *ColorChangeEvent {
+	return &ColorChangeEvent{
+		BaseEvent: BaseEvent{
+			Time: time,
+			Type: schema.EventTypeColorChange,
+		},
+		Track: track,
+		Color: color,
+	}
+}
+
+func (e *ColorChangeEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	// TODO: Implement color change logic
+	return nil
+}
+
+// ParticleEffectEvent triggers particle effects
+type ParticleEffectEvent struct {
+	BaseEvent
+	Effect        string  `json:"effect"`
+	Position      string  `json:"position,omitempty"`
+	Intensity     float32 `json:"intensity,omitempty"`
+	ParticleCount int     `json:"particle_count,omitempty"`
+}
+
+func NewParticleEffectEvent(time int64, duration int64, effect string) *ParticleEffectEvent {
+	return &ParticleEffectEvent{
+		BaseEvent: BaseEvent{
+			Time:     time,
+			Duration: duration,
+			Type:     schema.EventTypeParticleEffect,
+		},
+		Effect:        effect,
+		Intensity:     1.0,
+		ParticleCount: 100,
+	}
+}
+
+func (e *ParticleEffectEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	// TODO: Implement particle effect logic
+	return nil
+}
+
+// EventManager handles event scheduling and execution
+type EventManager struct {
+	events       []Event
+	activeEvents []Event
+	mu           sync.RWMutex
+	currentTime  int64
+}
+
+func NewEventManager() *EventManager {
+	return &EventManager{
+		events:       make([]Event, 0),
+		activeEvents: make([]Event, 0),
+	}
+}
+
+// AddEvent adds an event to the manager
+func (em *EventManager) AddEvent(event Event) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	em.events = append(em.events, event)
+
+	// Keep events sorted by time
+	sort.Slice(em.events, func(i, j int) bool {
+		return em.events[i].GetTime() < em.events[j].GetTime()
+	})
+}
+
+// Update processes events for the current time
+func (em *EventManager) Update(currentTime int64, ctx *EventContext) error {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	em.currentTime = currentTime
+	ctx.CurrentTime = currentTime
+
+	// Process new events that should trigger
+	for _, event := range em.events {
+		if event.GetTime() <= currentTime && !event.IsActive(currentTime) {
+			// Check if this is the first time we're executing this event
+			if event.GetTime() <= currentTime && event.GetTime() > em.currentTime-16 { // ~60fps tolerance
+				if err := event.Execute(ctx); err != nil {
+					return fmt.Errorf("failed to execute event %s at %dms: %w",
+						event.GetType(), event.GetTime(), err)
+				}
+			}
+		}
+	}
+
+	// Update active events list
+	em.activeEvents = em.activeEvents[:0] // Clear without reallocation
+	for _, event := range em.events {
+		if event.IsActive(currentTime) {
+			em.activeEvents = append(em.activeEvents, event)
+		}
+	}
+
+	return nil
+}
+
+// GetActiveEvents returns currently active events
+func (em *EventManager) GetActiveEvents() []Event {
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+
+	// Return a copy to avoid race conditions
+	active := make([]Event, len(em.activeEvents))
+	copy(active, em.activeEvents)
+	return active
+}
+
+// Reset resets all events to their initial state
+func (em *EventManager) Reset() {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	for _, event := range em.events {
+		event.Reset()
+	}
+	em.activeEvents = em.activeEvents[:0]
+	em.currentTime = 0
+}
+
+// Clear removes all events
+func (em *EventManager) Clear() {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	em.events = em.events[:0]
+	em.activeEvents = em.activeEvents[:0]
+	em.currentTime = 0
+}
+
+// GetEventCount returns the total number of events
+func (em *EventManager) GetEventCount() int {
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+	return len(em.events)
+}
+
+// CreateEventFromData creates an Event from schema.EventData
+func CreateEventFromData(data schema.EventData) (Event, error) {
+	switch data.Type {
+	case schema.EventTypeBPMChange:
+		bpm, ok := data.Properties["bpm"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("BPM change event missing bpm property")
+		}
+		return NewBPMChangeEvent(data.Time, int(bpm)), nil
+
+	case schema.EventTypeLaneEffect:
+		track := data.Target
+		if track == "" {
+			track = "all"
+		}
+		effect := data.Effect
+		if effect == "" {
+			effect = "pulse"
+		}
+		return NewLaneEffectEvent(data.Time, data.Duration, track, effect), nil
+
+	case schema.EventTypeBackgroundChange:
+		image, ok := data.Properties["image"].(string)
+		if !ok {
+			return nil, fmt.Errorf("background change event missing image property")
+		}
+		transition, _ := data.Properties["transition"].(string)
+		return NewBackgroundChangeEvent(data.Time, image, transition), nil
+
+	case schema.EventTypeSpeedChange:
+		multiplier, ok := data.Properties["multiplier"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("speed change event missing multiplier property")
+		}
+		return NewSpeedChangeEvent(data.Time, float32(multiplier)), nil
+
+	case schema.EventTypeColorChange:
+		track := data.Target
+		color, ok := data.Properties["color"].(string)
+		if !ok {
+			return nil, fmt.Errorf("color change event missing color property")
+		}
+		return NewColorChangeEvent(data.Time, track, color), nil
+
+	case schema.EventTypeParticleEffect:
+		effect := data.Effect
+		if effect == "" {
+			effect = "explosion"
+		}
+		return NewParticleEffectEvent(data.Time, data.Duration, effect), nil
+
+	default:
+		return nil, fmt.Errorf("unknown event type: %s", data.Type)
+	}
+}

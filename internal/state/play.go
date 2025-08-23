@@ -17,14 +17,15 @@ type PlayArgs struct {
 
 type Play struct {
 	types.BaseGameState
-	Song        *types.Song
-	Difficulty  types.Difficulty
-	Tracks      []*types.Track
-	Score       *types.Score
-	Chart       *types.Chart
-	startTime   time.Time
-	elapsedTime int64
-	countTicks  []int64
+	Song         *types.Song
+	Difficulty   types.Difficulty
+	Tracks       []*types.Track
+	Score        *types.Score
+	Chart        *types.Chart
+	EventContext *types.EventContext
+	startTime    time.Time
+	elapsedTime  int64
+	countTicks   []int64
 }
 
 const travelTime float64 = 10000
@@ -56,6 +57,11 @@ func NewPlayState(args *PlayArgs) *Play {
 		elapsedTime: 0,
 		startTime:   time.Now(),
 		countTicks:  song.GetCountdownTicks(false),
+		EventContext: &types.EventContext{
+			Song:  song,
+			Chart: chart,
+			// TODO: Add system references when implementing visual effects
+		},
 	}
 	p.SetAction(input.ActionBack, p.pause)
 	p.SetNotNavigable()
@@ -137,6 +143,14 @@ func (p *Play) Update() error {
 		}
 	} else {
 		p.elapsedTime = int64(audio.CurrentSongPositionMS()) + user.S().AudioOffset
+	}
+
+	// Update events
+	if p.Chart.EventManager != nil {
+		if err := p.Chart.EventManager.Update(p.elapsedTime, p.EventContext); err != nil {
+			// Log error but don't fail the game
+			// logger.Warn("Event update error: %v", err)
+		}
 	}
 
 	// Update the tracks

@@ -5,13 +5,11 @@ import (
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/slaptrax/internal/assets"
 	"github.com/liqmix/slaptrax/internal/logger"
 	"gopkg.in/yaml.v2"
 )
 
-func GetAllSongs() []*Song {
-	allSongData := assets.GetAllSongData()
+func GetAllSongs(allSongData []*SongData) []*Song {
 	songs := make([]*Song, 0, len(allSongData))
 	for _, songData := range allSongData {
 		song, err := NewSong(songData)
@@ -23,8 +21,7 @@ func GetAllSongs() []*Song {
 	return songs
 }
 
-func GetAllCharts() []*Chart {
-	allSongData := assets.GetAllSongData()
+func GetAllCharts(allSongData []*SongData) []*Chart {
 	charts := make([]*Chart, 0)
 	for _, songData := range allSongData {
 		song, err := NewSong(songData)
@@ -77,7 +74,7 @@ type Song struct {
 
 var parsedSongs map[string]*Song = make(map[string]*Song)
 
-func NewSong(songData *assets.SongData) (*Song, error) {
+func NewSong(songData *SongData) (*Song, error) {
 	if songData == nil {
 		return nil, fmt.Errorf("songData is nil")
 	}
