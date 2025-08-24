@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/external"
+	"github.com/liqmix/slaptrax/internal/input"
 	"github.com/liqmix/slaptrax/internal/l"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
@@ -23,10 +24,15 @@ func NewLoginState() *LoginState {
 		modal: ui.NewLoginModal(),
 	}
 
+	// Enable text input for this state
+	input.SetAllowTextInput(true)
+
 	// Center modal
 	s.modal.SetCenter(ui.Point{X: 0.5, Y: 0.5})
 	s.modal.SetOnLogin(s.handleLogin)
 	s.modal.SetOnContinue(func() {
+		// Disable text input when leaving
+		input.SetAllowTextInput(false)
 		s.SetNextState(types.GameStateTitle, nil)
 	})
 	return s
@@ -77,6 +83,8 @@ func (s *LoginState) handleLogin(username, password string) {
 			return
 		}
 	}
+	// Disable text input when leaving via successful login
+	input.SetAllowTextInput(false)
 	s.SetNextState(types.GameStateTitle, nil)
 	s.loading = false
 }

@@ -25,11 +25,12 @@ type keyboard struct {
 
 	watchedKeys map[ebiten.Key]int64
 
-	isFocused bool
-	runes     []rune
-	osHook    uintptr
-	m         sync.RWMutex
-	cleanup   sync.Once
+	isFocused      bool
+	allowTextInput bool // Allow alphanumeric keys to pass through for text input
+	runes          []rune
+	osHook         uintptr
+	m              sync.RWMutex
+	cleanup        sync.Once
 }
 
 func getBitPosition(key ebiten.Key) (wordIndex, bitOffset int) {
@@ -209,4 +210,18 @@ func (k *keyboard) IsKeyHeldFor(key ebiten.Key, frames int64) bool {
 	}
 
 	return false
+}
+
+// SetAllowTextInput enables or disables text input passthrough
+func (k *keyboard) SetAllowTextInput(allow bool) {
+	k.m.Lock()
+	defer k.m.Unlock()
+	k.allowTextInput = allow
+}
+
+// GetAllowTextInput returns whether text input passthrough is enabled
+func (k *keyboard) GetAllowTextInput() bool {
+	k.m.RLock()
+	defer k.m.RUnlock()
+	return k.allowTextInput
 }

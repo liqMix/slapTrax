@@ -107,12 +107,16 @@ func (m *Manager) Register(username, password string) error {
 
 func (m *Manager) GetLeaderboard(song string, difficulty int) ([]Score, error) {
 	if !m.HasConnection() {
+		logger.Debug("No connection available for leaderboard request")
 		return []Score{}, nil
 	}
+	logger.Debug("Fetching leaderboard for song %s difficulty %d", song, difficulty)
 	lb, err := m.storage.client.GetLeaderboard(song, fmt.Sprintf("%d", difficulty))
 	if err != nil {
-		return []Score{}, nil
+		logger.Error("Failed to fetch leaderboard: %v", err)
+		return []Score{}, err  // Return the error instead of hiding it
 	}
+	logger.Debug("Retrieved %d leaderboard scores", len(lb))
 	return lb, nil
 }
 

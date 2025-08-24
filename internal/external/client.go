@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/liqmix/slaptrax/internal/config"
@@ -142,7 +143,13 @@ func (c *APIClient) AddScore(accessToken string, score *Score) error {
 
 // GetLeaderboard retrieves the leaderboard for a song
 func (c *APIClient) GetLeaderboard(song, difficulty string) ([]Score, error) {
-	resp, err := c.get("/scores/leaderboard?song=" + song + "&difficulty=" + difficulty)
+	// Properly URL encode the parameters
+	params := url.Values{}
+	params.Add("song", song)
+	params.Add("difficulty", difficulty)
+	
+	endpoint := "/scores/leaderboard?" + params.Encode()
+	resp, err := c.get(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("leaderboard request failed: %w", err)
 	}

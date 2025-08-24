@@ -1,7 +1,5 @@
 package l
 
-import "github.com/liqmix/slaptrax/internal/assets"
-
 const (
 	LOCALE = "locale" // The current locale name in locale language
 
@@ -149,6 +147,9 @@ const (
 	UNKNOWN = "unknown"
 )
 
+// GetLocaleString is a function that can be set from outside to get localized strings
+var GetLocaleString func(string) string = func(key string) string { return key }
+
 func String(key string) string {
-	return assets.GetLocaleString(key)
+	return GetLocaleString(key)
 }

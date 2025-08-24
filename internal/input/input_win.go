@@ -14,6 +14,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/logger"
+	"golang.org/x/sys/windows/registry"
 )
 
 var keyMap = map[uint32]ebiten.Key{
@@ -138,6 +139,42 @@ var keyMap = map[uint32]ebiten.Key{
 	0x5D: ebiten.KeyMenu, // Application/Menu key
 }
 
+// isTextInputKey checks if a virtual key code represents an alphanumeric or common input key
+func isTextInputKey(vkCode uint32) bool {
+	// Letters (A-Z)
+	if vkCode >= 0x41 && vkCode <= 0x5A {
+		return true
+	}
+	// Numbers (0-9)
+	if vkCode >= 0x30 && vkCode <= 0x39 {
+		return true
+	}
+	// Numpad numbers (0-9)
+	if vkCode >= 0x60 && vkCode <= 0x69 {
+		return true
+	}
+	// Common punctuation and editing keys
+	switch vkCode {
+	case 0x08: // Backspace
+		return true
+	case 0x09: // Tab
+		return true
+	case 0x0D: // Enter
+		return true
+	case 0x20: // Space
+		return true
+	case 0x2E: // Delete
+		return true
+	case 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF: // ; = , - . /
+		return true
+	case 0xC0: // `
+		return true
+	case 0xDB, 0xDC, 0xDD, 0xDE: // [ \ ] '
+		return true
+	}
+	return false
+}
+
 // Additional virtual key codes for reference (not mapped to ebiten keys)
 // You might want to track these separately if needed:
 var systemKeys = map[uint32]string{
@@ -182,6 +219,12 @@ var (
 func applyOSHook(k *keyboard) error {
 	logger.Debug("Initializing Windows keyboard hook")
 
+	// Disable Windows+L shortcut via registry
+	if err := disableWinLShortcut(); err != nil {
+		logger.Warn("Failed to disable Windows+L shortcut: %v", err)
+		// Continue anyway - the keyboard hook might still help
+	}
+
 	// Initialize channels
 	hookReady = make(chan bool, 1)
 	hookShutdownDone = make(chan bool, 1)
@@ -197,11 +240,15 @@ func applyOSHook(k *keyboard) error {
 	select {
 	case success := <-hookReady:
 		if !success {
+			// Restore Windows+L shortcut on failure
+			enableWinLShortcut()
 			return syscall.Errno(1) // Generic error
 		}
 		logger.Debug("Hook installed successfully")
 	case <-time.After(5 * time.Second):
 		logger.Error("Timeout waiting for hook installation")
+		// Restore Windows+L shortcut on timeout
+		enableWinLShortcut()
 		return syscall.Errno(1)
 	}
 
@@ -297,6 +344,48 @@ func lowLevelKeyboardProc(nCode int, wParam, lParam uintptr) uintptr {
 	// You might want to allow Escape or a specific quit combo
 	if kb.VkCode == 0x1B { // Escape key
 		// Could implement a "hold Escape for 2 seconds to quit" here
+	}
+
+	// Check if we should allow text input (for login screen)
+	if globalKeyboard.allowTextInput && isTextInputKey(kb.VkCode) {
+		logger.Debug("Allowing text input for key VK=0x%X", kb.VkCode)
+		
+		// Still track the key for our input system
+		key, exists := keyMap[kb.VkCode]
+		if exists {
+			globalKeyboard.m.Lock()
+			switch wParam {
+			case WM_KEYDOWN, WM_SYSKEYDOWN:
+				// Prevent duplicate entries in justPressed
+				found := false
+				for _, existingKey := range globalKeyboard.justPressed {
+					if existingKey == key {
+						found = true
+						break
+					}
+				}
+				if !found {
+					globalKeyboard.justPressed = append(globalKeyboard.justPressed, key)
+				}
+			case WM_KEYUP, WM_SYSKEYUP:
+				// Prevent duplicate entries in justReleased
+				found := false
+				for _, existingKey := range globalKeyboard.justReleased {
+					if existingKey == key {
+						found = true
+						break
+					}
+				}
+				if !found {
+					globalKeyboard.justReleased = append(globalKeyboard.justReleased, key)
+				}
+			}
+			globalKeyboard.m.Unlock()
+		}
+		
+		// Pass through for text input - this allows Ebiten's AppendInputChars to work
+		ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
+		return ret
 	}
 
 	// Map the key if we recognize it
@@ -429,6 +518,11 @@ func cleanupHook(k *keyboard) {
 			logger.Debug("Hook removed successfully")
 		}
 
+		// Restore Windows+L shortcut
+		if err := enableWinLShortcut(); err != nil {
+			logger.Warn("Failed to restore Windows+L shortcut: %v", err)
+		}
+
 		// Clear all global state
 		k.osHook = 0
 		hookHandle = 0
@@ -451,6 +545,11 @@ func cleanupHookForce() {
 			logger.Error("Failed to force unhook: %v", err)
 		} else {
 			logger.Debug("Force unhook successful")
+		}
+
+		// Restore Windows+L shortcut even on force cleanup
+		if err := enableWinLShortcut(); err != nil {
+			logger.Warn("Failed to restore Windows+L shortcut during force cleanup: %v", err)
 		}
 
 		hookHandle = 0
@@ -502,5 +601,77 @@ func useRawInputInstead(k *keyboard) error {
 	// This would be a better long-term solution
 	// Example implementation would go here
 
+	return nil
+}
+
+// Registry key management for Windows+L shortcut
+var (
+	registryKey     = `SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`
+	registryValue   = "DisableLockWorkstation"
+	originalValue   uint32
+	hadOriginalKey  bool
+)
+
+// disableWinLShortcut disables the Windows+L shortcut via registry
+func disableWinLShortcut() error {
+	logger.Debug("Disabling Windows+L shortcut via registry")
+	
+	// Open or create the registry key
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, registryKey, registry.ALL_ACCESS)
+	if err != nil {
+		return err
+	}
+	defer key.Close()
+	
+	// Check if the value already exists and store original
+	val, _, err := key.GetIntegerValue(registryValue)
+	if err == nil {
+		originalValue = uint32(val)
+		hadOriginalKey = true
+		logger.Debug("Found existing DisableLockWorkstation value: %d", originalValue)
+	} else {
+		hadOriginalKey = false
+		logger.Debug("No existing DisableLockWorkstation value found")
+	}
+	
+	// Set the value to 1 to disable Windows+L
+	err = key.SetDWordValue(registryValue, 1)
+	if err != nil {
+		return err
+	}
+	
+	logger.Debug("Successfully disabled Windows+L shortcut")
+	return nil
+}
+
+// enableWinLShortcut restores the Windows+L shortcut via registry
+func enableWinLShortcut() error {
+	logger.Debug("Restoring Windows+L shortcut via registry")
+	
+	key, err := registry.OpenKey(registry.CURRENT_USER, registryKey, registry.ALL_ACCESS)
+	if err != nil {
+		logger.Debug("Could not open registry key for restoration: %v", err)
+		return nil // Don't fail if we can't restore
+	}
+	defer key.Close()
+	
+	if hadOriginalKey {
+		// Restore original value
+		err = key.SetDWordValue(registryValue, originalValue)
+		if err != nil {
+			logger.Error("Failed to restore original DisableLockWorkstation value: %v", err)
+		} else {
+			logger.Debug("Restored original DisableLockWorkstation value: %d", originalValue)
+		}
+	} else {
+		// Delete the value since it didn't exist before
+		err = key.DeleteValue(registryValue)
+		if err != nil {
+			logger.Error("Failed to delete DisableLockWorkstation value: %v", err)
+		} else {
+			logger.Debug("Removed DisableLockWorkstation value")
+		}
+	}
+	
 	return nil
 }

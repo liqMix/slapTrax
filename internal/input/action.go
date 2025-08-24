@@ -2,7 +2,6 @@ package input
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/slaptrax/internal/assets"
 	"github.com/liqmix/slaptrax/internal/l"
 )
 
@@ -77,12 +76,15 @@ func (t TrackKeyConfig) String() string {
 	return l.UNKNOWN
 }
 
+// GetImage is a function that can be set from outside to get images
+var GetImage func(string) *ebiten.Image = func(key string) *ebiten.Image { return nil }
+
 func (t TrackKeyConfig) Image() *ebiten.Image {
 	switch t {
 	case TrackKeyConfigDefault:
-		return assets.GetImage("key_default.png")
+		return GetImage("key_default.png")
 	case TrackKeyConfigReduced:
-		return assets.GetImage("key_reduced.png")
+		return GetImage("key_reduced.png")
 	}
 	return nil
 }

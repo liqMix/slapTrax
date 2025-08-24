@@ -1,6 +1,7 @@
 package input
 
 import (
+	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/user"
 )
 
@@ -39,4 +40,15 @@ var (
 
 func InitInput() {
 	SetTrackKeys(TrackKeyConfig(user.S().KeyConfig))
+}
+
+// SetAllowTextInput enables or disables text input passthrough for login screens
+func SetAllowTextInput(allow bool) {
+	logger.Debug("Setting allow text input: %v", allow)
+	K.SetAllowTextInput(allow)
+}
+
+// GetAllowTextInput returns whether text input passthrough is enabled
+func GetAllowTextInput() bool {
+	return K.GetAllowTextInput()
 }

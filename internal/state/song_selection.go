@@ -4,9 +4,11 @@ import (
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/slaptrax/internal/assets"
 	"github.com/liqmix/slaptrax/internal/audio"
 	"github.com/liqmix/slaptrax/internal/input"
 	"github.com/liqmix/slaptrax/internal/l"
+	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
 )
@@ -42,16 +44,20 @@ func NewSongSelectionState() *SongSelection {
 		s.SetNextState(types.GameStateTitle, nil)
 	})
 
-	allSongs := types.GetAllSongs()
+	allSongs := assets.GetAllLoadedSongs()
+	logger.Debug("Found %d loaded songs", len(allSongs))
 	songs := make([]*SongOption, 0)
 	for _, song := range allSongs {
-		for _, diff := range song.GetDifficulties() {
+		difficulties := song.GetDifficulties()
+		logger.Debug("Song '%s' has %d difficulties: %v", song.Title, len(difficulties), difficulties)
+		for _, diff := range difficulties {
 			songs = append(songs, &SongOption{
 				song:       song,
 				difficulty: diff,
 			})
 		}
 	}
+	logger.Debug("Created %d song options total", len(songs))
 
 	//order by difficulty,
 	//then by song title
