@@ -52,11 +52,15 @@ func (jl *JSONLoader) LoadSong(folderName string) (*types.Song, error) {
 	artPath := path.Join(songPath, "art.png")
 	artData, err := jl.fs.ReadFile(artPath)
 	if err != nil {
-		logger.Debug("No artwork found for %s: %v", folderName, err)
+		logger.Debug("No artwork found for %s, using default: %v", folderName, err)
+		// Use default artwork
+		song.Art = GetImage("default_art.png")
 	} else {
 		artImage, _, err := ebitenutil.NewImageFromReader(bytes.NewReader(artData))
 		if err != nil {
-			logger.Debug("Failed to load artwork for %s: %v", folderName, err)
+			logger.Debug("Failed to load artwork for %s, using default: %v", folderName, err)
+			// Use default artwork
+			song.Art = GetImage("default_art.png")
 		} else {
 			song.Art = artImage
 		}

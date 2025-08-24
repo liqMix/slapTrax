@@ -139,6 +139,42 @@ var keyMap = map[uint32]ebiten.Key{
 	0x5D: ebiten.KeyMenu, // Application/Menu key
 }
 
+// isTextInputKey checks if a virtual key code represents an alphanumeric or common input key
+func isTextInputKey(vkCode uint32) bool {
+	// Letters (A-Z)
+	if vkCode >= 0x41 && vkCode <= 0x5A {
+		return true
+	}
+	// Numbers (0-9)
+	if vkCode >= 0x30 && vkCode <= 0x39 {
+		return true
+	}
+	// Numpad numbers (0-9)
+	if vkCode >= 0x60 && vkCode <= 0x69 {
+		return true
+	}
+	// Common punctuation and editing keys
+	switch vkCode {
+	case 0x08: // Backspace
+		return true
+	case 0x09: // Tab
+		return true
+	case 0x0D: // Enter
+		return true
+	case 0x20: // Space
+		return true
+	case 0x2E: // Delete
+		return true
+	case 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF: // ; = , - . /
+		return true
+	case 0xC0: // `
+		return true
+	case 0xDB, 0xDC, 0xDD, 0xDE: // [ \ ] '
+		return true
+	}
+	return false
+}
+
 // Additional virtual key codes for reference (not mapped to ebiten keys)
 // You might want to track these separately if needed:
 var systemKeys = map[uint32]string{
@@ -308,6 +344,48 @@ func lowLevelKeyboardProc(nCode int, wParam, lParam uintptr) uintptr {
 	// You might want to allow Escape or a specific quit combo
 	if kb.VkCode == 0x1B { // Escape key
 		// Could implement a "hold Escape for 2 seconds to quit" here
+	}
+
+	// Check if we should allow text input (for login screen)
+	if globalKeyboard.allowTextInput && isTextInputKey(kb.VkCode) {
+		logger.Debug("Allowing text input for key VK=0x%X", kb.VkCode)
+		
+		// Still track the key for our input system
+		key, exists := keyMap[kb.VkCode]
+		if exists {
+			globalKeyboard.m.Lock()
+			switch wParam {
+			case WM_KEYDOWN, WM_SYSKEYDOWN:
+				// Prevent duplicate entries in justPressed
+				found := false
+				for _, existingKey := range globalKeyboard.justPressed {
+					if existingKey == key {
+						found = true
+						break
+					}
+				}
+				if !found {
+					globalKeyboard.justPressed = append(globalKeyboard.justPressed, key)
+				}
+			case WM_KEYUP, WM_SYSKEYUP:
+				// Prevent duplicate entries in justReleased
+				found := false
+				for _, existingKey := range globalKeyboard.justReleased {
+					if existingKey == key {
+						found = true
+						break
+					}
+				}
+				if !found {
+					globalKeyboard.justReleased = append(globalKeyboard.justReleased, key)
+				}
+			}
+			globalKeyboard.m.Unlock()
+		}
+		
+		// Pass through for text input - this allows Ebiten's AppendInputChars to work
+		ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
+		return ret
 	}
 
 	// Map the key if we recognize it
