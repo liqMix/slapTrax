@@ -28,7 +28,7 @@ const (
 )
 
 var actionToKey = map[Action][]ebiten.Key{
-	ActionBack:        {ebiten.KeyEscape, ebiten.KeyF1},
+	ActionBack:        {ebiten.KeyEscape}, // Esc for menu navigation only (not gameplay pause)
 	ActionSelect:      {ebiten.KeyEnter},
 	ActionUp:          {ebiten.KeyArrowUp},
 	ActionDown:        {ebiten.KeyArrowDown},
@@ -120,6 +120,8 @@ func SetTrackKeys(config TrackKeyConfig) {
 			ebiten.Key3,
 			ebiten.Key4,
 
+			ebiten.KeyEscape,
+			ebiten.KeyF1,
 			ebiten.KeyF2,
 			ebiten.KeyF3,
 			ebiten.KeyF4,
@@ -223,6 +225,8 @@ func SetTrackKeys(config TrackKeyConfig) {
 			ebiten.Key3,
 			ebiten.Key4,
 
+			ebiten.KeyEscape,
+			ebiten.KeyF1,
 			ebiten.KeyF2,
 			ebiten.KeyF3,
 			ebiten.KeyF4,

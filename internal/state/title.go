@@ -205,6 +205,20 @@ func NewTitleState() *Title {
 	group.Add(howToPlay)
 	center.Y += offset
 
+	// Editor
+	editor := ui.NewElement()
+	editor.SetCenter(center)
+	editor.SetSize(buttonSize)
+	editor.SetText(l.String(l.STATE_EDITOR))
+	editor.SetTextScale(textScale)
+	editor.SetTrigger(func() {
+		state.SetNextState(types.GameStateEditor, &EditorArgs{
+			Song: nil, // Start with empty chart
+		})
+	})
+	group.Add(editor)
+	center.Y += offset
+
 	// login
 	loginState := external.GetLoginState()
 	var login *ui.Element

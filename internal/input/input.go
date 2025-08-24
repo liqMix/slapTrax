@@ -52,3 +52,13 @@ func SetAllowTextInput(allow bool) {
 func GetAllowTextInput() bool {
 	return K.GetAllowTextInput()
 }
+
+// SetCurrentState sets the current game state for shortcut decisions
+func SetCurrentState(state string) {
+	K.SetCurrentState(state)
+}
+
+// GetCurrentState returns the current game state
+func GetCurrentState() string {
+	return K.GetCurrentState()
+}

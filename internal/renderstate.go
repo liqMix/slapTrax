@@ -11,8 +11,9 @@ import (
 )
 
 type RenderState struct {
-	id     string
-	frozen bool
+	id        string
+	frozen    bool
+	stateType types.GameState
 
 	state    state.State
 	renderer display.Renderer
@@ -44,9 +45,10 @@ func (r *RenderState) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) 
 func GetState(gs types.GameState, arg interface{}) *RenderState {
 	state := state.New(gs, arg)
 	return &RenderState{
-		id:       uuid.New().String(),
-		state:    state,
-		renderer: render.GetRenderer(gs, state),
+		id:        uuid.New().String(),
+		stateType: gs,
+		state:     state,
+		renderer:  render.GetRenderer(gs, state),
 	}
 }
 

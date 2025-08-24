@@ -68,6 +68,9 @@ type Game struct {
 }
 
 func NewGame() *Game {
+	// Set initial state for input system
+	input.SetCurrentState(string(types.GameStateTitle))
+	
 	return &Game{
 		started:      false,
 		startTicks:   0,
@@ -110,6 +113,10 @@ func (g *Game) handleStateTransition(nextState types.GameState, nextArgs interfa
 		g.stateStack = nil
 	}
 	g.currentState = next
+	
+	// Update the input system with the current state for shortcut decisions
+	input.SetCurrentState(string(nextState))
+	
 	return nil
 }
 
@@ -120,6 +127,12 @@ func (g *Game) popState() error {
 	g.currentState = g.stateStack[len(g.stateStack)-1]
 	g.stateStack = g.stateStack[:len(g.stateStack)-1]
 	g.currentState.Unfreeze()
+	
+	// Update the input system - we need to determine the state from the stack
+	// For now, we'll use a generic "unknown" state when popping
+	// This could be improved by tracking state names in RenderState
+	input.SetCurrentState("unknown")
+	
 	return nil
 }
 
@@ -209,13 +222,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			}
 			g.currentState.Draw(canvas, nil)
 
-			// Draw nav action bar if navigable
-			if g.currentState.state.IsNavigable() {
+			// Draw nav action bar if navigable (but not in editor)
+			if g.currentState.state.IsNavigable() && g.currentState.stateType != types.GameStateEditor {
 				g.navText.Draw(canvas, nil)
 			}
 		}
 
-		g.userHeader.Draw(canvas, nil)
+		// Don't draw user header in editor
+		if g.currentState.stateType != types.GameStateEditor {
+			g.userHeader.Draw(canvas, nil)
+		}
 	}
 	opts := display.Window.GetScreenDrawOptions()
 	if !g.started {

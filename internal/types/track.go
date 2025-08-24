@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/liqmix/slaptrax/internal/input"
+	"github.com/liqmix/slaptrax/internal/logger"
 )
 
 type Track struct {
@@ -57,6 +58,9 @@ func (t *Track) Update(currentTime int64, travelTime int64, maxTime int64) HitRa
 	if !t.Active && !t.StaleActive {
 		if input.JustActioned(t.Name.Action()) {
 			t.Active = true
+			if t.Name == TrackLeftBottom {
+				logger.Debug("Track LeftBottom activated")
+			}
 		}
 	}
 
@@ -64,6 +68,9 @@ func (t *Track) Update(currentTime int64, travelTime int64, maxTime int64) HitRa
 		if input.NotActioned(t.Name.Action()) {
 			t.Active = false
 			t.StaleActive = false
+			if t.Name == TrackLeftBottom {
+				logger.Debug("Track LeftBottom deactivated")
+			}
 		}
 	}
 

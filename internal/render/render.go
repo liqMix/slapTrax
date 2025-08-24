@@ -12,6 +12,8 @@ func GetRenderer(gs types.GameState, s state.State) display.Renderer {
 		return NewPlayRender(s)
 	case types.GameStateOffset:
 		return NewOffsetRender(s)
+	case types.GameStateEditor:
+		return NewEditorRenderer(s.(*state.EditorState))
 	}
 	return nil
 }

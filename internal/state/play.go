@@ -63,7 +63,7 @@ func NewPlayState(args *PlayArgs) *Play {
 			// TODO: Add system references when implementing visual effects
 		},
 	}
-	p.SetAction(input.ActionBack, p.pause)
+	// Remove keyboard pause action - will use mouse click instead
 	p.SetNotNavigable()
 	return p
 }
@@ -125,6 +125,12 @@ func (p *Play) inGracePeriod() bool {
 
 func (p *Play) Update() error {
 	p.BaseGameState.Update()
+
+	// Check for left mouse click to pause
+	if input.M.Is(ebiten.MouseButtonLeft, input.JustPressed) {
+		p.pause()
+		return nil
+	}
 
 	if !audio.IsSongPlaying() {
 		if !p.inGracePeriod() {
