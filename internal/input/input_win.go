@@ -5,6 +5,7 @@ package input
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -206,8 +208,22 @@ const (
 	WM_SYSKEYDOWN  = 0x0104
 	WM_SYSKEYUP    = 0x0105
 	WM_QUIT        = 0x0012
+	WM_HOTKEY      = 0x0312
 
-	registryPath = `Software\Microsoft\Windows\CurrentVersion\Policies\System`
+	registryPath        = `Software\Microsoft\Windows\CurrentVersion\Policies\System`
+	gameBarRegistryPath = `SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR`
+	gameConfigStorePath = `System\GameConfigStore`
+
+	// RegisterHotKey modifiers
+	MOD_ALT     = 0x0001
+	MOD_CONTROL = 0x0002
+	MOD_SHIFT   = 0x0004
+	MOD_WIN     = 0x0008
+
+	// Hotkey IDs for our registered hotkeys
+	HOTKEY_WIN_ALT_G = 1001
+	HOTKEY_WIN_ALT_W = 1002
+	HOTKEY_WIN_ALT_B = 1003
 )
 
 type HHOOK uintptr
@@ -236,6 +252,16 @@ type KeyboardManager struct {
 	registryMutex     sync.Mutex
 	originalWinLValue uint32
 	threadID          uintptr
+
+	// GameBar registry backup values
+	originalGameDVREnabled    uint32
+	originalAppCaptureEnabled uint32
+	originalGameConfigEnabled uint32
+	gameBarRegistryModified   bool
+
+	// Hotkey registration tracking
+	registeredHotkeys []int
+	hotkeyMutex       sync.Mutex
 }
 
 type KeyEvent struct {
@@ -247,6 +273,14 @@ var (
 	globalKeyboard *keyboard
 	globalManager  *KeyboardManager
 	isShuttingDown int32
+
+	// Modifier key states for combo detection
+	winKeyDown  int32
+	altKeyDown  int32
+	ctrlKeyDown int32
+
+	// BlockInput state
+	inputBlocked int32
 )
 
 func (km *KeyboardManager) DisableWinL() error {
@@ -260,8 +294,6 @@ func (km *KeyboardManager) DisableWinL() error {
 		value string
 	}{
 		{registry.CURRENT_USER, registryPath, "DisableLockWorkstation"},
-		{registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Policies\Explorer`, "NoWinKeys"},
-		{registry.LOCAL_MACHINE, registryPath, "DisableLockWorkstation"},
 	}
 
 	var lastErr error
@@ -315,12 +347,280 @@ func (km *KeyboardManager) RestoreWinL() error {
 	return key.SetDWordValue("DisableLockWorkstation", km.originalWinLValue)
 }
 
+func (km *KeyboardManager) DisableGameBar() error {
+	km.registryMutex.Lock()
+	defer km.registryMutex.Unlock()
+
+	var errors []error
+
+	// 1. Disable GameDVR in main GameDVR registry path
+	key1, _, err := registry.CreateKey(registry.CURRENT_USER, gameBarRegistryPath, registry.SET_VALUE|registry.QUERY_VALUE)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("failed to open GameDVR registry: %w", err))
+	} else {
+		defer key1.Close()
+
+		// Backup and set GameDVR_Enabled
+		originalValue, _, err := key1.GetIntegerValue("GameDVR_Enabled")
+		if err != nil {
+			originalValue = 1 // Default enabled
+		}
+		km.originalGameDVREnabled = uint32(originalValue)
+
+		err = key1.SetDWordValue("GameDVR_Enabled", 0)
+		if err != nil {
+			errors = append(errors, fmt.Errorf("failed to set GameDVR_Enabled: %w", err))
+		}
+
+		// Backup and set AppCaptureEnabled
+		originalValue, _, err = key1.GetIntegerValue("AppCaptureEnabled")
+		if err != nil {
+			originalValue = 1 // Default enabled
+		}
+		km.originalAppCaptureEnabled = uint32(originalValue)
+
+		err = key1.SetDWordValue("AppCaptureEnabled", 0)
+		if err != nil {
+			errors = append(errors, fmt.Errorf("failed to set AppCaptureEnabled: %w", err))
+		}
+	}
+
+	// 2. Disable GameDVR in GameConfigStore
+	key2, _, err := registry.CreateKey(registry.CURRENT_USER, gameConfigStorePath, registry.SET_VALUE|registry.QUERY_VALUE)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("failed to open GameConfigStore registry: %w", err))
+	} else {
+		defer key2.Close()
+
+		// Backup and set GameDVR_Enabled
+		originalValue, _, err := key2.GetIntegerValue("GameDVR_Enabled")
+		if err != nil {
+			originalValue = 1 // Default enabled
+		}
+		km.originalGameConfigEnabled = uint32(originalValue)
+
+		err = key2.SetDWordValue("GameDVR_Enabled", 0)
+		if err != nil {
+			errors = append(errors, fmt.Errorf("failed to set GameConfigStore GameDVR_Enabled: %w", err))
+		}
+	}
+
+	if len(errors) == 0 {
+		km.gameBarRegistryModified = true
+		logger.Debug("Successfully disabled GameBar via registry")
+		return nil
+	}
+
+	// Log all errors but continue - hook will provide fallback
+	for _, err := range errors {
+		logger.Warn("GameBar registry error: %v", err)
+	}
+	return fmt.Errorf("GameBar disable had %d errors", len(errors))
+}
+
+func (km *KeyboardManager) RestoreGameBar() error {
+	if !km.gameBarRegistryModified {
+		return nil
+	}
+
+	km.registryMutex.Lock()
+	defer km.registryMutex.Unlock()
+
+	var errors []error
+
+	// 1. Restore GameDVR registry values
+	key1, err := registry.OpenKey(registry.CURRENT_USER, gameBarRegistryPath, registry.SET_VALUE)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("failed to open GameDVR registry for restore: %w", err))
+	} else {
+		defer key1.Close()
+
+		if km.originalGameDVREnabled == 0 {
+			key1.DeleteValue("GameDVR_Enabled")
+		} else {
+			key1.SetDWordValue("GameDVR_Enabled", km.originalGameDVREnabled)
+		}
+
+		if km.originalAppCaptureEnabled == 0 {
+			key1.DeleteValue("AppCaptureEnabled")
+		} else {
+			key1.SetDWordValue("AppCaptureEnabled", km.originalAppCaptureEnabled)
+		}
+	}
+
+	// 2. Restore GameConfigStore registry values
+	key2, err := registry.OpenKey(registry.CURRENT_USER, gameConfigStorePath, registry.SET_VALUE)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("failed to open GameConfigStore registry for restore: %w", err))
+	} else {
+		defer key2.Close()
+
+		if km.originalGameConfigEnabled == 0 {
+			key2.DeleteValue("GameDVR_Enabled")
+		} else {
+			key2.SetDWordValue("GameDVR_Enabled", km.originalGameConfigEnabled)
+		}
+	}
+
+	if len(errors) > 0 {
+		for _, err := range errors {
+			logger.Error("GameBar restore error: %v", err)
+		}
+		return fmt.Errorf("GameBar restore had %d errors", len(errors))
+	}
+
+	logger.Debug("Successfully restored GameBar registry settings")
+	return nil
+}
+
+func (km *KeyboardManager) RegisterBlockingHotkeys() error {
+	km.hotkeyMutex.Lock()
+	defer km.hotkeyMutex.Unlock()
+
+	user32 := syscall.NewLazyDLL("user32.dll")
+	procRegisterHotKey := user32.NewProc("RegisterHotKey")
+	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+
+	// Get current window handle - this might help RegisterHotKey work better
+	hwnd, _, _ := procGetForegroundWindow.Call()
+
+	// Register Win+Alt+G (GameBar record)
+	ret, _, err := procRegisterHotKey.Call(hwnd, HOTKEY_WIN_ALT_G, MOD_WIN|MOD_ALT, 0x47) // G key
+	if ret != 0 {
+		km.registeredHotkeys = append(km.registeredHotkeys, HOTKEY_WIN_ALT_G)
+		logger.Debug("Registered Win+Alt+G hotkey with HWND")
+	} else {
+		logger.Warn("Failed to register Win+Alt+G hotkey: %v", err)
+		// Try without HWND as fallback
+		ret, _, _ = procRegisterHotKey.Call(0, HOTKEY_WIN_ALT_G, MOD_WIN|MOD_ALT, 0x47)
+		if ret != 0 {
+			km.registeredHotkeys = append(km.registeredHotkeys, HOTKEY_WIN_ALT_G)
+			logger.Debug("Registered Win+Alt+G hotkey without HWND")
+		}
+	}
+
+	// Register Win+Alt+W (GameBar widget)
+	ret, _, err = procRegisterHotKey.Call(hwnd, HOTKEY_WIN_ALT_W, MOD_WIN|MOD_ALT, 0x57) // W key
+	if ret != 0 {
+		km.registeredHotkeys = append(km.registeredHotkeys, HOTKEY_WIN_ALT_W)
+		logger.Debug("Registered Win+Alt+W hotkey with HWND")
+	} else {
+		logger.Warn("Failed to register Win+Alt+W hotkey: %v", err)
+		ret, _, _ = procRegisterHotKey.Call(0, HOTKEY_WIN_ALT_W, MOD_WIN|MOD_ALT, 0x57)
+		if ret != 0 {
+			km.registeredHotkeys = append(km.registeredHotkeys, HOTKEY_WIN_ALT_W)
+			logger.Debug("Registered Win+Alt+W hotkey without HWND")
+		}
+	}
+
+	// Register Win+Alt+B (HDR toggle)
+	ret, _, err = procRegisterHotKey.Call(hwnd, HOTKEY_WIN_ALT_B, MOD_WIN|MOD_ALT, 0x42) // B key
+	if ret != 0 {
+		km.registeredHotkeys = append(km.registeredHotkeys, HOTKEY_WIN_ALT_B)
+		logger.Debug("Registered Win+Alt+B hotkey with HWND")
+	} else {
+		logger.Warn("Failed to register Win+Alt+B hotkey: %v", err)
+		ret, _, _ = procRegisterHotKey.Call(0, HOTKEY_WIN_ALT_B, MOD_WIN|MOD_ALT, 0x42)
+		if ret != 0 {
+			km.registeredHotkeys = append(km.registeredHotkeys, HOTKEY_WIN_ALT_B)
+			logger.Debug("Registered Win+Alt+B hotkey without HWND")
+		}
+	}
+
+	if len(km.registeredHotkeys) > 0 {
+		logger.Debug("Successfully registered %d blocking hotkeys", len(km.registeredHotkeys))
+	}
+
+	return nil
+}
+
+func (km *KeyboardManager) UnregisterBlockingHotkeys() error {
+	km.hotkeyMutex.Lock()
+	defer km.hotkeyMutex.Unlock()
+
+	if len(km.registeredHotkeys) == 0 {
+		return nil
+	}
+
+	user32 := syscall.NewLazyDLL("user32.dll")
+	procUnregisterHotKey := user32.NewProc("UnregisterHotKey")
+
+	for _, hotkeyID := range km.registeredHotkeys {
+		ret, _, err := procUnregisterHotKey.Call(0, uintptr(hotkeyID))
+		if ret != 0 {
+			logger.Debug("Unregistered hotkey ID %d", hotkeyID)
+		} else {
+			logger.Warn("Failed to unregister hotkey ID %d: %v", hotkeyID, err)
+		}
+	}
+
+	km.registeredHotkeys = km.registeredHotkeys[:0]
+	logger.Debug("Unregistered all blocking hotkeys")
+	return nil
+}
+
 func isGameActive() bool {
 	if globalKeyboard == nil || !globalKeyboard.isFocused {
 		return false
 	}
 	currentState := globalKeyboard.GetCurrentState()
 	return currentState == "state.play" || currentState == "state.play.pause"
+}
+
+func updateModifierStates(vkCode uint32, isKeyDown bool) {
+	state := int32(0)
+	if isKeyDown {
+		state = 1
+	}
+
+	switch vkCode {
+	case 0x5B, 0x5C: // Left/Right Windows keys
+		atomic.StoreInt32(&winKeyDown, state)
+	case 0xA4, 0xA5: // Left/Right Alt keys
+		atomic.StoreInt32(&altKeyDown, state)
+	case 0xA2, 0xA3: // Left/Right Ctrl keys
+		atomic.StoreInt32(&ctrlKeyDown, state)
+	}
+}
+
+func isWinAltComboPressed() bool {
+	return atomic.LoadInt32(&winKeyDown) == 1 && atomic.LoadInt32(&altKeyDown) == 1
+}
+
+func isDangerousWinAltCombo(vkCode uint32) bool {
+	if !isWinAltComboPressed() {
+		return false
+	}
+
+	switch vkCode {
+	case 0x47: // G key - GameBar record
+		return true
+	case 0x57: // W key - GameBar widget
+		return true
+	case 0x42: // B key - HDR toggle
+		return true
+	}
+	return false
+}
+
+func blockInputTemporarily() {
+	if atomic.CompareAndSwapInt32(&inputBlocked, 0, 1) {
+		user32 := syscall.NewLazyDLL("user32.dll")
+		procBlockInput := user32.NewProc("BlockInput")
+
+		// Block input for a very short time
+		procBlockInput.Call(1) // TRUE = block
+		logger.Debug("Temporarily blocked all input")
+
+		// Unblock after a short delay in a goroutine
+		go func() {
+			// Wait a tiny bit to let the shortcut attempt fail
+			time.Sleep(100 * time.Millisecond)
+			procBlockInput.Call(0) // FALSE = unblock
+			atomic.StoreInt32(&inputBlocked, 0)
+			logger.Debug("Unblocked input")
+		}()
+	}
 }
 
 func applyOSHook(k *keyboard) error {
@@ -345,10 +645,20 @@ func applyOSHook(k *keyboard) error {
 }
 
 func (km *KeyboardManager) Initialize() error {
-	// 1. Set up registry modification
+	// 1. Set up registry modifications
 	if err := km.DisableWinL(); err != nil {
 		// Log warning but continue - not critical
 		logger.Warn("Could not disable Win+L: %v", err)
+	}
+
+	if err := km.DisableGameBar(); err != nil {
+		// Log warning but continue - not critical
+		logger.Warn("Could not disable GameBar: %v", err)
+	}
+
+	if err := km.RegisterBlockingHotkeys(); err != nil {
+		// Log warning but continue - not critical
+		logger.Warn("Could not register blocking hotkeys: %v", err)
 	}
 
 	// 2. Install hook in dedicated thread
@@ -359,7 +669,7 @@ func (km *KeyboardManager) Initialize() error {
 		// Initialize DLLs locally in this goroutine to avoid race conditions
 		user32 := syscall.NewLazyDLL("user32.dll")
 		kernel32 := syscall.NewLazyDLL("kernel32.dll")
-		
+
 		procGetCurrentThreadId := kernel32.NewProc("GetCurrentThreadId")
 		procGetModuleHandle := kernel32.NewProc("GetModuleHandleW")
 		procSetWindowsHookExW := user32.NewProc("SetWindowsHookExW")
@@ -400,6 +710,15 @@ func (km *KeyboardManager) Initialize() error {
 
 			if ret == 0 || ret == ^uintptr(0) { // WM_QUIT or error
 				break
+			}
+
+			// Consume WM_HOTKEY messages to prevent Windows from processing them
+			if msg.Message == WM_HOTKEY {
+				switch msg.WParam {
+				case HOTKEY_WIN_ALT_G, HOTKEY_WIN_ALT_W, HOTKEY_WIN_ALT_B:
+					logger.Debug("Consumed blocked hotkey message: %d", msg.WParam)
+					continue // Don't dispatch this message
+				}
 			}
 
 			procTranslateMessage.Call(uintptr(unsafe.Pointer(&msg)))
@@ -466,6 +785,14 @@ func (km *KeyboardManager) Cleanup() {
 			logger.Error("Failed to restore Win+L: %v", err)
 		}
 
+		if err := km.RestoreGameBar(); err != nil {
+			logger.Error("Failed to restore GameBar: %v", err)
+		}
+
+		if err := km.UnregisterBlockingHotkeys(); err != nil {
+			logger.Error("Failed to unregister hotkeys: %v", err)
+		}
+
 		// 3. Post quit message to stop message loop
 		if km.threadID != 0 {
 			procPostThreadMessage.Call(km.threadID, WM_QUIT, 0, 0)
@@ -493,37 +820,14 @@ func lowLevelKeyboardProc(nCode int, wParam, lParam uintptr) uintptr {
 	}
 
 	kb := (*KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
+	isKeyDown := wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN
+
+	// Always update modifier states for combo detection
+	updateModifierStates(kb.VkCode, isKeyDown)
 
 	// Always track keys synchronously to prevent stuck keys
 	if globalKeyboard != nil {
 		trackKeyForInputSystem(kb.VkCode, wParam)
-	}
-
-	// Special handling for Win+L regardless of game state
-	if isGameActive() {
-		// Use the same user32 reference for GetAsyncKeyState
-		procGetAsyncKeyState := user32.NewProc("GetAsyncKeyState")
-		
-		// Check for Windows key + L combination
-		if kb.VkCode == 0x4C { // L key
-			leftWin, _, _ := procGetAsyncKeyState.Call(uintptr(0x5B))  // Left Windows
-			rightWin, _, _ := procGetAsyncKeyState.Call(uintptr(0x5C)) // Right Windows
-
-			if (leftWin&0x8000) != 0 || (rightWin&0x8000) != 0 {
-				logger.Debug("Blocking Win+L during gameplay")
-				return 1 // Block Win+L
-			}
-		}
-
-		// Check for Windows key when L is already pressed
-		if kb.VkCode == 0x5B || kb.VkCode == 0x5C { // Windows keys
-			lKey, _, _ := procGetAsyncKeyState.Call(uintptr(0x4C)) // L key
-
-			if (lKey & 0x8000) != 0 {
-				logger.Debug("Blocking Windows key when L is pressed during gameplay")
-				return 1 // Block Windows key when L is pressed
-			}
-		}
 	}
 
 	// Check if we should be blocking keys
@@ -531,6 +835,27 @@ func lowLevelKeyboardProc(nCode int, wParam, lParam uintptr) uintptr {
 		// Not in game - allow keys through
 		ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
 		return ret
+	}
+
+	// Detect dangerous Win+Alt combinations and use BlockInput to prevent them
+	isWinPressed := atomic.LoadInt32(&winKeyDown) == 1
+	isAltPressed := atomic.LoadInt32(&altKeyDown) == 1
+
+	// If we detect a dangerous Win+Alt combination, block all input temporarily
+	if isWinPressed && isAltPressed && isKeyDown {
+		switch kb.VkCode {
+		case 0x47, 0x57, 0x42: // G, W, B keys
+			logger.Debug("Detected dangerous Win+Alt+%c - blocking all input", kb.VkCode)
+			blockInputTemporarily()
+			return 1 // Also block this specific key
+		}
+	}
+
+	// Also specifically block the dangerous combinations even if our state tracking is off
+	if isDangerousWinAltCombo(kb.VkCode) {
+		logger.Debug("Blocked dangerous Win+Alt+%c combination", kb.VkCode)
+		blockInputTemporarily() // Use BlockInput as additional protection
+		return 1                // Block the key
 	}
 
 	// Allow text input when enabled (for login screen)

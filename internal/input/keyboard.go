@@ -210,17 +210,17 @@ func (k *keyboard) checkCapsLockState() {
 	// Use Windows API to check actual Caps Lock state
 	user32, _ := syscall.LoadDLL("user32.dll")
 	getAsyncKeyState, _ := user32.FindProc("GetAsyncKeyState")
-	
+
 	capsState, _, _ := getAsyncKeyState.Call(uintptr(0x14)) // VK_CAPITAL
-	isActuallyPressed := (capsState&0x8000) != 0
-	
+	isActuallyPressed := (capsState & 0x8000) != 0
+
 	// Check our tracked state
 	wordIdx, bitOff := getBitPosition(ebiten.KeyCapsLock)
 	isTrackedAsHeld := false
 	if wordIdx < numWords {
 		isTrackedAsHeld = (k.heldBits[wordIdx] & (1 << bitOff)) != 0
 	}
-	
+
 	// If there's a mismatch, correct it
 	if isTrackedAsHeld && !isActuallyPressed {
 		// We think it's held but it's actually released - force a release

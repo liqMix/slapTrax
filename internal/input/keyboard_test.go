@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-	
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -17,17 +17,17 @@ func TestKeyboardCleanupRaceCondition(t *testing.T) {
 
 	// Call cleanup multiple times concurrently
 	done := make(chan bool, 3)
-	
+
 	go func() {
 		k.Cleanup()
 		done <- true
 	}()
-	
+
 	go func() {
 		k.close()
 		done <- true
 	}()
-	
+
 	go func() {
 		// Simulate the defer call from main
 		k.Cleanup()
@@ -54,19 +54,19 @@ func TestKeyboardCleanupRaceCondition(t *testing.T) {
 func TestShutdownFlagPreventsHookCalls(t *testing.T) {
 	// Ensure that once shutdown flag is set, hook proc returns immediately
 	atomic.StoreInt32(&isShuttingDown, 1)
-	
+
 	// Mock a hook call - this should pass through immediately
 	result := lowLevelKeyboardProc(0, 0x0100, 0) // WM_KEYDOWN
-	
+
 	// The result should be from CallNextHookEx, not our blocking return value of 1
 	// This is hard to test directly, but we can verify the shutdown flag works
 	if atomic.LoadInt32(&isShuttingDown) != 1 {
 		t.Error("Shutdown flag should remain set")
 	}
-	
+
 	// Reset for other tests
 	atomic.StoreInt32(&isShuttingDown, 0)
-	
+
 	// Verify result is not our blocking value when shutting down
 	// Note: This test is limited as we can't easily mock the Windows API calls
 	_ = result
@@ -106,7 +106,7 @@ func TestKeyPressReleaseHandling(t *testing.T) {
 	k.justPressed = k.justPressed[:0]
 	k.justReleased = k.justReleased[:0]
 	k.m.Unlock()
-	
+
 	if len(k.justPressed) != 0 || len(k.justReleased) != 0 {
 		t.Error("Arrays should be cleared after manual reset")
 	}
@@ -122,7 +122,7 @@ func TestAltKeySystemMessages(t *testing.T) {
 
 	// Test ALT key mappings
 	altKeys := []uint32{0x12, 0xA4, 0xA5} // ALT, LALT, RALT
-	
+
 	for _, vkCode := range altKeys {
 		// Test that the VK code maps to ALT key
 		if ebitenKey, exists := keyMap[vkCode]; !exists {
@@ -162,13 +162,13 @@ func TestFinalizerCleanup(t *testing.T) {
 	if k == nil {
 		t.Skip("Cannot test keyboard on this platform")
 	}
-	
+
 	// Don't call close() explicitly - let finalizer handle it
 	// This is hard to test reliably, but we can at least verify the hook is set
 	if k.osHook == 0 {
 		t.Log("Hook not installed (may be expected on test systems)")
 	}
-	
+
 	// Manually trigger what the finalizer would do
 	if k.osHook != 0 {
 		k.close()
