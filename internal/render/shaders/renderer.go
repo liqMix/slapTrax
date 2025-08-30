@@ -194,7 +194,7 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 			return
 		}
 		
-		uniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint)
+		uniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint, 120.0) // TODO: Get actual BPM
 		if uniforms == nil {
 			return
 		}
@@ -227,6 +227,7 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 			"HoldEndProgress":    uniforms.HoldEndProgress,
 			"WasHit":             uniforms.WasHit,
 			"WasReleased":        uniforms.WasReleased,
+			"BPM":                uniforms.BPM,
 			"FadeInThreshold":    uniforms.FadeInThreshold,
 			"FadeOutThreshold":   uniforms.FadeOutThreshold,
 		}
@@ -242,7 +243,7 @@ func (sr *ShaderRenderer) RenderHoldNoteTail(img *ebiten.Image, track types.Trac
 		return
 	}
 	
-	uniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint)
+	uniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint, 120.0) // TODO: Get actual BPM
 	if uniforms == nil {
 		return
 	}
@@ -275,6 +276,7 @@ func (sr *ShaderRenderer) RenderHoldNoteTail(img *ebiten.Image, track types.Trac
 		"HoldEndProgress":    uniforms.HoldEndProgress,
 		"WasHit":             uniforms.WasHit,
 		"WasReleased":        uniforms.WasReleased,
+		"BPM":                uniforms.BPM,
 		"FadeInThreshold":    uniforms.FadeInThreshold,
 		"FadeOutThreshold":   uniforms.FadeOutThreshold,
 	}
@@ -287,6 +289,13 @@ func (sr *ShaderRenderer) RenderHoldNoteHead(img *ebiten.Image, track types.Trac
 	noteShader := Manager.GetNoteShader()
 	if noteShader == nil {
 		return
+	}
+	
+	// Only render the head if the release progress is above the fade-in threshold
+	// This prevents the head from appearing at the judgment line when the hold note first spawns
+	fadeInThreshold := float64(0.02) // Same threshold used in uniforms
+	if note.ReleaseProgress < fadeInThreshold {
+		return // Head is not yet visible, don't render it
 	}
 	
 	// Create a temporary note at the hold end position for the head
@@ -304,7 +313,7 @@ func (sr *ShaderRenderer) RenderHoldNoteHead(img *ebiten.Image, track types.Trac
 	}
 	
 	// Use the hold note's color and state
-	holdUniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint)
+	holdUniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint, 120.0) // TODO: Get actual BPM
 	if holdUniforms != nil {
 		uniforms.ColorR = holdUniforms.ColorR
 		uniforms.ColorG = holdUniforms.ColorG

@@ -24,6 +24,7 @@ var HoldStartProgress float // Where hold starts (0.0-1.0)
 var HoldEndProgress float   // Where hold ends (0.0-1.0)
 var WasHit float           // 1.0 if hit, 0.0 otherwise
 var WasReleased float      // 1.0 if released, 0.0 otherwise
+var BPM float              // Song BPM for oscillation sync
 var FadeInThreshold float  // Progress below which notes are invisible
 var FadeOutThreshold float // Progress above which notes are fully visible
 
@@ -46,26 +47,65 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     endP3X := CenterX + (Point3X - CenterX) * HoldEndProgress  
     endP3Y := CenterY + (Point3Y - CenterY) * HoldEndProgress
     
+    // NO STATIC OSCILLATION - we'll do it dynamically per fragment!
+    
     // Create solid connections for both track segments
     // Segment 1: swept area from (startP1->startP2) to (endP1->endP2)
     // Segment 2: swept area from (startP2->startP3) to (endP2->endP3)
     
-    // Find minimum distance to either swept segment
-    distToSweptSeg1 := distanceToSweptSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y, endP1X, endP1Y, endP2X, endP2Y)
-    distToSweptSeg2 := distanceToSweptSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y, endP2X, endP2Y, endP3X, endP3Y)
+    // Calculate which progress point this fragment corresponds to first
+    // Find center line of the hold to determine fragment's position along it
+    centerStartX := (startP1X + startP2X + startP3X) / 3.0
+    centerStartY := (startP1Y + startP2Y + startP3Y) / 3.0
+    centerEndX := (endP1X + endP2X + endP3X) / 3.0
+    centerEndY := (endP1Y + endP2Y + endP3Y) / 3.0
+    
+    // Project fragment onto center line to find its progress (0.0 to 1.0)
+    holdDirX := centerEndX - centerStartX
+    holdDirY := centerEndY - centerStartY
+    holdLength := sqrt(holdDirX*holdDirX + holdDirY*holdDirY)
+    
+    var progressAlongHold float = 0.5 // Default middle
+    if holdLength > 0.1 {
+        holdDirX /= holdLength
+        holdDirY /= holdLength
+        toFragX := fragX - centerStartX
+        toFragY := fragY - centerStartY
+        projection := toFragX*holdDirX + toFragY*holdDirY
+        projection = max(0.0, min(holdLength, projection))
+        progressAlongHold = projection / holdLength
+    }
+    
+    // APPLY OSCILLATION based on fragment's position along hold!
+    var oscillatedStartP1X, oscillatedStartP1Y float = startP1X, startP1Y
+    var oscillatedStartP2X, oscillatedStartP2Y float = startP2X, startP2Y
+    var oscillatedStartP3X, oscillatedStartP3Y float = startP3X, startP3Y
+    var oscillatedEndP1X, oscillatedEndP1Y float = endP1X, endP1Y
+    var oscillatedEndP2X, oscillatedEndP2Y float = endP2X, endP2Y
+    var oscillatedEndP3X, oscillatedEndP3Y float = endP3X, endP3Y
+    
+    // DEBUG: Simple sine wave oscillation - always on for testing
+    if true {
+        // Simple horizontal sine wave - visible and smooth
+        oscillationOffset := sin(TimeMs * 0.005) * 20.0
+        
+        // Apply the same oscillation to all track points
+        oscillatedStartP1X += oscillationOffset
+        oscillatedStartP2X += oscillationOffset
+        oscillatedStartP3X += oscillationOffset
+        oscillatedEndP1X += oscillationOffset
+        oscillatedEndP2X += oscillationOffset
+        oscillatedEndP3X += oscillationOffset
+    }
+    
+    // Now find distance using oscillated geometry
+    distToSweptSeg1 := distanceToSweptSegment(fragX, fragY, oscillatedStartP1X, oscillatedStartP1Y, oscillatedStartP2X, oscillatedStartP2Y, oscillatedEndP1X, oscillatedEndP1Y, oscillatedEndP2X, oscillatedEndP2Y)
+    distToSweptSeg2 := distanceToSweptSegment(fragX, fragY, oscillatedStartP2X, oscillatedStartP2Y, oscillatedStartP3X, oscillatedStartP3Y, oscillatedEndP2X, oscillatedEndP2Y, oscillatedEndP3X, oscillatedEndP3Y)
     
     minDist := min(distToSweptSeg1, distToSweptSeg2)
     
-    // Calculate the progress along the hold for this fragment
-    // Find which segment is closer and interpolate accordingly
-    var currentProgress float
-    if distToSweptSeg1 <= distToSweptSeg2 {
-        // Closer to segment 1, find the progress along this segment
-        currentProgress = findProgressOnSweptSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y, endP1X, endP1Y, endP2X, endP2Y, HoldStartProgress, HoldEndProgress)
-    } else {
-        // Closer to segment 2, find the progress along this segment  
-        currentProgress = findProgressOnSweptSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y, endP2X, endP2Y, endP3X, endP3Y, HoldStartProgress, HoldEndProgress)
-    }
+    // Use the progress we calculated earlier
+    currentProgress := HoldStartProgress + (HoldEndProgress - HoldStartProgress) * progressAlongHold
     
     // Calculate tail width (thinner than regular notes)
     baseWidth := Width * WidthScale * currentProgress * 2.0 // Same base as regular notes

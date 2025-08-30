@@ -1,6 +1,8 @@
 package shaders
 
 import (
+	"time"
+	
 	"github.com/liqmix/slaptrax/internal/display"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
@@ -46,6 +48,7 @@ type HoldNoteUniforms struct {
 	HoldEndProgress   float32 // Where the hold ends (0.0-1.0)
 	WasHit            float32 // 1.0 if hit, 0.0 otherwise
 	WasReleased       float32 // 1.0 if released, 0.0 otherwise
+	BPM               float32 // Song BPM for oscillation sync
 }
 
 // CreateNoteUniforms creates uniforms for a regular note
@@ -96,11 +99,14 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	uniforms.FadeInThreshold = 0.02  // Start fading in later to reduce center clutter
 	uniforms.FadeOutThreshold = 0.06  // Reach full visibility quickly after fade starts
 	
+	// Set current time for animations (use modulo to keep values manageable for sine calculations)
+	uniforms.TimeMs = float32(time.Now().UnixMilli() % 100000)
+	
 	return uniforms
 }
 
 // CreateHoldNoteUniforms creates uniforms for a hold note
-func CreateHoldNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) *HoldNoteUniforms {
+func CreateHoldNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point, bpm float32) *HoldNoteUniforms {
 	baseUniforms := CreateNoteUniforms(track, note, trackPoints, centerPoint)
 	if baseUniforms == nil {
 		return nil
@@ -123,6 +129,9 @@ func CreateHoldNoteUniforms(track types.TrackName, note *types.Note, trackPoints
 	if note.WasReleased() {
 		holdUniforms.WasReleased = 1.0
 	}
+	
+	// Set BPM for oscillation effects
+	holdUniforms.BPM = bpm
 	
 	// Adjust alpha based on hold state
 	if note.WasHit() {
@@ -159,6 +168,7 @@ func (u *HoldNoteUniforms) ToSlice() []float32 {
 	hold := []float32{
 		u.HoldStartProgress, u.HoldEndProgress,
 		u.WasHit, u.WasReleased,
+		u.BPM,
 	}
 	return append(base, hold...)
 }
