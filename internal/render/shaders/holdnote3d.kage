@@ -82,10 +82,27 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
         }
     }
     
-    // Interpolate width at fragment position
+    // Determine if this fragment is in the head or tail region
+    // Head region is the last 15% of the hold (where player releases)
+    headThreshold := 0.85
+    isHeadRegion := holdProgress > headThreshold
+    
+    // Calculate variable width: full width for head, thin for tail
+    baseWidth := Width * WidthScale * 2.0 // Double thickness like regular notes
+    
+    var regionWidth float
+    if isHeadRegion {
+        // Head region: full width with smooth transition
+        transitionFactor := (holdProgress - headThreshold) / (1.0 - headThreshold)
+        regionWidth = baseWidth * (0.4 + transitionFactor * 0.6) // Smooth transition from 0.4 to 1.0
+    } else {
+        // Tail region: thinner trail (40% of normal width)
+        regionWidth = baseWidth * 0.4
+    }
+    
+    // Apply progress-based scaling for perspective
     currentProgress := HoldStartProgress + (HoldEndProgress - HoldStartProgress) * holdProgress
-    // Double the thickness for better 3D appearance
-    currentWidth := Width * WidthScale * currentProgress * 2.0
+    currentWidth := regionWidth * currentProgress
     halfWidth := currentWidth * 0.5
     
     // Use minimum distance to track outline for alpha
@@ -119,27 +136,47 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     distFromCenter := distance(vec2(fragX, fragY), vec2(centerX, centerY))
     normalizedDist := clamp(distFromCenter / (currentWidth * 0.5), 0.0, 1.0)
     
-    // 1. STRONG RADIAL BRIGHTNESS - cylindrical hold note effect
-    radialBrightness := 1.0 + (1.0 - normalizedDist) * 1.3 // Up to 2.3x brighter in center
+    // Apply different 3D effects for head vs tail regions
+    var radialBrightness, specularBoost, edgeDarkening float
     
-    // 2. DRAMATIC SPECULAR HIGHLIGHT - travels along hold length
-    highlightX := centerX - (currentWidth * 0.12)
-    highlightY := centerY - (currentWidth * 0.18)
-    distToHighlight := distance(vec2(fragX, fragY), vec2(highlightX, highlightY))
-    
-    specularBoost := 1.0
-    highlightRadius := currentWidth * 0.5 // Large highlight
-    if distToHighlight < highlightRadius {
-        highlightFactor := 1.0 - (distToHighlight / highlightRadius)
-        highlightFactor = pow(highlightFactor, 1.3)
-        specularBoost = 1.0 + (highlightFactor * 1.8)
-    }
-    
-    // 3. EDGE DEFINITION - strong darkening at edges for shape definition
-    edgeDarkening := 1.0
-    if normalizedDist > 0.75 {
-        darkeningFactor := (normalizedDist - 0.75) / 0.25
-        edgeDarkening = 1.0 - (darkeningFactor * darkeningFactor * 0.5)
+    if isHeadRegion {
+        // HEAD: Full 3D effects like regular notes
+        // 1. Strong radial brightness for prominent head
+        radialBrightness = 1.0 + (1.0 - normalizedDist) * 1.3 // Up to 2.3x brighter in center
+        
+        // 2. Dramatic specular highlight for head prominence
+        highlightX := centerX - (currentWidth * 0.12)
+        highlightY := centerY - (currentWidth * 0.18)
+        distToHighlight := distance(vec2(fragX, fragY), vec2(highlightX, highlightY))
+        
+        specularBoost = 1.0
+        highlightRadius := currentWidth * 0.5 // Large highlight
+        if distToHighlight < highlightRadius {
+            highlightFactor := 1.0 - (distToHighlight / highlightRadius)
+            highlightFactor = pow(highlightFactor, 1.3)
+            specularBoost = 1.0 + (highlightFactor * 1.8)
+        }
+        
+        // 3. Strong edge definition for head
+        edgeDarkening = 1.0
+        if normalizedDist > 0.75 {
+            darkeningFactor := (normalizedDist - 0.75) / 0.25
+            edgeDarkening = 1.0 - (darkeningFactor * darkeningFactor * 0.5)
+        }
+    } else {
+        // TAIL: Subtle 3D effects to emphasize it's a trail
+        // 1. Modest radial brightness for subtle tail depth
+        radialBrightness = 1.0 + (1.0 - normalizedDist) * 0.6 // Up to 1.6x brighter in center
+        
+        // 2. Minimal specular for tail (just subtle sheen)
+        specularBoost = 1.0 + (1.0 - normalizedDist) * 0.3 // Subtle highlight
+        
+        // 3. Gentle edge darkening for tail definition
+        edgeDarkening = 1.0
+        if normalizedDist > 0.8 {
+            darkeningFactor := (normalizedDist - 0.8) / 0.2
+            edgeDarkening = 1.0 - (darkeningFactor * 0.2) // Gentler edge effect
+        }
     }
     
     // 4. DEPTH-BASED INTENSITY - varies along hold length
@@ -166,15 +203,37 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
         }
     }
     
-    // Combine all 3D effects - emphasis on brightness
-    threeDEffect := depthIntensity * radialBrightness * specularBoost * max(edgeDarkening * bevelFactor, 0.7) * stateModifier
+    // Add gradient effect along the tail for visual flow
+    var gradientEffect float
+    if isHeadRegion {
+        // Head: no gradient modification, keep full brightness
+        gradientEffect = 1.0
+    } else {
+        // Tail: gradient from darker at start to brighter toward head
+        // holdProgress 0.0 = start (darker), 0.85 = transition to head (brighter)
+        tailGradient := holdProgress / headThreshold // Normalize to 0-1 across tail
+        gradientEffect = 0.7 + (tailGradient * 0.3) // Range from 0.7 to 1.0
+    }
+    
+    // Combine all 3D effects with gradient
+    threeDEffect := depthIntensity * radialBrightness * specularBoost * max(edgeDarkening * bevelFactor, 0.7) * stateModifier * gradientEffect
     
     // Apply final color with dramatic 3D effects and fade
     finalR := ColorR * fadeIntensity * threeDEffect
     finalG := ColorG * fadeIntensity * threeDEffect
     finalB := ColorB * fadeIntensity * threeDEffect
     
-    finalColor := vec4(finalR, finalG, finalB, ColorA * alpha)
+    // Apply different alpha for head vs tail regions
+    var regionAlpha float
+    if isHeadRegion {
+        // Head: full opacity
+        regionAlpha = ColorA * alpha
+    } else {
+        // Tail: slightly more transparent to emphasize it's a trail
+        regionAlpha = ColorA * alpha * 0.85
+    }
+    
+    finalColor := vec4(finalR, finalG, finalB, regionAlpha)
     
     // Add glow effect if enabled
     if Glow > 0.0 {

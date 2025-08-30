@@ -4,6 +4,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 // ShaderRenderer handles shader-based note rendering
@@ -176,14 +177,68 @@ func (sr *ShaderRenderer) RenderNote(img *ebiten.Image, track types.TrackName, n
 	img.DrawTrianglesShader(vertices, sr.baseIndices, shader, options)
 }
 
-// RenderHoldNote renders a hold note using shaders
+// RenderHoldNote renders a hold note using shaders (now renders tail and head separately)
 func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) {
 	if Manager == nil {
 		return
 	}
 	
-	shader := Manager.GetHoldNoteShader()
-	if shader == nil {
+	// In 3D mode, render tail and head separately
+	if user.S() != nil && user.S().Use3DNotes {
+		sr.RenderHoldNoteTail(img, track, note, trackPoints, centerPoint)
+		sr.RenderHoldNoteHead(img, track, note, trackPoints, centerPoint)
+	} else {
+		// In 2D mode, use the original hold note shader
+		shader := Manager.GetHoldNoteShader()
+		if shader == nil {
+			return
+		}
+		
+		uniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint)
+		if uniforms == nil {
+			return
+		}
+		
+		// Create bounded geometry for this hold note spanning from start to end progress
+		vertices := sr.createHoldNoteBoundedGeometry(trackPoints, centerPoint, uniforms.HoldStartProgress, uniforms.HoldEndProgress)
+		
+		options := &ebiten.DrawTrianglesShaderOptions{}
+		options.Blend = ebiten.BlendSourceOver // Ensure proper alpha blending
+		options.Uniforms = map[string]interface{}{
+			"Progress":           uniforms.Progress,
+			"Point1X":            uniforms.Point1X,
+			"Point1Y":            uniforms.Point1Y,
+			"Point2X":            uniforms.Point2X,
+			"Point2Y":            uniforms.Point2Y,
+			"Point3X":            uniforms.Point3X,
+			"Point3Y":            uniforms.Point3Y,
+			"CenterX":            uniforms.CenterX,
+			"CenterY":            uniforms.CenterY,
+			"Width":              uniforms.Width,
+			"WidthScale":         uniforms.WidthScale,
+			"ColorR":             uniforms.ColorR,
+			"ColorG":             uniforms.ColorG,
+			"ColorB":             uniforms.ColorB,
+			"ColorA":             uniforms.ColorA,
+			"Glow":               uniforms.Glow,
+			"Solo":               uniforms.Solo,
+			"TimeMs":             uniforms.TimeMs,
+			"HoldStartProgress":  uniforms.HoldStartProgress,
+			"HoldEndProgress":    uniforms.HoldEndProgress,
+			"WasHit":             uniforms.WasHit,
+			"WasReleased":        uniforms.WasReleased,
+			"FadeInThreshold":    uniforms.FadeInThreshold,
+			"FadeOutThreshold":   uniforms.FadeOutThreshold,
+		}
+		
+		img.DrawTrianglesShader(vertices, sr.baseIndices, shader, options)
+	}
+}
+
+// RenderHoldNoteTail renders the tail portion of a hold note using the tail shader
+func (sr *ShaderRenderer) RenderHoldNoteTail(img *ebiten.Image, track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) {
+	tailShader := Manager.GetHoldTailShader()
+	if tailShader == nil {
 		return
 	}
 	
@@ -192,11 +247,11 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 		return
 	}
 	
-	// Create bounded geometry for this hold note spanning from start to end progress
+	// Create bounded geometry for the tail (full hold length)
 	vertices := sr.createHoldNoteBoundedGeometry(trackPoints, centerPoint, uniforms.HoldStartProgress, uniforms.HoldEndProgress)
 	
 	options := &ebiten.DrawTrianglesShaderOptions{}
-	options.Blend = ebiten.BlendSourceOver // Ensure proper alpha blending
+	options.Blend = ebiten.BlendSourceOver
 	options.Uniforms = map[string]interface{}{
 		"Progress":           uniforms.Progress,
 		"Point1X":            uniforms.Point1X,
@@ -224,7 +279,69 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 		"FadeOutThreshold":   uniforms.FadeOutThreshold,
 	}
 	
-	img.DrawTrianglesShader(vertices, sr.baseIndices, shader, options)
+	img.DrawTrianglesShader(vertices, sr.baseIndices, tailShader, options)
+}
+
+// RenderHoldNoteHead renders the head portion of a hold note using the regular note shader
+func (sr *ShaderRenderer) RenderHoldNoteHead(img *ebiten.Image, track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) {
+	noteShader := Manager.GetNoteShader()
+	if noteShader == nil {
+		return
+	}
+	
+	// Create a temporary note at the hold end position for the head
+	headNote := &types.Note{
+		TrackName:       note.TrackName,
+		Target:          note.TargetRelease, // Use release target for head position
+		Progress:        note.ReleaseProgress, // Use release progress for head position
+		Solo:            note.Solo,
+	}
+	
+	// Create uniforms for the head note
+	uniforms := CreateNoteUniforms(track, headNote, trackPoints, centerPoint)
+	if uniforms == nil {
+		return
+	}
+	
+	// Use the hold note's color and state
+	holdUniforms := CreateHoldNoteUniforms(track, note, trackPoints, centerPoint)
+	if holdUniforms != nil {
+		uniforms.ColorR = holdUniforms.ColorR
+		uniforms.ColorG = holdUniforms.ColorG
+		uniforms.ColorB = holdUniforms.ColorB
+		uniforms.ColorA = holdUniforms.ColorA
+		uniforms.Solo = holdUniforms.Solo
+	}
+	
+	// Create bounded geometry for the head note
+	vertices := sr.createBoundedGeometry(trackPoints, centerPoint, uniforms.Progress)
+	
+	options := &ebiten.DrawTrianglesShaderOptions{}
+	options.Blend = ebiten.BlendSourceOver
+	options.Uniforms = map[string]interface{}{
+		"Progress":   uniforms.Progress,
+		"Point1X":    uniforms.Point1X,
+		"Point1Y":    uniforms.Point1Y,
+		"Point2X":    uniforms.Point2X,
+		"Point2Y":    uniforms.Point2Y,
+		"Point3X":    uniforms.Point3X,
+		"Point3Y":    uniforms.Point3Y,
+		"CenterX":    uniforms.CenterX,
+		"CenterY":    uniforms.CenterY,
+		"Width":      uniforms.Width,
+		"WidthScale": uniforms.WidthScale,
+		"ColorR":     uniforms.ColorR,
+		"ColorG":     uniforms.ColorG,
+		"ColorB":     uniforms.ColorB,
+		"ColorA":     uniforms.ColorA,
+		"Glow":       uniforms.Glow,
+		"Solo":       uniforms.Solo,
+		"TimeMs":     uniforms.TimeMs,
+		"FadeInThreshold":  uniforms.FadeInThreshold,
+		"FadeOutThreshold": uniforms.FadeOutThreshold,
+	}
+	
+	img.DrawTrianglesShader(vertices, sr.baseIndices, noteShader, options)
 }
 
 // Global shader renderer instance

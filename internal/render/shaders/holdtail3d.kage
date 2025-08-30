@@ -1,0 +1,247 @@
+//kage:unit pixels
+package main
+
+// Hold note tail shader uniforms (3D version)
+var Progress float         // Current note progress (not used for tail)
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Note color alpha
+var Glow float             // Glow intensity
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var TimeMs float           // Time in milliseconds for animations
+var HoldStartProgress float // Where hold starts (0.0-1.0)
+var HoldEndProgress float   // Where hold ends (0.0-1.0)
+var WasHit float           // 1.0 if hit, 0.0 otherwise
+var WasReleased float      // 1.0 if released, 0.0 otherwise
+var FadeInThreshold float  // Progress below which notes are invisible
+var FadeOutThreshold float // Progress above which notes are fully visible
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Calculate start and end track positions for continuous connection
+    startP1X := CenterX + (Point1X - CenterX) * HoldStartProgress
+    startP1Y := CenterY + (Point1Y - CenterY) * HoldStartProgress
+    startP2X := CenterX + (Point2X - CenterX) * HoldStartProgress
+    startP2Y := CenterY + (Point2Y - CenterY) * HoldStartProgress  
+    startP3X := CenterX + (Point3X - CenterX) * HoldStartProgress
+    startP3Y := CenterY + (Point3Y - CenterY) * HoldStartProgress
+    
+    endP1X := CenterX + (Point1X - CenterX) * HoldEndProgress
+    endP1Y := CenterY + (Point1Y - CenterY) * HoldEndProgress
+    endP2X := CenterX + (Point2X - CenterX) * HoldEndProgress
+    endP2Y := CenterY + (Point2Y - CenterY) * HoldEndProgress
+    endP3X := CenterX + (Point3X - CenterX) * HoldEndProgress  
+    endP3Y := CenterY + (Point3Y - CenterY) * HoldEndProgress
+    
+    // Create solid connections for both track segments
+    // Segment 1: swept area from (startP1->startP2) to (endP1->endP2)
+    // Segment 2: swept area from (startP2->startP3) to (endP2->endP3)
+    
+    // Find minimum distance to either swept segment
+    distToSweptSeg1 := distanceToSweptSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y, endP1X, endP1Y, endP2X, endP2Y)
+    distToSweptSeg2 := distanceToSweptSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y, endP2X, endP2Y, endP3X, endP3Y)
+    
+    minDist := min(distToSweptSeg1, distToSweptSeg2)
+    
+    // Calculate the progress along the hold for this fragment
+    // Find which segment is closer and interpolate accordingly
+    var currentProgress float
+    if distToSweptSeg1 <= distToSweptSeg2 {
+        // Closer to segment 1, find the progress along this segment
+        currentProgress = findProgressOnSweptSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y, endP1X, endP1Y, endP2X, endP2Y, HoldStartProgress, HoldEndProgress)
+    } else {
+        // Closer to segment 2, find the progress along this segment  
+        currentProgress = findProgressOnSweptSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y, endP2X, endP2Y, endP3X, endP3Y, HoldStartProgress, HoldEndProgress)
+    }
+    
+    // Calculate tail width (thinner than regular notes)
+    baseWidth := Width * WidthScale * currentProgress * 2.0 // Same base as regular notes
+    tailWidth := baseWidth * 0.4 // 40% width for thin tail
+    halfWidth := tailWidth * 0.5
+    
+    // Distance-based alpha for anti-aliasing
+    alpha := 1.0 - smoothstep(halfWidth-0.5, halfWidth+0.5, minDist)
+    
+    if alpha <= 0.0 {
+        return vec4(0)
+    }
+    
+    // Apply fade in/out based on progress
+    fadeIntensity := 1.0
+    if currentProgress < FadeInThreshold {
+        fadeIntensity = 0.0
+    } else if currentProgress < FadeOutThreshold {
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        if fadeRange > 0.0 {
+            fadeProgress := (currentProgress - FadeInThreshold) / fadeRange
+            fadeIntensity = fadeProgress
+        }
+    }
+    
+    // ===== TAIL 3D EFFECTS =====
+    
+    // Distance from fragment to track centerline (normalized 0-1)
+    normalizedDist := clamp(minDist / halfWidth, 0.0, 1.0)
+    
+    // 1. Modest radial brightness for subtle tail depth
+    radialBrightness := 1.0 + (1.0 - normalizedDist) * 0.4 // Up to 1.4x brighter in center
+    
+    // 2. Minimal specular for tail (just subtle sheen)
+    specularBoost := 1.0 + (1.0 - normalizedDist) * 0.2 // Subtle highlight
+    
+    // 3. Gentle edge darkening for tail definition
+    edgeDarkening := 1.0
+    if normalizedDist > 0.8 {
+        darkeningFactor := (normalizedDist - 0.8) / 0.2
+        edgeDarkening = 1.0 - (darkeningFactor * 0.15) // Very gentle edge effect
+    }
+    
+    // 4. Depth-based intensity
+    depthIntensity := 0.6 + (currentProgress * 0.4) // Range 0.6 to 1.0
+    
+    // 5. Gradient along tail length (darker at start, brighter toward end)  
+    // Calculate normalized progress along the hold (0.0 to 1.0)
+    holdProgress := 0.5 // Default
+    if HoldEndProgress != HoldStartProgress {
+        holdProgress = (currentProgress - HoldStartProgress) / (HoldEndProgress - HoldStartProgress)
+        holdProgress = clamp(holdProgress, 0.0, 1.0)
+    }
+    gradientEffect := 0.7 + (holdProgress * 0.3) // Range 0.7 to 1.0
+    
+    // 6. State-based effects
+    stateModifier := 1.0
+    if WasHit > 0.5 {
+        if WasReleased > 0.5 {
+            // Released hold - dimmer tail
+            stateModifier = 0.5
+        } else {
+            // Active hold - subtle pulse on tail
+            pulse := sin(TimeMs * 0.002) * 0.1 + 0.9
+            stateModifier = pulse
+        }
+    }
+    
+    // Combine all tail effects
+    threeDEffect := depthIntensity * radialBrightness * specularBoost * edgeDarkening * gradientEffect * stateModifier
+    
+    // Apply final color with tail effects and fade
+    finalR := ColorR * fadeIntensity * threeDEffect
+    finalG := ColorG * fadeIntensity * threeDEffect
+    finalB := ColorB * fadeIntensity * threeDEffect
+    
+    // Tail is more transparent than head
+    tailAlpha := ColorA * alpha * 0.8
+    
+    finalColor := vec4(finalR, finalG, finalB, tailAlpha)
+    
+    // Add subtle glow if enabled
+    if Glow > 0.0 {
+        glowRadius := tailWidth * 1.2
+        glowAlpha := Glow * (1.0 - smoothstep(0.0, glowRadius, minDist))
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.1)
+        finalColor = mix(finalColor, glowColor, glowAlpha)
+    }
+    
+    // Solo note animation (subtle for tail)
+    if Solo > 0.5 {
+        pulse := sin(TimeMs * 0.003) * 0.05 + 0.95
+        finalColor.rgb *= pulse
+    }
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    abx := bx - ax
+    aby := by - ay
+    apx := px - ax
+    apy := py - ay
+    
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}
+
+// Helper function to calculate distance from point to swept segment (quadrilateral)
+// Forms a quadrilateral from startA->startB to endA->endB
+func distanceToSweptSegment(px, py, startAX, startAY, startBX, startBY, endAX, endAY, endBX, endBY float) float {
+    // Calculate distance to all four edges of the quadrilateral and take minimum
+    
+    // Edge 1: start segment (startA -> startB)
+    dist1 := distanceToLineSegment(px, py, startAX, startAY, startBX, startBY)
+    
+    // Edge 2: end segment (endA -> endB)  
+    dist2 := distanceToLineSegment(px, py, endAX, endAY, endBX, endBY)
+    
+    // Edge 3: left side (startA -> endA)
+    dist3 := distanceToLineSegment(px, py, startAX, startAY, endAX, endAY)
+    
+    // Edge 4: right side (startB -> endB)
+    dist4 := distanceToLineSegment(px, py, startBX, startBY, endBX, endBY)
+    
+    return min(min(dist1, dist2), min(dist3, dist4))
+}
+
+// Helper function to find progress along a swept segment
+func findProgressOnSweptSegment(px, py, startAX, startAY, startBX, startBY, endAX, endAY, endBX, endBY, startProgress, endProgress float) float {
+    // Find the parameter t (0 to 1) along the swept surface that's closest to the point
+    // We'll project the point onto the centerline of the swept segment
+    
+    centerStartX := (startAX + startBX) * 0.5
+    centerStartY := (startAY + startBY) * 0.5
+    centerEndX := (endAX + endBX) * 0.5
+    centerEndY := (endAY + endBY) * 0.5
+    
+    // Vector along the sweep direction
+    sweepDirX := centerEndX - centerStartX
+    sweepDirY := centerEndY - centerStartY
+    sweepLength := sqrt(sweepDirX*sweepDirX + sweepDirY*sweepDirY)
+    
+    if sweepLength < 0.001 {
+        return startProgress // Very short hold, return start
+    }
+    
+    // Normalize sweep direction
+    sweepDirX /= sweepLength
+    sweepDirY /= sweepLength
+    
+    // Project point onto sweep centerline
+    toPointX := px - centerStartX
+    toPointY := py - centerStartY
+    projection := toPointX*sweepDirX + toPointY*sweepDirY
+    
+    // Clamp to sweep bounds
+    projection = max(0.0, min(sweepLength, projection))
+    
+    // Convert to progress (0 to 1 along the sweep)
+    t := projection / sweepLength
+    
+    // Interpolate between start and end progress
+    return startProgress + (endProgress - startProgress) * t
+}

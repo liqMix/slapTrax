@@ -15,6 +15,7 @@ type ShaderManager struct {
 	noteShader3D     *ebiten.Shader
 	holdNoteShader2D *ebiten.Shader
 	holdNoteShader3D *ebiten.Shader
+	holdTailShader3D *ebiten.Shader // New tail shader for 3D hold notes
 }
 
 var Manager *ShaderManager
@@ -94,6 +95,17 @@ func (sm *ShaderManager) loadShaders() error {
 		return err
 	}
 	
+	// Load 3D hold tail shader
+	tailSource3D, err := shaderFS.ReadFile("holdtail3d.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.holdTailShader3D, err = ebiten.NewShader(tailSource3D)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -113,4 +125,13 @@ func (sm *ShaderManager) GetHoldNoteShader() *ebiten.Shader {
 		return sm.holdNoteShader2D
 	}
 	return sm.holdNoteShader3D
+}
+
+// GetHoldTailShader returns the hold tail shader (only available in 3D mode)
+func (sm *ShaderManager) GetHoldTailShader() *ebiten.Shader {
+	// Only return tail shader in 3D mode, otherwise nil
+	if user.S() == nil || !user.S().Use3DNotes {
+		return nil
+	}
+	return sm.holdTailShader3D
 }
