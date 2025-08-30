@@ -25,6 +25,8 @@ const (
 	GameStateExit                GameState = l.EXIT
 	GameStateHowToPlay           GameState = "howtoplay"
 	GameStateKeyConfig           GameState = l.SETTINGS_GAME_KEY_CONFIG
+	GameStateChartSelection      GameState = "chartselection"
+	GameStateEditorSongSelection GameState = "editorsongselection"
 )
 
 func (gs GameState) String() string {

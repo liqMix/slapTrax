@@ -413,20 +413,20 @@ func (r *EditorRenderer) drawTimeIndicator(screen *ebiten.Image, time int64, clr
 }
 
 func (r *EditorRenderer) drawGrid(screen *ebiten.Image, currentTime int64) {
-	// Get fixed note durations (independent of current time division)
-	wholeNoteSize := r.state.GetWholeNoteMs()   // 1/1 - whole notes/measures
-	quarterNoteSize := r.state.GetQuarterNoteMs() // 1/4 - quarter notes  
-	eighthNoteSize := r.state.GetEighthNoteMs()   // 1/8 - eighth notes
-	
 	// Apply lane speed to travel time (exactly matching play renderer)
 	baseTravelTime := 10000.0
 	travelTime := int64(baseTravelTime / r.state.GetLaneSpeed())
 	
+	// Convert current time to beats for precise alignment
+	currentBeat := r.state.MsIntToBeats(currentTime)
+	
 	// Draw eighth note markers (faintest) - 1/8 notes
 	for i := int64(0); i < 32; i++ {
-		eighthTime := ((currentTime / eighthNoteSize) + i) * eighthNoteSize
-		progress := math.Max(0, 1-float64(eighthTime-currentTime)/float64(travelTime))
+		// Calculate beat position precisely - start from nearest eighth beat boundary
+		eighthBeat := math.Floor(currentBeat*2)/2 + float64(i)/2
+		eighthTimeMs := r.state.BeatsToMsInt(eighthBeat)
 		
+		progress := math.Max(0, 1-float64(eighthTimeMs-currentTime)/float64(travelTime))
 		if progress > 0 && progress <= 1.0 {
 			r.drawMeasureMarker(screen, progress, color.RGBA{32, 32, 32, 50}) // Faintest
 		}
@@ -434,9 +434,11 @@ func (r *EditorRenderer) drawGrid(screen *ebiten.Image, currentTime int64) {
 	
 	// Draw quarter note markers (medium) - 1/4 notes
 	for i := int64(0); i < 16; i++ {
-		quarterTime := ((currentTime / quarterNoteSize) + i) * quarterNoteSize
-		progress := math.Max(0, 1-float64(quarterTime-currentTime)/float64(travelTime))
+		// Calculate beat position precisely - start from nearest quarter beat boundary
+		quarterBeat := math.Floor(currentBeat) + float64(i)
+		quarterTimeMs := r.state.BeatsToMsInt(quarterBeat)
 		
+		progress := math.Max(0, 1-float64(quarterTimeMs-currentTime)/float64(travelTime))
 		if progress > 0 && progress <= 1.0 {
 			r.drawMeasureMarker(screen, progress, color.RGBA{64, 64, 64, 100}) // Medium visibility
 		}
@@ -444,9 +446,11 @@ func (r *EditorRenderer) drawGrid(screen *ebiten.Image, currentTime int64) {
 	
 	// Draw whole note/measure markers (brightest) - 1/1 notes  
 	for i := int64(0); i < 4; i++ {
-		wholeTime := ((currentTime / wholeNoteSize) + i) * wholeNoteSize
-		progress := math.Max(0, 1-float64(wholeTime-currentTime)/float64(travelTime))
+		// Calculate measure position precisely - start from nearest measure boundary
+		wholeBeat := math.Floor(currentBeat/4)*4 + float64(i*4)
+		wholeTimeMs := r.state.BeatsToMsInt(wholeBeat)
 		
+		progress := math.Max(0, 1-float64(wholeTimeMs-currentTime)/float64(travelTime))
 		if progress > 0 && progress <= 1.0 {
 			r.drawMeasureMarker(screen, progress, color.RGBA{128, 128, 128, 200}) // Most prominent
 		}

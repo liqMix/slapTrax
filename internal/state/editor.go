@@ -3,10 +3,12 @@ package state
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -16,10 +18,13 @@ import (
 	"github.com/liqmix/slaptrax/internal/system"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/types/schema"
+	"github.com/liqmix/slaptrax/internal/ui"
 )
 
 type EditorArgs struct {
-	Song *types.Song
+	Song      *types.Song // For editing existing bundled songs
+	ChartPath string      // Path to existing chart file to load
+	AudioPath string      // Path to audio file for new charts
 }
 
 type ChartAction struct {
@@ -48,6 +53,8 @@ type EditorState struct {
 	types.BaseGameState
 	song           *types.Song
 	chart          *EditorChart
+	chartPath      string // Store original chart path for re-entry
+	audioPath      string // Store original audio path for re-entry
 	currentTime    int64
 	selectedTrack  types.TrackName
 	playing        bool
@@ -72,11 +79,14 @@ type EditorState struct {
 	offsetIncreaseHeldStart time.Time // When Alt+Plus started being held
 	offsetDecreaseHeldStart time.Time // When Alt+Minus started being held
 	offsetRapidAdjustment   bool      // Whether rapid adjustment is active
+	
 }
 
 func NewEditorState(args *EditorArgs) *EditorState {
 	editor := &EditorState{
 		song:          args.Song,
+		chartPath:     args.ChartPath,
+		audioPath:     args.AudioPath,
 		currentTime:   0,
 		selectedTrack: types.TrackLeftTop,
 		snapToGrid:    true,
@@ -92,10 +102,19 @@ func NewEditorState(args *EditorArgs) *EditorState {
 		audioInitialized: false, // Audio not initialized at start
 	}
 
-	// Initialize empty chart or load existing one
+	// Initialize chart based on provided arguments
 	if args.Song != nil {
+		// Editing an existing bundled song
 		editor.initializeChart()
+	} else if args.ChartPath != "" {
+		// Loading an existing chart folder
+		editor.loadChartFromFolder(args.ChartPath)
+	} else if args.AudioPath != "" {
+		// Creating new chart with provided audio - for now just create empty chart
+		// TODO: Implement audio file loading
+		editor.createEmptyChart()
 	} else {
+		// No specific arguments, create empty chart
 		editor.createEmptyChart()
 	}
 
@@ -193,8 +212,12 @@ func (e *EditorState) syncEventsToManager() {
 
 func (e *EditorState) setupControls() {
 	// Only set up essential actions that don't conflict
-	e.SetAction(input.ActionBack, e.exitEditor)
+	e.SetAction(input.ActionBack, e.handleBackAction)
 	// Note: Using direct key input in Update() for navigation to avoid conflicts
+}
+
+func (e *EditorState) handleBackAction() {
+	e.exitEditor()
 }
 
 func (e *EditorState) moveLeft() {
@@ -245,15 +268,60 @@ func (e *EditorState) goToLastNote() {
 }
 
 func (e *EditorState) exitEditor() {
+	// Create modal state for exit confirmation
+	message := "Are you sure you want to exit the editor?"
 	if e.chart.modified {
-		// TODO: Show save confirmation dialog
+		message = "You have unsaved changes. Exit without saving?"
 	}
+	
+	// Create the modal once
+	var modal *ui.ConfirmModal
+	
+	modalArgs := &ModalStateArgs{
+		Update: func(setNext func(types.GameState, interface{})) {
+			// Create modal if not already created
+			if modal == nil {
+				modal = ui.NewConfirmModal(ui.ConfirmModalOptions{
+					Title:   "Exit Editor",
+					Message: message,
+					YesText: "Exit",
+					NoText:  "Stay",
+					OnYes: func() {
+						e.confirmExit(setNext)
+					},
+					OnNo: func() {
+						e.cancelExit(setNext)
+					},
+					OnCancel: func() {
+						e.cancelExit(setNext)
+					},
+				})
+			}
+			modal.Update()
+		},
+		Draw: func(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+			if modal != nil {
+				modal.Draw(screen, opts)
+			}
+		},
+	}
+	
+	// Transition to modal state
+	e.SetNextState(types.GameStateModal, modalArgs)
+}
+
+func (e *EditorState) confirmExit(setNext func(types.GameState, interface{})) {
 	audio.StopAll()
 	
 	// Resume background music when exiting to title
 	audio.PlayBGM(audio.BGMTitle)
 	
-	e.SetNextState(types.GameStateTitle, nil)
+	setNext(types.GameStateTitle, nil)
+}
+
+func (e *EditorState) cancelExit(setNext func(types.GameState, interface{})) {
+	// Return to the previous state (editor) without recreating it
+	setNext(types.GameStateBack, nil)
 }
 
 func (e *EditorState) getTimeStep() int64 {
@@ -280,6 +348,12 @@ func (e *EditorState) calculateTimeDivision(division int) int64 {
 
 func (e *EditorState) adjustBPM(delta float64) {
 	e.bpm = math.Max(30.0, math.Min(300.0, e.bpm+delta)) // Clamp BPM between 30-300
+	
+	// Keep song BPM synchronized with editor BPM
+	if e.song != nil {
+		e.song.BPM = int(e.bpm)
+	}
+	
 	e.updateGridSize()
 	e.recalculateTimestamps() // Update all notes and events to new BPM
 }
@@ -344,6 +418,15 @@ func (e *EditorState) adjustLaneSpeed(delta float64) {
 
 func (e *EditorState) GetAudioOffset() int64 {
 	return e.audioOffset
+}
+
+// Public beat conversion methods for renderer access
+func (e *EditorState) MsIntToBeats(ms int64) float64 {
+	return e.msIntToBeats(ms)
+}
+
+func (e *EditorState) BeatsToMsInt(beats float64) int64 {
+	return e.beatsToMsInt(beats)
 }
 
 // Beat conversion utilities (high precision)
@@ -740,21 +823,28 @@ func (e *EditorState) startPlayback() {
 	
 	// Initialize audio if song is available, but don't start playing yet
 	// The EventManager will handle playing the audio when it hits the audio start event
-	if e.song != nil && !e.audioInitialized {
-		audio.InitSong(e.song)
-		e.audioInitialized = true
-	}
+	e.safeInitSong(e.song)
 	// If no song, playback will just update the timeline position for editing
 }
 
 func (e *EditorState) stopPlayback() {
 	e.playing = false
 	
-	// Pause audio instead of stopping to avoid re-initialization
-	audio.PauseSong()
+	// Stop all audio to prevent overlapping
+	audio.StopAll()
+	e.audioInitialized = false
 	
 	// Snap to nearest time division when stopping playback
 	e.currentTime = e.snapTime(e.currentTime)
+}
+
+// safeInitSong prevents multiple audio initializations
+func (e *EditorState) safeInitSong(song *types.Song) {
+	if !e.audioInitialized && song != nil {
+		audio.InitSong(song)
+		e.audioInitialized = true
+		logger.Debug("Audio initialized for song: %s", song.Title)
+	}
 }
 
 func (e *EditorState) undo() {
@@ -930,7 +1020,7 @@ func (e *EditorState) Update() error {
 			Song:                 e.song,
 			Chart:                nil, // TODO: Convert EditorChart to Chart if needed
 			AudioOffset:          e.audioOffset,
-			AudioInitSong:        audio.InitSong,
+			AudioInitSong:        e.safeInitSong,
 			AudioPlaySong:        audio.PlaySong,
 			AudioSetSongPosition: audio.SetSongPositionMS,
 			AudioPlaySFX:         func(sfxCode string) {
@@ -1070,6 +1160,7 @@ func (e *EditorState) Update() error {
 		e.stopPlayback()
 	}
 	
+	
 	if input.K.Is(ebiten.KeyPageUp, input.JustPressed) {
 		// Jump back by 4 measures
 		measureTime := e.calculateTimeDivision(1) * 4 
@@ -1190,6 +1281,9 @@ func (e *EditorState) openAudioFile() {
 }
 
 func (e *EditorState) loadExternalSong(audioPath string) {
+	// Stop any existing playback first
+	e.stopPlayback()
+	
 	// Create a new song from external audio file
 	baseName := filepath.Base(audioPath)
 	songName := baseName[:len(baseName)-len(filepath.Ext(baseName))]
@@ -1219,18 +1313,30 @@ func (e *EditorState) saveChart() {
 		return
 	}
 	
-	defaultName := fmt.Sprintf("%s_%s.json", e.song.Title, e.chart.metadata.Name)
-	filePath, err := system.SaveJSONFileDialog(defaultName)
+	// Select folder to save the chart in
+	folderPath, err := system.SelectFolderDialog("Select folder to save chart")
 	if err != nil {
-		logger.Warn("Failed to show save dialog: %v", err)
+		logger.Warn("Failed to show folder dialog: %v", err)
 		return
 	}
 	
-	if filePath == "" {
+	if folderPath == "" {
 		return // User cancelled
 	}
 	
-	// Export to JSON format
+	// Create song folder name based on title
+	songFolderName := strings.ReplaceAll(e.song.Title, " ", "-")
+	songFolderName = strings.ToLower(songFolderName)
+	songFolderPath := filepath.Join(folderPath, songFolderName)
+	
+	// Create the song folder
+	err = os.MkdirAll(songFolderPath, 0755)
+	if err != nil {
+		logger.Error("Failed to create song folder: %v", err)
+		return
+	}
+	
+	// Export to JSON format and save as song.json
 	chartData := e.exportToJSON()
 	data, err := json.MarshalIndent(chartData, "", "  ")
 	if err != nil {
@@ -1238,28 +1344,141 @@ func (e *EditorState) saveChart() {
 		return
 	}
 	
-	err = os.WriteFile(filePath, data, 0644)
+	songJSONPath := filepath.Join(songFolderPath, "song.json")
+	err = os.WriteFile(songJSONPath, data, 0644)
 	if err != nil {
 		logger.Error("Failed to save chart file: %v", err)
 		return
 	}
 	
+	// Copy audio file if available
+	if e.song.AudioPath != "" {
+		srcAudioPath := e.song.AudioPath
+		destAudioPath := filepath.Join(songFolderPath, "audio.ogg")
+		
+		// Check if source exists
+		if _, err := os.Stat(srcAudioPath); err == nil {
+			// Copy the audio file
+			err = e.copyFile(srcAudioPath, destAudioPath)
+			if err != nil {
+				logger.Warn("Failed to copy audio file: %v", err)
+			} else {
+				logger.Debug("Audio file copied to: %s", destAudioPath)
+			}
+		} else {
+			logger.Warn("Source audio file not found: %s", srcAudioPath)
+		}
+	}
+	
 	e.chart.modified = false
-	logger.Debug("Chart saved to: %s", filePath)
+	logger.Debug("Chart saved to folder: %s", songFolderPath)
 }
 
-func (e *EditorState) loadChart() {
-	filePath, err := system.OpenJSONFileDialog()
+// copyFile copies a file from src to dst
+func (e *EditorState) copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
 	if err != nil {
-		logger.Warn("Failed to open chart dialog: %v", err)
+		return err
+	}
+	defer sourceFile.Close()
+	
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+	
+	_, err = io.Copy(destFile, sourceFile)
+	return err
+}
+
+// loadChartFromFolder loads a chart from a folder path (used during initialization)
+func (e *EditorState) loadChartFromFolder(folderPath string) {
+	// Validate that the folder contains required files
+	songJSONPath := filepath.Join(folderPath, "song.json")
+	audioPath := filepath.Join(folderPath, "audio.ogg")
+	
+	// Check if song.json exists
+	if _, err := os.Stat(songJSONPath); os.IsNotExist(err) {
+		logger.Error("Chart folder missing song.json: %s", folderPath)
+		e.createEmptyChart()
 		return
 	}
 	
-	if filePath == "" {
+	// Check if audio.ogg exists
+	if _, err := os.Stat(audioPath); os.IsNotExist(err) {
+		logger.Warn("Chart folder missing audio.ogg: %s", folderPath)
+		audioPath = "" // Clear audio path if not found
+	}
+	
+	// Read the song.json file
+	data, err := os.ReadFile(songJSONPath)
+	if err != nil {
+		logger.Error("Failed to read chart file: %v", err)
+		e.createEmptyChart()
+		return
+	}
+	
+	var songData schema.SongDataV2
+	err = json.Unmarshal(data, &songData)
+	if err != nil {
+		logger.Error("Failed to parse chart file: %v", err)
+		e.createEmptyChart()
+		return
+	}
+	
+	// Load the first chart for editing
+	if len(songData.Charts) == 0 {
+		logger.Warn("No charts found in file")
+		e.createEmptyChart()
+		return
+	}
+	
+	var firstChartData schema.ChartDataV2
+	for _, chartData := range songData.Charts {
+		firstChartData = chartData
+		break
+	}
+	
+	// Set the audio path in the song data if found
+	if audioPath != "" {
+		songData.Audio.File = audioPath
+	}
+	
+	e.importFromJSON(&songData, &firstChartData)
+	logger.Debug("Chart loaded from folder during initialization: %s", folderPath)
+}
+
+func (e *EditorState) loadChart() {
+	// Select folder containing the chart
+	folderPath, err := system.SelectFolderDialog("Select chart folder")
+	if err != nil {
+		logger.Warn("Failed to open folder dialog: %v", err)
+		return
+	}
+	
+	if folderPath == "" {
 		return // User cancelled
 	}
 	
-	data, err := os.ReadFile(filePath)
+	// Validate that the folder contains required files
+	songJSONPath := filepath.Join(folderPath, "song.json")
+	audioPath := filepath.Join(folderPath, "audio.ogg")
+	
+	// Check if song.json exists
+	if _, err := os.Stat(songJSONPath); os.IsNotExist(err) {
+		logger.Error("Chart folder missing song.json: %s", folderPath)
+		return
+	}
+	
+	// Check if audio.ogg exists
+	if _, err := os.Stat(audioPath); os.IsNotExist(err) {
+		logger.Warn("Chart folder missing audio.ogg: %s", folderPath)
+		audioPath = "" // Clear audio path if not found
+	}
+	
+	// Read the song.json file
+	data, err := os.ReadFile(songJSONPath)
 	if err != nil {
 		logger.Error("Failed to read chart file: %v", err)
 		return
@@ -1284,8 +1503,13 @@ func (e *EditorState) loadChart() {
 		break
 	}
 	
+	// Set the audio path in the song data if found
+	if audioPath != "" {
+		songData.Audio.File = audioPath
+	}
+	
 	e.importFromJSON(&songData, &firstChartData)
-	logger.Debug("Chart loaded from: %s", filePath)
+	logger.Debug("Chart loaded from folder: %s", folderPath)
 }
 
 func (e *EditorState) exportToJSON() *schema.SongDataV2 {
@@ -1359,7 +1583,7 @@ func (e *EditorState) exportToJSON() *schema.SongDataV2 {
 		Metadata: schema.SongMetadata{
 			Title:           e.song.Title,
 			Artist:          e.song.Artist,
-			BPM:             e.song.BPM,
+			BPM:             int(e.bpm), // Use current editor BPM
 			PreviewStart:    30000, // Default preview start
 			Duration:      int64(e.song.Length),
 			ChartedBy:       "Chart Editor",
@@ -1367,7 +1591,8 @@ func (e *EditorState) exportToJSON() *schema.SongDataV2 {
 			DifficultyRange: [2]int{e.chart.metadata.Difficulty, e.chart.metadata.Difficulty},
 		},
 		Audio: schema.AudioInfo{
-			File: filepath.Base(e.song.AudioPath),
+			File:   filepath.Base(e.song.AudioPath),
+			Offset: e.audioOffset, // Save current audio offset
 		},
 		Visual: schema.VisualInfo{
 			Theme: "default",
@@ -1381,6 +1606,9 @@ func (e *EditorState) exportToJSON() *schema.SongDataV2 {
 }
 
 func (e *EditorState) importFromJSON(songData *schema.SongDataV2, chartData *schema.ChartDataV2) {
+	// Stop any existing playback and cleanup audio
+	e.stopPlayback()
+	
 	// Create song from metadata
 	e.song = &types.Song{
 		Title:     songData.Metadata.Title,
@@ -1390,6 +1618,13 @@ func (e *EditorState) importFromJSON(songData *schema.SongDataV2, chartData *sch
 		AudioPath: songData.Audio.File, // This might need full path resolution
 		Charts:    make(map[types.Difficulty]*types.Chart),
 	}
+	
+	// Set editor BPM and audio offset from loaded data
+	e.bpm = float64(songData.Metadata.BPM)
+	e.audioOffset = songData.Audio.Offset
+	
+	// Reset audio initialization flag for new song
+	e.audioInitialized = false
 	
 	// Create chart
 	e.chart = &EditorChart{
@@ -1505,7 +1740,8 @@ func stringToTrackName(trackStr string) types.TrackName {
 	}
 }
 
-func (e *EditorState) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {}
+func (e *EditorState) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+}
 
 // Helper functions
 func abs(x int64) int64 {

@@ -72,6 +72,10 @@ func New(s types.GameState, arg interface{}) State {
 		state = NewKeyConfigState(arg.(*FloatStateArgs))
 	case types.GameStateEditor:
 		state = NewEditorState(arg.(*EditorArgs))
+	case types.GameStateChartSelection:
+		state = NewChartSelectionState()
+	case types.GameStateEditorSongSelection:
+		state = NewEditorSongSelectionState()
 	}
 
 	if state == nil {

@@ -92,7 +92,7 @@ func OpenAudioFileDialog() (string, error) {
 // SaveJSONFileDialog opens a Windows file dialog for saving JSON files
 func SaveJSONFileDialog(defaultName string) (string, error) {
 	title := syscall.StringToUTF16Ptr("Save Chart")
-	filter := syscall.StringToUTF16Ptr("JSON Files\x00*.json\x00All Files\x00*.*\x00")
+	filter := utf16.Encode([]rune("JSON Files\x00*.json\x00All Files\x00*.*\x00\x00"))
 	
 	filename := make([]uint16, 260)
 	if defaultName != "" {
@@ -101,7 +101,7 @@ func SaveJSONFileDialog(defaultName string) (string, error) {
 	
 	ofn := openFileName{
 		lStructSize:     uint32(unsafe.Sizeof(openFileName{})),
-		lpstrFilter:     filter,
+		lpstrFilter:     &filter[0],
 		nFilterIndex:    1,
 		lpstrFile:       &filename[0],
 		nMaxFile:        260,
@@ -121,13 +121,13 @@ func SaveJSONFileDialog(defaultName string) (string, error) {
 // OpenJSONFileDialog opens a Windows file dialog for selecting JSON chart files
 func OpenJSONFileDialog() (string, error) {
 	title := syscall.StringToUTF16Ptr("Open Chart")
-	filter := syscall.StringToUTF16Ptr("JSON Files\x00*.json\x00All Files\x00*.*\x00")
+	filter := utf16.Encode([]rune("JSON Files\x00*.json\x00All Files\x00*.*\x00\x00"))
 	
 	filename := make([]uint16, 260)
 	
 	ofn := openFileName{
 		lStructSize:     uint32(unsafe.Sizeof(openFileName{})),
-		lpstrFilter:     filter,
+		lpstrFilter:     &filter[0],
 		nFilterIndex:    1,
 		lpstrFile:       &filename[0],
 		nMaxFile:        260,
