@@ -4,6 +4,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/display"
+	"github.com/liqmix/slaptrax/internal/logger"
+	"github.com/liqmix/slaptrax/internal/render/shaders"
 	"github.com/liqmix/slaptrax/internal/state"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
@@ -26,20 +28,37 @@ func NewPlayRender(s state.State) *Play {
 	}
 	p.BaseRenderer.Init(p.static)
 
-	// awful but idc
-	cache.Path.RemoveCbs()
-	cb := func() {
-		go func() {
-			if cache.Path.IsBuilding() {
-				return
-			}
-			cache.Path.SetIsBuilding(true)
-			RebuildVectorCache()
-			cache.Path.SetIsBuilding(false)
-		}()
+	// Initialize shader system
+	if err := shaders.InitManager(); err != nil {
+		logger.Error("Failed to initialize shader manager: %v", err)
+		logger.Info("Falling back to vertex-based rendering")
+		ShaderRenderingEnabled = false
+	} else {
+		shaders.InitRenderer()
+		// Enable shader rendering by default for testing
+		ShaderRenderingEnabled = true
+		logger.Info("Shader-based note rendering initialized successfully")
 	}
-	cache.Path.AddCb(&cb)
-	cache.Path.Clear()
+
+	// Only initialize vector cache system if shaders failed
+	if !ShaderRenderingEnabled {
+		logger.Info("Initializing vector cache system")
+		cache.Path.RemoveCbs()
+		cb := func() {
+			go func() {
+				if cache.Path.IsBuilding() {
+					return
+				}
+				cache.Path.SetIsBuilding(true)
+				RebuildVectorCache()
+				cache.Path.SetIsBuilding(false)
+			}()
+		}
+		cache.Path.AddCb(&cb)
+		cache.Path.Clear()
+	} else {
+		logger.Info("Skipping vector cache initialization - using shaders")
+	}
 	return p
 }
 
@@ -51,9 +70,13 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	r.BaseRenderer.Draw(screen, opts)
 	r.drawMeasureMarkers(screen)
 
-	// Track vemctors
+	// Track vectors
 	for _, track := range r.state.Tracks {
-		r.addNotePath(track)
+		if ShaderRenderingEnabled {
+			r.addNotePathShader(track, screen)
+		} else {
+			r.addNotePath(track)
+		}
 		r.addJudgementPath(track)
 		if !user.S().DisableLaneEffects {
 			r.addTrackPath(track)

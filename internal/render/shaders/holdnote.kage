@@ -1,0 +1,133 @@
+//kage:unit pixels
+package main
+
+// Hold note shader uniforms (includes all note uniforms plus hold-specific)
+var Progress float         // Current note progress
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Note color alpha
+var Glow float             // Glow intensity
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var TimeMs float           // Time in milliseconds for animations
+var HoldStartProgress float // Where hold starts (0.0-1.0)
+var HoldEndProgress float   // Where hold ends (0.0-1.0)
+var WasHit float           // 1.0 if hit, 0.0 otherwise
+var WasReleased float      // 1.0 if released, 0.0 otherwise
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // We'll calculate hold positions dynamically in the loop below
+    
+    // Check if fragment is inside the hold area (trapezoid shape)
+    // We'll use a simple approach: check if the point is inside the polygon
+    // formed by the start and end track shapes
+    
+    // For simplicity, we'll approximate by checking distance to the two track segments
+    // at various points along the hold length
+    
+    minDistanceToHold := 1000000.0 // Large number
+    
+    // Sample multiple points along the hold to find minimum distance
+    for i := 0.0; i < 10.0; i += 1.0 {
+        t := i / 9.0 // 0.0 to 1.0
+        progress := HoldStartProgress + (HoldEndProgress - HoldStartProgress) * t
+        
+        // Interpolate track points at this progress
+        p1X := CenterX + (Point1X - CenterX) * progress
+        p1Y := CenterY + (Point1Y - CenterY) * progress
+        p2X := CenterX + (Point2X - CenterX) * progress
+        p2Y := CenterY + (Point2Y - CenterY) * progress
+        p3X := CenterX + (Point3X - CenterX) * progress
+        p3Y := CenterY + (Point3Y - CenterY) * progress
+        
+        // Distance to track segments
+        dist1 := distanceToLineSegment(fragX, fragY, p1X, p1Y, p2X, p2Y)
+        dist2 := distanceToLineSegment(fragX, fragY, p2X, p2Y, p3X, p3Y)
+        
+        segmentDist := min(dist1, dist2)
+        effectiveWidth := Width * progress * WidthScale
+        
+        // If within this segment's width, we're inside the hold
+        if segmentDist < effectiveWidth * 0.5 {
+            minDistanceToHold = 0.0
+            break
+        }
+        
+        minDistanceToHold = min(minDistanceToHold, segmentDist - effectiveWidth * 0.5)
+    }
+    
+    if minDistanceToHold > 2.0 {
+        return vec4(0)
+    }
+    
+    // Calculate alpha based on distance to hold area
+    alpha := 1.0 - smoothstep(0.0, 2.0, minDistanceToHold)
+    
+    // Base color
+    finalColor := vec4(ColorR, ColorG, ColorB, ColorA * alpha)
+    
+    // Add hit effect
+    if WasHit > 0.5 {
+        // Add slight brightness increase
+        finalColor.rgb *= 1.2
+        
+        if WasReleased < 0.5 {
+            // Still holding - add pulsing effect
+            pulse := sin(TimeMs * 0.01) * 0.1 + 1.0
+            finalColor.rgb *= pulse
+        }
+    }
+    
+    // Add glow for active holds
+    if Glow > 0.0 || (WasHit > 0.5 && WasReleased < 0.5) {
+        glowAlpha := 0.5 * (1.0 - smoothstep(0.0, 10.0, minDistanceToHold))
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.4)
+        finalColor = mix(finalColor, glowColor, glowAlpha)
+    }
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    // Vector from A to B
+    abx := bx - ax
+    aby := by - ay
+    
+    // Vector from A to P
+    apx := px - ax
+    apy := py - ay
+    
+    // Project AP onto AB
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        // A and B are the same point, return distance to A
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    // Find closest point on segment
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    // Return distance to closest point
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}
