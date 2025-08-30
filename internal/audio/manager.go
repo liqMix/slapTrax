@@ -2,7 +2,9 @@ package audio
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -155,10 +157,45 @@ func getStream(path string) (io.ReadSeeker, error) {
 	return stream, nil
 }
 
+// getExternalStream loads and decodes audio from an external file path
+func getExternalStream(path string) (io.ReadSeeker, error) {
+	// Read file from disk
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read audio file: %v", err)
+	}
+
+	reader := bytes.NewReader(data)
+	ext := assets.AudioExtFromPath(path)
+	var stream io.ReadSeeker
+	
+	switch ext {
+	case assets.Wav:
+		stream, err = wav.DecodeWithSampleRate(sampleRate, reader)
+	case assets.Ogg:
+		stream, err = vorbis.DecodeWithSampleRate(sampleRate, reader)
+	case assets.Mp3:
+		stream, err = mp3.DecodeWithSampleRate(sampleRate, reader)
+	default:
+		return nil, fmt.Errorf("unsupported audio format: %s", ext)
+	}
+	
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode audio: %v", err)
+	}
+
+	return stream, nil
+}
+
 func getPlayer(path string, c *resound.DSPChannel) (*resound.Player, error) {
+	// Try embedded assets first
 	stream, err := getStream(path)
 	if err != nil {
-		return nil, err
+		// If embedded loading fails, try external file loading
+		stream, err = getExternalStream(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load audio from both embedded and external sources: %v", err)
+		}
 	}
 
 	volume := getVolumeEffect(c)

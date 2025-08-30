@@ -66,6 +66,12 @@ type EditorState struct {
 	laneSpeed      float64 // Editor lane speed (separate from user settings during editing)
 	audioOffset    int64   // Audio starting position offset in milliseconds
 	eventManager   *types.EventManager // Event system for playback execution
+	audioInitialized bool // Track if audio has been initialized to prevent duplicate initialization
+	
+	// Rapid offset adjustment tracking
+	offsetIncreaseHeldStart time.Time // When Alt+Plus started being held
+	offsetDecreaseHeldStart time.Time // When Alt+Minus started being held
+	offsetRapidAdjustment   bool      // Whether rapid adjustment is active
 }
 
 func NewEditorState(args *EditorArgs) *EditorState {
@@ -83,6 +89,7 @@ func NewEditorState(args *EditorArgs) *EditorState {
 		laneSpeed:     1.0, // Default editor speed
 		audioOffset:   0,   // No audio offset by default
 		eventManager:  types.NewEventManager(), // Initialize event system
+		audioInitialized: false, // Audio not initialized at start
 	}
 
 	// Initialize empty chart or load existing one
@@ -125,6 +132,9 @@ func (e *EditorState) initializeChart() {
 			copy(notes, track.AllNotes)
 			e.chart.tracks[track.Name] = notes
 		}
+		
+		// Initialize beat positions for existing content
+		e.initializeBeatPositions()
 	} else {
 		e.createEmptyChart()
 	}
@@ -151,23 +161,17 @@ func (e *EditorState) createEmptyChart() {
 }
 
 func (e *EditorState) generateDefaultEvents() {
-	// Calculate timing based on BPM (default 120 BPM)
-	// Quarter note duration = 60000 / BPM milliseconds
-	quarterNoteMs := int64(60000 / e.bpm)
-	
-	// Measure duration (4 quarter notes)
-	measureMs := quarterNoteMs * 4
-	
+	// Use exact beat-based positioning (measure = 4 beats)
 	// Add countdown beat events on each quarter beat in the second measure (after one measure of silence)
 	for beat := 0; beat < 4; beat++ {
-		countdownTime := measureMs + int64(beat)*quarterNoteMs
-		countdownEvent := types.NewCountdownBeatEvent(countdownTime)
+		// Use exact beat fractions: 4.0, 5.0, 6.0, 7.0
+		beatPosition := 4.0 + float64(beat) // Second measure starts at beat 4
+		countdownEvent := types.NewCountdownBeatEventFromBeat(beatPosition, e.bpm)
 		e.chart.events = append(e.chart.events, countdownEvent)
 	}
 	
-	// Add audio start marker at the beginning of the third measure
-	audioStartTime := measureMs * 2
-	audioStartEvent := types.NewAudioStartEvent(audioStartTime)
+	// Add audio start marker at the beginning of the third measure (exact beat 8.0)
+	audioStartEvent := types.NewAudioStartEventFromBeat(8.0, e.bpm)
 	e.chart.events = append(e.chart.events, audioStartEvent)
 	
 	// Keep events sorted by time
@@ -277,6 +281,7 @@ func (e *EditorState) calculateTimeDivision(division int) int64 {
 func (e *EditorState) adjustBPM(delta float64) {
 	e.bpm = math.Max(30.0, math.Min(300.0, e.bpm+delta)) // Clamp BPM between 30-300
 	e.updateGridSize()
+	e.recalculateTimestamps() // Update all notes and events to new BPM
 }
 
 func (e *EditorState) adjustTimeDivision(up bool) {
@@ -341,6 +346,118 @@ func (e *EditorState) GetAudioOffset() int64 {
 	return e.audioOffset
 }
 
+// Beat conversion utilities (high precision)
+func (e *EditorState) beatsToMs(beats float64) float64 {
+	quarterNoteMs := 60000.0 / e.bpm
+	return beats * quarterNoteMs
+}
+
+func (e *EditorState) msToBeats(ms float64) float64 {
+	quarterNoteMs := 60000.0 / e.bpm
+	return ms / quarterNoteMs
+}
+
+// Legacy integer conversion for compatibility
+func (e *EditorState) beatsToMsInt(beats float64) int64 {
+	return int64(math.Round(e.beatsToMs(beats)))
+}
+
+func (e *EditorState) msIntToBeats(ms int64) float64 {
+	return e.msToBeats(float64(ms))
+}
+
+// initializeBeatPositions calculates beat positions for existing content using the song's original BPM
+func (e *EditorState) initializeBeatPositions() {
+	// Use the song's BPM if available, otherwise use current editor BPM
+	originalBPM := e.bpm
+	if e.song != nil && e.song.BPM > 0 {
+		originalBPM = float64(e.song.BPM)
+	}
+	
+	quarterNoteMs := 60000.0 / originalBPM
+	
+	// Initialize beat positions for notes that don't have them
+	for _, notes := range e.chart.tracks {
+		for _, note := range notes {
+			if note.TargetBeat == 0 && note.Target > 0 {
+				note.TargetBeat = float64(note.Target) / quarterNoteMs
+			}
+			if note.TargetReleaseBeat == 0 && note.TargetRelease > 0 {
+				note.TargetReleaseBeat = float64(note.TargetRelease) / quarterNoteMs
+			}
+		}
+	}
+	
+	// Initialize beat positions for events that don't have them
+	for _, event := range e.chart.events {
+		switch ev := event.(type) {
+		case *types.AudioStartEvent:
+			if ev.BaseEvent.TimeBeat == 0 && ev.BaseEvent.Time > 0 {
+				ev.BaseEvent.TimeBeat = float64(ev.BaseEvent.Time) / quarterNoteMs
+			}
+		case *types.CountdownBeatEvent:
+			if ev.BaseEvent.TimeBeat == 0 && ev.BaseEvent.Time > 0 {
+				ev.BaseEvent.TimeBeat = float64(ev.BaseEvent.Time) / quarterNoteMs
+			}
+		}
+	}
+}
+
+// recalculateTimestamps updates all note and event timestamps when BPM changes
+func (e *EditorState) recalculateTimestamps() {
+	// First, ensure all content has beat positions initialized
+	e.initializeBeatPositions()
+	
+	// Now recalculate all millisecond positions from beat positions using current BPM
+	for _, notes := range e.chart.tracks {
+		for _, note := range notes {
+			if note.TargetBeat > 0 {
+				note.Target = e.beatsToMsInt(note.TargetBeat)
+			}
+			if note.TargetReleaseBeat > 0 {
+				note.TargetRelease = e.beatsToMsInt(note.TargetReleaseBeat)
+			}
+		}
+	}
+	
+	// Update event timestamps from their beat positions  
+	for _, event := range e.chart.events {
+		switch ev := event.(type) {
+		case *types.AudioStartEvent:
+			ev.BaseEvent.RecalculateTime(e.bpm)
+		case *types.CountdownBeatEvent:
+			ev.BaseEvent.RecalculateTime(e.bpm)
+		}
+	}
+	
+	// Re-sync events to event manager with updated timestamps
+	e.syncEventsToManager()
+}
+
+// createNoteAtBeat creates a note at a specific beat position
+func (e *EditorState) createNoteAtBeat(trackName types.TrackName, beatPosition, beatRelease float64) *types.Note {
+	note := types.NewNoteFromBeats(trackName, beatPosition, beatRelease, e.bpm)
+	return note
+}
+
+// createNoteAtTime creates a note at a millisecond position and calculates beat position
+func (e *EditorState) createNoteAtTime(trackName types.TrackName, timeMs, releaseMs int64) *types.Note {
+	beatPosition := e.msIntToBeats(timeMs)
+	beatRelease := float64(0)
+	if releaseMs > 0 {
+		beatRelease = e.msIntToBeats(releaseMs)
+	}
+	
+	// Snap beat positions to ensure they're exact musical fractions
+	beatPosition = e.snapToBeat(beatPosition)
+	if beatRelease > 0 {
+		beatRelease = e.snapToBeat(beatRelease)
+	}
+	
+	note := types.NewNoteFromBeats(trackName, beatPosition, beatRelease, e.bpm)
+	return note
+}
+
 func (e *EditorState) adjustAudioOffset(delta int64) {
 	// Allow audio offset range from -5 seconds to +5 seconds
 	e.audioOffset = max(-5000, min(5000, e.audioOffset+delta))
@@ -366,6 +483,67 @@ func (e *EditorState) isControlHeld() bool {
 		   input.K.Is(ebiten.KeyControlRight, input.Held)
 }
 
+func (e *EditorState) handleRapidOffsetAdjustment() {
+	const throttleDelayMs = 1000 // 1 second delay before rapid adjustment starts
+	const rapidAdjustmentMs = 50 // Adjust every 50ms during rapid mode
+	
+	now := time.Now()
+	
+	// Handle increase (Plus/Equal key)
+	if input.K.Is(ebiten.KeyEqual, input.Held) {
+		if input.K.Is(ebiten.KeyEqual, input.JustPressed) {
+			// Just pressed - do immediate adjustment and start tracking
+			e.adjustAudioOffset(10)
+			e.offsetIncreaseHeldStart = now
+			e.offsetRapidAdjustment = false
+		} else {
+			// Being held - check if we should start rapid adjustment
+			heldDuration := now.Sub(e.offsetIncreaseHeldStart)
+			if heldDuration >= time.Duration(throttleDelayMs)*time.Millisecond && !e.offsetRapidAdjustment {
+				e.offsetRapidAdjustment = true
+			}
+			
+			// If in rapid mode, adjust every rapidAdjustmentMs
+			if e.offsetRapidAdjustment && heldDuration.Milliseconds()%rapidAdjustmentMs < 16 { // ~60fps tolerance
+				e.adjustAudioOffset(10)
+			}
+		}
+	} else {
+		// Reset increase tracking when key is released
+		e.offsetIncreaseHeldStart = time.Time{}
+		if !input.K.Is(ebiten.KeyMinus, input.Held) {
+			e.offsetRapidAdjustment = false
+		}
+	}
+	
+	// Handle decrease (Minus key)
+	if input.K.Is(ebiten.KeyMinus, input.Held) {
+		if input.K.Is(ebiten.KeyMinus, input.JustPressed) {
+			// Just pressed - do immediate adjustment and start tracking
+			e.adjustAudioOffset(-10)
+			e.offsetDecreaseHeldStart = now
+			e.offsetRapidAdjustment = false
+		} else {
+			// Being held - check if we should start rapid adjustment
+			heldDuration := now.Sub(e.offsetDecreaseHeldStart)
+			if heldDuration >= time.Duration(throttleDelayMs)*time.Millisecond && !e.offsetRapidAdjustment {
+				e.offsetRapidAdjustment = true
+			}
+			
+			// If in rapid mode, adjust every rapidAdjustmentMs
+			if e.offsetRapidAdjustment && heldDuration.Milliseconds()%rapidAdjustmentMs < 16 { // ~60fps tolerance
+				e.adjustAudioOffset(-10)
+			}
+		}
+	} else {
+		// Reset decrease tracking when key is released
+		e.offsetDecreaseHeldStart = time.Time{}
+		if !input.K.Is(ebiten.KeyEqual, input.Held) {
+			e.offsetRapidAdjustment = false
+		}
+	}
+}
+
 // Get current time position as a time division fraction (e.g., "3/4", "5/8")
 func (e *EditorState) GetCurrentTimePosition() string {
 	// Calculate how many divisions have passed
@@ -389,11 +567,30 @@ func (e *EditorState) GetCurrentTimePosition() string {
 	}
 }
 
+// snapToBeat snaps a beat position to the nearest grid division
+func (e *EditorState) snapToBeat(beats float64) float64 {
+	if !e.snapToGrid {
+		return beats
+	}
+	
+	// Calculate divisions per beat (e.g., 4 = quarter notes, 16 = sixteenth notes)
+	divisionsPerBeat := float64(e.timeDivision) / 4.0
+	
+	// Snap to nearest division
+	snappedBeats := math.Round(beats * divisionsPerBeat) / divisionsPerBeat
+	return snappedBeats
+}
+
+// snapTime snaps milliseconds to beat grid (legacy function for compatibility)
 func (e *EditorState) snapTime(time int64) int64 {
 	if !e.snapToGrid {
 		return time
 	}
-	return (time + e.gridSize/2) / e.gridSize * e.gridSize
+	
+	// Convert to beats, snap, then convert back
+	beats := e.msIntToBeats(time)
+	snappedBeats := e.snapToBeat(beats)
+	return e.beatsToMsInt(snappedBeats)
 }
 
 func (e *EditorState) placeNote() {
@@ -414,7 +611,7 @@ func (e *EditorState) placeNote() {
 		if e.holdStartTime > 0 {
 			duration := time - e.holdStartTime
 			if duration > 0 {
-				note = types.NewNote(e.selectedTrack, e.holdStartTime, e.holdStartTime+duration)
+				note = e.createNoteAtTime(e.selectedTrack, e.holdStartTime, e.holdStartTime+duration)
 				e.addNote(note)
 			}
 		}
@@ -427,7 +624,7 @@ func (e *EditorState) placeNote() {
 			e.holdStartTime = time
 		} else {
 			// Place tap note
-			note = types.NewNote(e.selectedTrack, time, 0)
+			note = e.createNoteAtTime(e.selectedTrack, time, 0)
 			e.addNote(note)
 		}
 	}
@@ -451,7 +648,7 @@ func (e *EditorState) toggleNoteOnTrack(trackName types.TrackName) {
 		if e.holdStartTime > 0 {
 			duration := time - e.holdStartTime
 			if duration > 0 {
-				note = types.NewNote(trackName, e.holdStartTime, e.holdStartTime+duration)
+				note = e.createNoteAtTime(trackName, e.holdStartTime, e.holdStartTime+duration)
 				e.addNote(note)
 			}
 		}
@@ -464,7 +661,7 @@ func (e *EditorState) toggleNoteOnTrack(trackName types.TrackName) {
 			e.holdStartTime = time
 		} else {
 			// Place tap note
-			note = types.NewNote(trackName, time, 0)
+			note = e.createNoteAtTime(trackName, time, 0)
 			e.addNote(note)
 		}
 	}
@@ -541,13 +738,11 @@ func (e *EditorState) startPlayback() {
 	// Reset event manager for fresh playback
 	e.eventManager.Reset()
 	
-	// Start audio from current position if song is available
-	if e.song != nil {
+	// Initialize audio if song is available, but don't start playing yet
+	// The EventManager will handle playing the audio when it hits the audio start event
+	if e.song != nil && !e.audioInitialized {
 		audio.InitSong(e.song)
-		// Apply audio offset to the playback position
-		audioPosition := e.currentTime + e.audioOffset
-		audio.SetSongPositionMS(int(max(0, audioPosition))) // Ensure non-negative position
-		audio.PlaySong()
+		e.audioInitialized = true
 	}
 	// If no song, playback will just update the timeline position for editing
 }
@@ -555,8 +750,8 @@ func (e *EditorState) startPlayback() {
 func (e *EditorState) stopPlayback() {
 	e.playing = false
 	
-	// Stop all audio (both song and SFX)
-	audio.StopAll()
+	// Pause audio instead of stopping to avoid re-initialization
+	audio.PauseSong()
 	
 	// Snap to nearest time division when stopping playback
 	e.currentTime = e.snapTime(e.currentTime)
@@ -683,8 +878,10 @@ func (e *EditorState) toggleAudioStartMarker() {
 	// Remove any existing audio start markers (only one allowed)
 	e.removeAllAudioStartMarkers()
 	
-	// Create new audio start event
-	event := types.NewAudioStartEvent(time)
+	// Create new audio start event using beat position
+	beatPosition := e.msIntToBeats(time)
+	beatPosition = e.snapToBeat(beatPosition) // Ensure exact beat positioning
+	event := types.NewAudioStartEventFromBeat(beatPosition, e.bpm)
 	e.addEvent(event)
 }
 
@@ -712,8 +909,10 @@ func (e *EditorState) toggleCountdownBeatMarker() {
 		return // Event was removed
 	}
 	
-	// Create new countdown beat event
-	event := types.NewCountdownBeatEvent(time)
+	// Create new countdown beat event using beat position
+	beatPosition := e.msIntToBeats(time)
+	beatPosition = e.snapToBeat(beatPosition) // Ensure exact beat positioning
+	event := types.NewCountdownBeatEventFromBeat(beatPosition, e.bpm)
 	e.addEvent(event)
 }
 
@@ -727,12 +926,14 @@ func (e *EditorState) Update() error {
 		
 		// Execute events during playback
 		ctx := &types.EventContext{
-			CurrentTime:   e.currentTime,
-			Song:          e.song,
-			Chart:         nil, // TODO: Convert EditorChart to Chart if needed
-			AudioInitSong: audio.InitSong,
-			AudioPlaySong: audio.PlaySong,
-			AudioPlaySFX:  func(sfxCode string) {
+			CurrentTime:          e.currentTime,
+			Song:                 e.song,
+			Chart:                nil, // TODO: Convert EditorChart to Chart if needed
+			AudioOffset:          e.audioOffset,
+			AudioInitSong:        audio.InitSong,
+			AudioPlaySong:        audio.PlaySong,
+			AudioSetSongPosition: audio.SetSongPositionMS,
+			AudioPlaySFX:         func(sfxCode string) {
 				switch sfxCode {
 				case "hat":
 					audio.PlaySFX(audio.SFXHat)
@@ -794,14 +995,10 @@ func (e *EditorState) Update() error {
 				e.adjustLaneSpeed(-0.5) // Decrease lane speed
 				bpmDivisionHandled = true
 			}
-			if input.K.Is(ebiten.KeyMinus, input.JustPressed) {
-				e.adjustAudioOffset(-10) // Decrease audio offset by 10ms
-				bpmDivisionHandled = true
-			}
-			if input.K.Is(ebiten.KeyEqual, input.JustPressed) { // Plus key
-				e.adjustAudioOffset(10) // Increase audio offset by 10ms
-				bpmDivisionHandled = true
-			}
+			
+			// Handle audio offset adjustment with throttled rapid adjustment
+			e.handleRapidOffsetAdjustment()
+			bpmDivisionHandled = true
 		} else {
 			// Time navigation (Left/Right arrows) and time division (Up/Down arrows)
 			if input.K.Is(ebiten.KeyArrowLeft, input.JustPressed) {
@@ -1009,6 +1206,9 @@ func (e *EditorState) loadExternalSong(audioPath string) {
 		Charts:    make(map[types.Difficulty]*types.Chart),
 	}
 	
+	// Reset audio initialization flag for new song
+	e.audioInitialized = false
+	
 	e.createEmptyChart()
 	logger.Debug("Loaded external song: %s", songName)
 }
@@ -1118,13 +1318,15 @@ func (e *EditorState) exportToJSON() *schema.SongDataV2 {
 		
 		for i, note := range sortedNotes {
 			jsonNotes[i] = schema.NoteData{
-				Time: note.Target,
-				Type: schema.NoteTypeTap,
+				Time:     note.Target,
+				Type:     schema.NoteTypeTap,
+				TimeBeat: note.TargetBeat,
 			}
 			
 			if note.IsHoldNote() {
 				jsonNotes[i].Type = schema.NoteTypeHold
 				jsonNotes[i].Duration = note.TargetRelease - note.Target
+				jsonNotes[i].DurationBeat = note.TargetReleaseBeat - note.TargetBeat
 			}
 		}
 		
@@ -1137,6 +1339,16 @@ func (e *EditorState) exportToJSON() *schema.SongDataV2 {
 			Time: event.GetTime(),
 			Type: event.GetType(),
 		}
+		
+		// Add beat position if available
+		switch ev := event.(type) {
+		case *types.AudioStartEvent:
+			eventData.TimeBeat = ev.BaseEvent.TimeBeat
+		case *types.CountdownBeatEvent:
+			eventData.TimeBeat = ev.BaseEvent.TimeBeat
+		// Add other event types as needed
+		}
+		
 		chartData.Events = append(chartData.Events, eventData)
 	}
 	
@@ -1206,18 +1418,31 @@ func (e *EditorState) importFromJSON(songData *schema.SongDataV2, chartData *sch
 		
 		for _, noteData := range notes {
 			var note *types.Note
-			if noteData.Type == schema.NoteTypeHold && noteData.Duration > 0 {
-				note = types.NewNote(trackName, noteData.Time, noteData.Time+noteData.Duration)
+			
+			// Prefer beat-based data if available, fall back to millisecond data
+			if noteData.TimeBeat > 0 {
+				// Use beat-based positioning
+				releaseBeat := float64(0)
+				if noteData.Type == schema.NoteTypeHold && noteData.DurationBeat > 0 {
+					releaseBeat = noteData.TimeBeat + noteData.DurationBeat
+				}
+				note = types.NewNoteFromBeats(trackName, noteData.TimeBeat, releaseBeat, e.bpm)
 			} else {
-				note = types.NewNote(trackName, noteData.Time, 0)
+				// Fall back to millisecond-based positioning and calculate beats
+				if noteData.Type == schema.NoteTypeHold && noteData.Duration > 0 {
+					note = e.createNoteAtTime(trackName, noteData.Time, noteData.Time+noteData.Duration)
+				} else {
+					note = e.createNoteAtTime(trackName, noteData.Time, 0)
+				}
 			}
+			
 			e.chart.tracks[trackName] = append(e.chart.tracks[trackName], note)
 		}
 	}
 	
 	// Import events
 	for _, eventData := range chartData.Events {
-		event, err := types.CreateEventFromData(eventData)
+		event, err := types.CreateEventFromDataWithBPM(eventData, e.bpm)
 		if err != nil {
 			logger.Warn("Failed to create event: %v", err)
 			continue

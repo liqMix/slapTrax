@@ -4,6 +4,7 @@ package system
 
 import (
 	"syscall"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -64,13 +65,15 @@ const (
 // OpenAudioFileDialog opens a Windows file dialog for selecting audio files
 func OpenAudioFileDialog() (string, error) {
 	title := syscall.StringToUTF16Ptr("Select Audio File")
-	filter := syscall.StringToUTF16Ptr("Audio Files\x00*.ogg;*.mp3;*.wav;*.flac\x00OGG Files\x00*.ogg\x00MP3 Files\x00*.mp3\x00WAV Files\x00*.wav\x00FLAC Files\x00*.flac\x00All Files\x00*.*\x00")
+	// Manually create filter with NUL separators for Windows file dialog
+	// We can't use syscall.StringToUTF16 because it doesn't handle embedded NULs
+	filter := utf16.Encode([]rune("Audio Files\x00*.ogg;*.mp3;*.wav;*.flac\x00OGG Files\x00*.ogg\x00MP3 Files\x00*.mp3\x00WAV Files\x00*.wav\x00FLAC Files\x00*.flac\x00All Files\x00*.*\x00\x00"))
 	
 	filename := make([]uint16, 260)
 	
 	ofn := openFileName{
 		lStructSize:     uint32(unsafe.Sizeof(openFileName{})),
-		lpstrFilter:     filter,
+		lpstrFilter:     &filter[0],
 		nFilterIndex:    1,
 		lpstrFile:       &filename[0],
 		nMaxFile:        260,

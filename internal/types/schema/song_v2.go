@@ -65,6 +65,10 @@ type NoteData struct {
 	Duration int64                  `json:"duration,omitempty"`
 	Tracks   []string               `json:"tracks,omitempty"`
 	Props    map[string]interface{} `json:"props,omitempty"`
+	
+	// Beat-based positioning (BPM-independent)
+	TimeBeat     float64 `json:"timeBeat,omitempty"`     // beat position from start of song
+	DurationBeat float64 `json:"durationBeat,omitempty"` // duration in beats
 }
 
 // EventData represents a gameplay or visual event
@@ -75,6 +79,10 @@ type EventData struct {
 	Effect     string                 `json:"effect,omitempty"`
 	Duration   int64                  `json:"duration,omitempty"`
 	Properties map[string]interface{} `json:"properties,omitempty"`
+	
+	// Beat-based positioning (BPM-independent)
+	TimeBeat     float64 `json:"timeBeat,omitempty"`     // beat position from start of song
+	DurationBeat float64 `json:"durationBeat,omitempty"` // duration in beats
 }
 
 // NoteType constants

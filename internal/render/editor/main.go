@@ -162,7 +162,7 @@ func (r *EditorRenderer) static(img *ebiten.Image, opts *ebiten.DrawImageOptions
 }
 
 func (r *EditorRenderer) drawHelpText(screen *ebiten.Image) {
-	helpText := "QWE: Top tracks | ASD: Bottom tracks | P: Play | ←→: Time | ↑↓: Division | Alt+↑↓: Speed | Alt±: Audio Offset | K: Audio Start | I: Countdown Beat | B: Beginning | Shift+B: Last Note | G: Grid | Shift±: BPM | Ctrl+S: Save"
+	helpText := "QWE: Top tracks | ASD: Bottom tracks | P: Play | ←→: Time | ↑↓: Division | Alt+↑↓: Speed | Alt±: Audio Offset | K: Audio Start | I: Countdown Beat | B: Beginning | Shift+B: Last Note | G: Grid | Shift±: BPM | Ctrl+S: Save | Ctrl+Shift+O: Import Audio"
 	ebitenutil.DebugPrintAt(screen, helpText, 10, 10)
 	
 	// Display BPM, time division, lane speed, audio offset, and current position info
@@ -201,7 +201,7 @@ func (r *EditorRenderer) drawTrackLanes(screen *ebiten.Image) {
 		isSelected := trackName == r.state.SelectedTrack()
 		
 		r.addTrackLanePath(trackName, points, isSelected)
-		r.addJudgementLinePath(trackName, isSelected)
+		// Removed addJudgementLinePath - no longer needed with QWE/ASD direct note toggling
 	}
 }
 
@@ -391,46 +391,25 @@ func (r *EditorRenderer) drawEditingIndicators(screen *ebiten.Image) {
 }
 
 func (r *EditorRenderer) drawTimeIndicator(screen *ebiten.Image, time int64, clr color.RGBA) {
-	// Draw a vertical line at the judgement position to show current edit time
-	tracks := types.TrackNames()
-	selectedTrack := r.state.SelectedTrack()
+	// Draw a simple vertical line across the entire play area
+	indicatorPath := vector.Path{}
 	
-	for i, trackName := range tracks {
-		if trackName != selectedTrack {
-			continue
-		}
-		
-		points := r.notePoints[i]
-		if len(points) == 0 {
-			continue
-		}
-		
-		// Draw indicator at judgement line
-		x, y := points[0].ToRender32()
-		centerX, centerY := r.playArea.centerPoint.ToRender32()
-		
-		// Calculate direction and draw indicator
-		dx := x - centerX
-		dy := y - centerY
-		length := float32(distance32(dx, dy))
-		normalX := -dy / length
-		normalY := dx / length
-		
-		indicatorPath := vector.Path{}
-		width := float32(40)
-		indicatorPath.MoveTo(x+normalX*width, y+normalY*width)
-		indicatorPath.LineTo(x-normalX*width, y-normalY*width)
-		
-		vs, is := indicatorPath.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
-			Width:    float32(8),
-			LineCap:  vector.LineCapRound,
-			LineJoin: vector.LineJoinRound,
-		})
-		
-		ui.ColorVertices(vs, clr)
-		r.vectorCollection.Add(vs, is)
-		break
-	}
+	// Draw from top to bottom of play area at center
+	centerX := float32(r.playArea.centerX)
+	topY := float32(r.playArea.top)
+	bottomY := float32(r.playArea.bottom)
+	
+	indicatorPath.MoveTo(centerX, topY)
+	indicatorPath.LineTo(centerX, bottomY)
+	
+	vs, is := indicatorPath.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
+		Width:    float32(4),
+		LineCap:  vector.LineCapRound,
+		LineJoin: vector.LineJoinRound,
+	})
+	
+	ui.ColorVertices(vs, clr)
+	r.vectorCollection.Add(vs, is)
 }
 
 func (r *EditorRenderer) drawGrid(screen *ebiten.Image, currentTime int64) {

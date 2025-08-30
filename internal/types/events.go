@@ -34,23 +34,29 @@ type EventContext struct {
 	CurrentTime int64
 	Song        *Song
 	Chart       *Chart
+	AudioOffset int64 // Audio offset in milliseconds
 
 	// System accessors for event execution
-	AudioInitSong  func(*Song)        // Function to initialize song
-	AudioPlaySong  func()             // Function to play song
-	AudioPlaySFX   func(string)       // Function to play sound effects
-	RenderSystem   interface{}        // TODO: Replace with actual render system interface
-	EffectSystem   interface{}        // TODO: Replace with actual effect system interface
+	AudioInitSong        func(*Song)  // Function to initialize song
+	AudioPlaySong        func()       // Function to play song
+	AudioSetSongPosition func(int)    // Function to set song position in milliseconds
+	AudioPlaySFX         func(string) // Function to play sound effects
+	RenderSystem         interface{}  // TODO: Replace with actual render system interface
+	EffectSystem         interface{}  // TODO: Replace with actual effect system interface
 }
 
 // BaseEvent provides common functionality for all events
 type BaseEvent struct {
-	Time     int64
+	Time     int64 // ms from start (calculated from TimeBeat)
 	Duration int64
 	Type     string
 	Active   bool
 	executed bool
 	mu       sync.RWMutex
+	
+	// Beat-based positioning (musical time, BPM-independent)
+	TimeBeat     float64 // beat position from start of song
+	DurationBeat float64 // duration in beats
 }
 
 func (e *BaseEvent) GetTime() int64 {
@@ -85,6 +91,23 @@ func (e *BaseEvent) Reset() {
 	defer e.mu.Unlock()
 	e.Active = false
 	e.executed = false
+}
+
+// RecalculateTime updates the millisecond timestamp from beat position
+func (e *BaseEvent) RecalculateTime(bpm float64) {
+	if e.TimeBeat > 0 {
+		quarterNoteMs := 60000.0 / bpm
+		e.Time = int64(e.TimeBeat * quarterNoteMs)
+		if e.DurationBeat > 0 {
+			e.Duration = int64(e.DurationBeat * quarterNoteMs)
+		}
+	}
+}
+
+// SetBeatPosition sets the beat position and calculates millisecond timestamp
+func (e *BaseEvent) SetBeatPosition(timeBeat float64, bpm float64) {
+	e.TimeBeat = timeBeat
+	e.RecalculateTime(bpm)
 }
 
 func (e *BaseEvent) markExecuted() {
@@ -253,6 +276,21 @@ func NewAudioStartEvent(time int64) *AudioStartEvent {
 		BaseEvent: BaseEvent{
 			Time: time,
 			Type: schema.EventTypeAudioStart,
+			// TimeBeat will be calculated when BPM context is available
+		},
+	}
+}
+
+// NewAudioStartEventFromBeat creates an audio start event using beat position
+func NewAudioStartEventFromBeat(timeBeat float64, bpm float64) *AudioStartEvent {
+	quarterNoteMs := 60000.0 / bpm
+	time := int64(timeBeat * quarterNoteMs)
+	
+	return &AudioStartEvent{
+		BaseEvent: BaseEvent{
+			Time:     time,
+			Type:     schema.EventTypeAudioStart,
+			TimeBeat: timeBeat,
 		},
 	}
 }
@@ -261,11 +299,26 @@ func (e *AudioStartEvent) Execute(ctx *EventContext) error {
 	e.markExecuted()
 	
 	// Debug: Print when audio start is executed
-	fmt.Printf("🎶 Audio start executed at %dms\n", ctx.CurrentTime)
+	fmt.Printf("🎶 Audio start executed at %dms (offset: %dms)\n", ctx.CurrentTime, ctx.AudioOffset)
 	
 	// Start the backing track audio if available
 	if ctx.Song != nil && ctx.AudioInitSong != nil && ctx.AudioPlaySong != nil {
 		ctx.AudioInitSong(ctx.Song)
+		
+		// Calculate how far into the audio file we should start playing
+		// Audio offset trims silence: negative offset skips forward in the audio file
+		timeFromMarker := ctx.CurrentTime - e.Time  // How far past the audio start marker we are
+		audioFilePosition := timeFromMarker - ctx.AudioOffset  // Apply offset to trim silence
+		
+		// Set the position in the audio file
+		if ctx.AudioSetSongPosition != nil {
+			// Ensure we don't set a negative position (clamp to 0)
+			finalPosition := int(max(0, audioFilePosition))
+			ctx.AudioSetSongPosition(finalPosition)
+			fmt.Printf("🎶 Setting audio file position to %dms (time from marker: %dms, offset: %dms)\n", 
+				finalPosition, timeFromMarker, ctx.AudioOffset)
+		}
+		
 		ctx.AudioPlaySong()
 	}
 	
@@ -282,6 +335,21 @@ func NewCountdownBeatEvent(time int64) *CountdownBeatEvent {
 		BaseEvent: BaseEvent{
 			Time: time,
 			Type: schema.EventTypeCountdownBeat,
+			// TimeBeat will be calculated when BPM context is available
+		},
+	}
+}
+
+// NewCountdownBeatEventFromBeat creates a countdown beat event using beat position
+func NewCountdownBeatEventFromBeat(timeBeat float64, bpm float64) *CountdownBeatEvent {
+	quarterNoteMs := 60000.0 / bpm
+	time := int64(timeBeat * quarterNoteMs)
+	
+	return &CountdownBeatEvent{
+		BaseEvent: BaseEvent{
+			Time:     time,
+			Type:     schema.EventTypeCountdownBeat,
+			TimeBeat: timeBeat,
 		},
 	}
 }
@@ -423,6 +491,11 @@ func (em *EventManager) GetEventCount() int {
 
 // CreateEventFromData creates an Event from schema.EventData
 func CreateEventFromData(data schema.EventData) (Event, error) {
+	return CreateEventFromDataWithBPM(data, 120.0) // Default BPM fallback
+}
+
+// CreateEventFromDataWithBPM creates an Event from schema.EventData with BPM context
+func CreateEventFromDataWithBPM(data schema.EventData, bpm float64) (Event, error) {
 	switch data.Type {
 	case schema.EventTypeBPMChange:
 		bpm, ok := data.Properties["bpm"].(float64)
@@ -473,12 +546,30 @@ func CreateEventFromData(data schema.EventData) (Event, error) {
 		return NewParticleEffectEvent(data.Time, data.Duration, effect), nil
 
 	case schema.EventTypeAudioStart:
+		if data.TimeBeat > 0 {
+			// Use beat-based positioning
+			return NewAudioStartEventFromBeat(data.TimeBeat, bpm), nil
+		}
+		// Fall back to millisecond-based positioning
 		return NewAudioStartEvent(data.Time), nil
 
 	case schema.EventTypeCountdownBeat:
+		if data.TimeBeat > 0 {
+			// Use beat-based positioning
+			return NewCountdownBeatEventFromBeat(data.TimeBeat, bpm), nil
+		}
+		// Fall back to millisecond-based positioning
 		return NewCountdownBeatEvent(data.Time), nil
 
 	default:
 		return nil, fmt.Errorf("unknown event type: %s", data.Type)
 	}
+}
+
+// Helper function for max of two int64 values
+func max(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }

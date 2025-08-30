@@ -18,8 +18,12 @@ const (
 type Note struct {
 	Id            int
 	TrackName     TrackName
-	Target        int64 // ms from start of song it should be played
-	TargetRelease int64 // ms the note should be held until
+	Target        int64 // ms from start of song it should be played (calculated from TargetBeat)
+	TargetRelease int64 // ms the note should be held until (calculated from TargetReleaseBeat)
+	
+	// Beat-based positioning (musical time, BPM-independent)
+	TargetBeat        float64 // beat position from start of song
+	TargetReleaseBeat float64 // beat position where note should be released
 
 	HitTime     int64 // ms the note was hit
 	ReleaseTime int64 // ms the note was released
@@ -42,7 +46,33 @@ func NewNote(trackName TrackName, target, targetRelease int64) *Note {
 		TrackName:     trackName,
 		Target:        target,
 		TargetRelease: targetRelease,
-		Solo:          true,
+		// Beat positions will be calculated when BPM context is available
+		TargetBeat:        0, // Will be set by editor when BPM is known
+		TargetReleaseBeat: 0, // Will be set by editor when BPM is known
+		Solo:              true,
+	}
+}
+
+// NewNoteFromBeats creates a note using beat positions and calculates millisecond positions
+func NewNoteFromBeats(trackName TrackName, targetBeat, targetReleaseBeat float64, bpm float64) *Note {
+	noteId++
+	
+	// Convert beats to milliseconds with rounding for integer storage
+	quarterNoteMs := 60000.0 / bpm
+	target := int64(math.Round(targetBeat * quarterNoteMs))
+	targetRelease := int64(0)
+	if targetReleaseBeat > 0 {
+		targetRelease = int64(math.Round(targetReleaseBeat * quarterNoteMs))
+	}
+	
+	return &Note{
+		Id:                noteId,
+		TrackName:         trackName,
+		Target:            target,
+		TargetRelease:     targetRelease,
+		TargetBeat:        targetBeat,
+		TargetReleaseBeat: targetReleaseBeat,
+		Solo:              true,
 	}
 }
 
