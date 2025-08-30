@@ -82,7 +82,7 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	uniforms.ColorR = float32(color.R) / 255.0
 	uniforms.ColorG = float32(color.G) / 255.0
 	uniforms.ColorB = float32(color.B) / 255.0
-	uniforms.ColorA = float32(getNoteFadeAlpha(uniforms.Progress)) / 255.0
+	uniforms.ColorA = 1.0 // Let shader handle fading based on progress and thresholds
 	
 	// Set effects
 	uniforms.Solo = 0.0
@@ -91,9 +91,10 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	}
 	uniforms.Glow = 0.0
 	
-	// Set fade thresholds - notes start invisible and fade in as they approach judgment line
-	uniforms.FadeInThreshold = smoothProgress(0.2)  // Start fading in at 20% of travel
-	uniforms.FadeOutThreshold = smoothProgress(0.6) // Fully visible at 60% of travel
+	// Set fade thresholds - start fade much earlier to reduce center clutter
+	// These values work with smoothProgress - use small values due to perspective compression
+	uniforms.FadeInThreshold = 0.005 // Start fading in much earlier to reduce center clutter
+	uniforms.FadeOutThreshold = 0.03  // Reach full visibility very quickly after fade starts
 	
 	return uniforms
 }

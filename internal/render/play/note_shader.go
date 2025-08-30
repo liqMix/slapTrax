@@ -31,7 +31,7 @@ func (r *Play) addNotePathShader(track *types.Track, screen *ebiten.Image) {
 }
 
 // ShaderRenderingEnabled flag to toggle between shader and vertex rendering
-var ShaderRenderingEnabled = false
+var ShaderRenderingEnabled = true
 
 // EnableShaderRendering enables shader-based note rendering
 func EnableShaderRendering() {

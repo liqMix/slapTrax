@@ -62,20 +62,23 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     }
     
     // Apply fade in/out based on progress distance from judgment line
-    fadeAlpha := 1.0
+    fadeIntensity := 1.0
+    
     if Progress < FadeInThreshold {
-        // Fade in: invisible when too far from judgment line
-        fadeAlpha = 0.0
+        // Notes are invisible when too far from judgment line
+        fadeIntensity = 0.0
     } else if Progress < FadeOutThreshold {
         // Gradual fade in between thresholds
         fadeRange := FadeOutThreshold - FadeInThreshold
-        fadeProgress := (Progress - FadeInThreshold) / fadeRange
-        fadeAlpha = fadeProgress
+        if fadeRange > 0.0 {
+            fadeProgress := (Progress - FadeInThreshold) / fadeRange
+            fadeIntensity = fadeProgress // Smooth fade from 0 to 1
+        }
     }
-    // Above FadeOutThreshold: fully visible (fadeAlpha = 1.0)
+    // Above FadeOutThreshold: fully visible (fadeIntensity = 1.0)
     
-    // Apply base color with combined alpha (distance + fade)
-    finalColor := vec4(ColorR, ColorG, ColorB, ColorA * alpha * fadeAlpha)
+    // Apply color intensity fade - multiply RGB channels by fade intensity
+    finalColor := vec4(ColorR * fadeIntensity, ColorG * fadeIntensity, ColorB * fadeIntensity, ColorA * alpha)
     
     // Add glow effect if enabled
     if Glow > 0.0 {

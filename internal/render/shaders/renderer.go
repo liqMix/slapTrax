@@ -144,6 +144,7 @@ func (sr *ShaderRenderer) RenderNote(img *ebiten.Image, track types.TrackName, n
 	vertices := sr.createBoundedGeometry(trackPoints, centerPoint, uniforms.Progress)
 	
 	options := &ebiten.DrawTrianglesShaderOptions{}
+	options.Blend = ebiten.BlendSourceOver // Ensure proper alpha blending
 	options.Uniforms = map[string]interface{}{
 		"Progress":   uniforms.Progress,
 		"Point1X":    uniforms.Point1X,
@@ -185,6 +186,7 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 	vertices := sr.createHoldNoteBoundedGeometry(trackPoints, centerPoint, uniforms.HoldStartProgress, uniforms.HoldEndProgress)
 	
 	options := &ebiten.DrawTrianglesShaderOptions{}
+	options.Blend = ebiten.BlendSourceOver // Ensure proper alpha blending
 	options.Uniforms = map[string]interface{}{
 		"Progress":           uniforms.Progress,
 		"Point1X":            uniforms.Point1X,
@@ -221,4 +223,9 @@ var Renderer *ShaderRenderer
 // InitRenderer initializes the shader renderer
 func InitRenderer() {
 	Renderer = NewShaderRenderer()
+}
+
+// ReinitRenderer reinitializes the shader renderer (for future use if needed)
+func ReinitRenderer() {
+	InitRenderer()
 }

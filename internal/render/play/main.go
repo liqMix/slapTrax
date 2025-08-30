@@ -2,6 +2,7 @@ package play
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/display"
 	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/render/shaders"
@@ -11,6 +12,7 @@ import (
 	"github.com/liqmix/slaptrax/internal/user"
 )
 
+
 // The default renderer for the play state.
 type Play struct {
 	display.BaseRenderer
@@ -18,6 +20,7 @@ type Play struct {
 	vectorCollection *ui.VectorCollection
 
 	hitRecordIdx int
+	lastCacheCheck bool
 }
 
 func NewPlayRender(s state.State) *Play {
@@ -36,10 +39,37 @@ func NewPlayRender(s state.State) *Play {
 	shaders.InitRenderer()
 	ShaderRenderingEnabled = true
 	logger.Info("Shader-based note rendering initialized successfully")
+	
+	// Initialize play area layouts
+	ReinitLayouts()
+	p.lastCacheCheck = true // Assume cache exists initially
+	
 	return p
 }
 
+func (r *Play) shouldReinitLayouts() bool {
+	// Simple heuristic: check if cache is empty (indicating it was cleared)
+	// This is a simplified approach that assumes settings changes clear the cache
+	_, cacheExists := cache.Image.Get("canvas")
+	if r.lastCacheCheck && !cacheExists {
+		r.lastCacheCheck = false
+		return true
+	}
+	r.lastCacheCheck = cacheExists
+	return false
+}
+
 func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	// Check if layouts need to be reinitialized
+	if cache.LayoutReinitRequested {
+		ReinitLayouts()
+		cache.LayoutReinitRequested = false
+		logger.Info("Layouts reinitialized after settings change")
+	} else if r.shouldReinitLayouts() {
+		ReinitLayouts()
+		logger.Info("Layouts reinitialized after cache cleared")
+	}
+	
 	r.BaseRenderer.Draw(screen, opts)
 	r.drawMeasureMarkers(screen)
 

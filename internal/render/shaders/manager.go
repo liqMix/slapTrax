@@ -26,6 +26,24 @@ func InitManager() error {
 	return nil
 }
 
+// ReinitManager reinitializes the shader manager (useful when settings change)
+func ReinitManager() error {
+	if Manager == nil {
+		return InitManager()
+	}
+	// Reload shaders into existing manager instead of creating new one
+	return Manager.loadShaders()
+}
+
+// ReinitSystem reinitializes the entire shader system (for future use if needed)
+func ReinitSystem() error {
+	if err := ReinitManager(); err != nil {
+		return err
+	}
+	ReinitRenderer()
+	return nil
+}
+
 func (sm *ShaderManager) loadShaders() error {
 	var err error
 	

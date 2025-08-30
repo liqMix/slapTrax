@@ -1,6 +1,9 @@
 package play
 
-import "github.com/liqmix/slaptrax/internal/ui"
+import (
+	"github.com/liqmix/slaptrax/internal/ui"
+	"github.com/liqmix/slaptrax/internal/user"
+)
 
 var (
 	//// Overall
@@ -199,4 +202,13 @@ func applyEdgeLayout() {
 	judgementWidth = noteWidth / 4
 	// judgementPressedRatio = float32(2.0)
 	applyLayout()
+}
+
+// ReinitLayouts reinitializes the play area layouts based on current settings
+func ReinitLayouts() {
+	if user.S().EdgePlayArea {
+		applyEdgeLayout()
+	} else {
+		applyDefaultLayout()
+	}
 }
