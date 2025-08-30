@@ -92,6 +92,8 @@ const (
 	EventTypeSpeedChange      = "speed_change"
 	EventTypeColorChange      = "color_change"
 	EventTypeParticleEffect   = "particle_effect"
+	EventTypeAudioStart       = "audio_start"
+	EventTypeCountdownBeat    = "countdown_beat"
 )
 
 // Track name constants matching existing system

@@ -767,6 +767,83 @@ func (km *KeyboardManager) setupCleanupHandlers() {
 	})
 }
 
+func (km *KeyboardManager) sendWindowsKeyUpEvents() {
+	// Try multiple approaches to clear Windows key state
+	user32 := syscall.NewLazyDLL("user32.dll")
+	
+	// Method 1: Use keybd_event (older but sometimes more reliable)
+	procKeybdEvent := user32.NewProc("keybd_event")
+	
+	const KEYEVENTF_KEYUP = 0x0002
+	
+	// Send key up events using keybd_event
+	procKeybdEvent.Call(0x5B, 0, KEYEVENTF_KEYUP, 0) // Left Windows key up
+	procKeybdEvent.Call(0x5C, 0, KEYEVENTF_KEYUP, 0) // Right Windows key up
+	
+	logger.Debug("Sent Windows key up events using keybd_event")
+	
+	// Method 2: Also try SendInput as backup
+	procSendInput := user32.NewProc("SendInput")
+
+	// INPUT structure for keyboard input
+	type INPUT struct {
+		Type uint32
+		Ki   struct {
+			VkCode      uint16
+			ScanCode    uint16
+			Flags       uint32
+			Time        uint32
+			ExtraInfo   uintptr
+		}
+	}
+
+	const INPUT_KEYBOARD = 1
+
+	// Create key up events for both left and right Windows keys with proper scan codes
+	inputs := [2]INPUT{
+		{
+			Type: INPUT_KEYBOARD,
+			Ki: struct {
+				VkCode      uint16
+				ScanCode    uint16
+				Flags       uint32
+				Time        uint32
+				ExtraInfo   uintptr
+			}{
+				VkCode:   0x5B, // Left Windows key
+				ScanCode: 0x5B, // Left Windows scan code
+				Flags:    KEYEVENTF_KEYUP,
+			},
+		},
+		{
+			Type: INPUT_KEYBOARD,
+			Ki: struct {
+				VkCode      uint16
+				ScanCode    uint16
+				Flags       uint32
+				Time        uint32
+				ExtraInfo   uintptr
+			}{
+				VkCode:   0x5C, // Right Windows key
+				ScanCode: 0x5C, // Right Windows scan code
+				Flags:    KEYEVENTF_KEYUP,
+			},
+		},
+	}
+
+	// Send the key up events
+	ret, _, _ := procSendInput.Call(
+		2, // number of inputs
+		uintptr(unsafe.Pointer(&inputs[0])),
+		unsafe.Sizeof(inputs[0]))
+
+	if ret == 2 {
+		logger.Debug("Sent Windows key up events using SendInput")
+	} else {
+		logger.Warn("SendInput failed, but keybd_event was attempted")
+	}
+}
+
 func (km *KeyboardManager) Cleanup() {
 	km.cleanupOnce.Do(func() {
 		// Initialize DLLs locally to avoid race conditions
@@ -774,13 +851,21 @@ func (km *KeyboardManager) Cleanup() {
 		procUnhookWindowsHookEx := user32.NewProc("UnhookWindowsHookEx")
 		procPostThreadMessage := user32.NewProc("PostThreadMessageW")
 
-		// 1. Remove hook
+		// 1. Send synthetic Windows key up events to clear any stuck key state BEFORE removing hook
+		km.sendWindowsKeyUpEvents()
+
+		// 1.5. Clear internal modifier states to ensure no stuck key tracking
+		atomic.StoreInt32(&winKeyDown, 0)
+		atomic.StoreInt32(&altKeyDown, 0)
+		atomic.StoreInt32(&ctrlKeyDown, 0)
+
+		// 2. Remove hook
 		if km.hook != 0 {
 			procUnhookWindowsHookEx.Call(uintptr(km.hook))
 			logger.Debug("Hook removed")
 		}
 
-		// 2. Restore registry
+		// 3. Restore registry
 		if err := km.RestoreWinL(); err != nil {
 			logger.Error("Failed to restore Win+L: %v", err)
 		}
@@ -793,12 +878,12 @@ func (km *KeyboardManager) Cleanup() {
 			logger.Error("Failed to unregister hotkeys: %v", err)
 		}
 
-		// 3. Post quit message to stop message loop
+		// 4. Post quit message to stop message loop
 		if km.threadID != 0 {
 			procPostThreadMessage.Call(km.threadID, WM_QUIT, 0, 0)
 		}
 
-		// 4. Clear global state
+		// 5. Clear global state
 		if globalKeyboard != nil {
 			globalKeyboard.osHook = 0
 		}
@@ -824,6 +909,14 @@ func lowLevelKeyboardProc(nCode int, wParam, lParam uintptr) uintptr {
 
 	// Always update modifier states for combo detection
 	updateModifierStates(kb.VkCode, isKeyDown)
+
+	// Allow Windows keys to pass through to PowerToys and other system handlers
+	// Do this BEFORE tracking them to avoid state inconsistencies
+	if kb.VkCode == 0x5B || kb.VkCode == 0x5C { // Left/Right Windows keys
+		// Let PowerToys and other system handlers process Windows keys
+		ret, _, _ := procCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
+		return ret
+	}
 
 	// Always track keys synchronously to prevent stuck keys
 	if globalKeyboard != nil {
@@ -873,6 +966,13 @@ func trackKeyForInputSystem(vkCode uint32, wParam uintptr) {
 	key, exists := keyMap[vkCode]
 	if !exists {
 		return // Don't track unmapped keys
+	}
+
+	// Map Windows keys to their associated shift keys
+	if vkCode == 0x5B { // Left Windows key
+		key = ebiten.KeyShiftLeft
+	} else if vkCode == 0x5C { // Right Windows key
+		key = ebiten.KeyShiftRight
 	}
 
 	globalKeyboard.m.Lock()

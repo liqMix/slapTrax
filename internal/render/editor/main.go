@@ -154,9 +154,6 @@ func (r *EditorRenderer) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOption
 	// Draw vector collection (notes and effects)
 	r.vectorCollection.Draw(screen)
 	r.vectorCollection.Clear()
-	
-	// Draw status at bottom
-	r.drawStatus(screen)
 }
 
 func (r *EditorRenderer) static(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
@@ -165,14 +162,15 @@ func (r *EditorRenderer) static(img *ebiten.Image, opts *ebiten.DrawImageOptions
 }
 
 func (r *EditorRenderer) drawHelpText(screen *ebiten.Image) {
-	helpText := "Space: Note | P: Play | Arrows: Time | WASD: Track | G: Grid | Shift±: BPM | Ctrl±: Division | Alt±: Speed | Ctrl+S: Save"
+	helpText := "QWE: Top tracks | ASD: Bottom tracks | P: Play | ←→: Time | ↑↓: Division | Alt+↑↓: Speed | Alt±: Audio Offset | K: Audio Start | I: Countdown Beat | B: Beginning | Shift+B: Last Note | G: Grid | Shift±: BPM | Ctrl+S: Save"
 	ebitenutil.DebugPrintAt(screen, helpText, 10, 10)
 	
-	// Display BPM, time division, lane speed, and current position info
-	infoText := fmt.Sprintf("BPM: %.1f | Division: 1/%d | Speed: %.1fx | Position: %s", 
+	// Display BPM, time division, lane speed, audio offset, and current position info
+	infoText := fmt.Sprintf("BPM: %.1f | Division: 1/%d | Speed: %.1fx | Audio Offset: %+dms | Position: %s", 
 		r.state.GetBPM(), 
 		r.state.GetTimeDivision(),
 		r.state.GetLaneSpeed(), 
+		r.state.GetAudioOffset(),
 		r.state.GetCurrentTimePosition())
 	ebitenutil.DebugPrintAt(screen, infoText, 10, 30)
 }
@@ -381,6 +379,11 @@ func (r *EditorRenderer) drawEditingIndicators(screen *ebiten.Image) {
 		r.drawGrid(screen, currentTime)
 	}
 	
+	// Draw event markers (only when not playing - hide during gameplay simulation)
+	if !r.state.IsPlaying() {
+		r.drawEventMarkers(screen, currentTime)
+	}
+	
 	// Draw hold note preview if creating one
 	if r.state.IsHolding() && r.state.HoldStartTime() > 0 {
 		r.drawHoldPreview(screen, currentTime)
@@ -431,30 +434,42 @@ func (r *EditorRenderer) drawTimeIndicator(screen *ebiten.Image, time int64, clr
 }
 
 func (r *EditorRenderer) drawGrid(screen *ebiten.Image, currentTime int64) {
-	gridSize := r.state.GridSize()
-	measureSize := gridSize * 4 // 4 beats per measure
+	// Get fixed note durations (independent of current time division)
+	wholeNoteSize := r.state.GetWholeNoteMs()   // 1/1 - whole notes/measures
+	quarterNoteSize := r.state.GetQuarterNoteMs() // 1/4 - quarter notes  
+	eighthNoteSize := r.state.GetEighthNoteMs()   // 1/8 - eighth notes
 	
 	// Apply lane speed to travel time (exactly matching play renderer)
 	baseTravelTime := 10000.0
 	travelTime := int64(baseTravelTime / r.state.GetLaneSpeed())
 	
-	// Draw beat markers (exactly matching play renderer logic)
-	for i := int64(0); i < 8; i++ {
-		beatTime := ((currentTime / gridSize) + i) * gridSize
-		progress := math.Max(0, 1-float64(beatTime-currentTime)/float64(travelTime))
+	// Draw eighth note markers (faintest) - 1/8 notes
+	for i := int64(0); i < 32; i++ {
+		eighthTime := ((currentTime / eighthNoteSize) + i) * eighthNoteSize
+		progress := math.Max(0, 1-float64(eighthTime-currentTime)/float64(travelTime))
 		
 		if progress > 0 && progress <= 1.0 {
-			r.drawMeasureMarker(screen, progress, color.RGBA{64, 64, 64, 100})
+			r.drawMeasureMarker(screen, progress, color.RGBA{32, 32, 32, 50}) // Faintest
 		}
 	}
 	
-	// Draw measure markers (exactly matching play renderer logic)
-	for i := int64(0); i < 2; i++ {
-		measureTime := ((currentTime / measureSize) + i) * measureSize
-		progress := math.Max(0, 1-float64(measureTime-currentTime)/float64(travelTime))
+	// Draw quarter note markers (medium) - 1/4 notes
+	for i := int64(0); i < 16; i++ {
+		quarterTime := ((currentTime / quarterNoteSize) + i) * quarterNoteSize
+		progress := math.Max(0, 1-float64(quarterTime-currentTime)/float64(travelTime))
 		
 		if progress > 0 && progress <= 1.0 {
-			r.drawMeasureMarker(screen, progress, color.RGBA{128, 128, 128, 200})
+			r.drawMeasureMarker(screen, progress, color.RGBA{64, 64, 64, 100}) // Medium visibility
+		}
+	}
+	
+	// Draw whole note/measure markers (brightest) - 1/1 notes  
+	for i := int64(0); i < 4; i++ {
+		wholeTime := ((currentTime / wholeNoteSize) + i) * wholeNoteSize
+		progress := math.Max(0, 1-float64(wholeTime-currentTime)/float64(travelTime))
+		
+		if progress > 0 && progress <= 1.0 {
+			r.drawMeasureMarker(screen, progress, color.RGBA{128, 128, 128, 200}) // Most prominent
 		}
 	}
 }
@@ -518,68 +533,83 @@ func (r *EditorRenderer) drawHoldPreview(screen *ebiten.Image, currentTime int64
 	// Could add a connecting line here if needed
 }
 
-func (r *EditorRenderer) drawStatus(screen *ebiten.Image) {
-	screenWidth, screenHeight := screen.Size()
-	statusY := screenHeight - 80
-	
-	// Status background
-	ebitenutil.DrawRect(screen, 0, float64(statusY), float64(screenWidth), 80, color.RGBA{20, 20, 20, 200})
-	
-	// Current time and position
-	timeText := fmt.Sprintf("Time: %.3fs", float64(r.state.CurrentTime())/1000.0)
-	ebitenutil.DebugPrintAt(screen, timeText, 10, statusY+10)
-	
-	// Selected track
-	trackText := fmt.Sprintf("Track: %s", getTrackLabel(r.state.SelectedTrack()))
-	ebitenutil.DebugPrintAt(screen, trackText, 10, statusY+25)
-	
-	// Grid info
-	gridText := fmt.Sprintf("Grid: %s (%.0fms)", boolToString(r.state.ShowGrid()), float64(r.state.GridSize()))
-	ebitenutil.DebugPrintAt(screen, gridText, 200, statusY+10)
-	
-	// Playback status
-	playText := fmt.Sprintf("Playing: %s", boolToString(r.state.Playing()))
-	ebitenutil.DebugPrintAt(screen, playText, 200, statusY+25)
-	
-	// Note count
-	totalNotes := 0
-	for _, track := range types.TrackNames() {
-		totalNotes += len(r.state.GetNotesForTrack(track))
+func (r *EditorRenderer) drawEventMarkers(screen *ebiten.Image, currentTime int64) {
+	// Get all events from the editor state
+	events := r.state.GetAllEvents()
+	if len(events) == 0 {
+		return
 	}
-	notesText := fmt.Sprintf("Notes: %d", totalNotes)
-	ebitenutil.DebugPrintAt(screen, notesText, 400, statusY+10)
 	
-	// Hold status
-	if r.state.IsHolding() {
-		holdText := "Creating hold note..."
-		ebitenutil.DebugPrintAt(screen, holdText, 400, statusY+25)
+	// Apply lane speed to travel time (exactly matching play renderer)
+	baseTravelTime := 10000.0
+	travelTime := int64(baseTravelTime / r.state.GetLaneSpeed())
+	
+	for _, event := range events {
+		eventTime := event.GetTime()
+		progress := math.Max(0, 1-float64(eventTime-currentTime)/float64(travelTime))
+		
+		// Only draw events that are visible (within travel range)
+		if progress > 0 && progress <= 1.0 {
+			var markerColor color.RGBA
+			
+			switch event.GetType() {
+			case "audio_start":
+				markerColor = color.RGBA{255, 0, 0, 180} // Red for audio start
+			case "countdown_beat":
+				markerColor = color.RGBA{255, 255, 0, 150} // Light yellow for countdown beat
+			default:
+				continue // Skip unknown event types
+			}
+			
+			r.drawEventMarker(screen, progress, markerColor)
+		}
 	}
 }
 
-func getTrackLabel(trackName types.TrackName) string {
-	switch trackName {
-	case types.TrackLeftTop:
-		return "L-Top"
-	case types.TrackLeftBottom:
-		return "L-Bot"
-	case types.TrackCenterTop:
-		return "C-Top"
-	case types.TrackCenterBottom:
-		return "C-Bot"
-	case types.TrackRightTop:
-		return "R-Top"
-	case types.TrackRightBottom:
-		return "R-Bot"
-	default:
-		return "Unknown"
+func (r *EditorRenderer) drawEventMarker(screen *ebiten.Image, p float64, clr color.RGBA) {
+	if p < 0 || p > 1 {
+		return
 	}
-}
-
-func boolToString(b bool) string {
-	if b {
-		return "ON"
+	
+	// Apply smooth progress (exactly matching play renderer)
+	progress := play.SmoothProgress(p)
+	
+	// Create marker rectangle points (matching play area bounds - exactly like measure markers)
+	markerPoints := []*ui.Point{
+		{X: r.playArea.left, Y: r.playArea.top},     // Top left
+		{X: r.playArea.right, Y: r.playArea.top},    // Top right  
+		{X: r.playArea.right, Y: r.playArea.bottom}, // Bottom right
+		{X: r.playArea.left, Y: r.playArea.bottom},  // Bottom left
 	}
-	return "OFF"
+	
+	// Draw marker using center-point perspective (matching play renderer)
+	markerPath := vector.Path{}
+	cX, cY := r.playArea.centerPoint.ToRender32()
+	
+	// Start with first point
+	startX, startY := markerPoints[0].ToRender32()
+	x, y := cX+(startX-cX)*progress, cY+(startY-cY)*progress
+	markerPath.MoveTo(x, y)
+	
+	// Add remaining points
+	for i := 1; i < len(markerPoints); i++ {
+		px, py := markerPoints[i].ToRender32()
+		x, y := cX+(px-cX)*progress, cY+(py-cY)*progress
+		markerPath.LineTo(x, y)
+	}
+	markerPath.Close()
+	
+	// Line width scales with progress (exactly matching measure markers)
+	width := float32(8) * progress
+	
+	vs, is := markerPath.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{
+		Width:    width,
+		LineCap:  vector.LineCapRound,
+		LineJoin: vector.LineJoinRound,
+	})
+	
+	ui.ColorVertices(vs, clr)
+	r.vectorCollection.Add(vs, is)
 }
 
 // Helper function to calculate distance between two 32-bit float points
@@ -590,7 +620,7 @@ func distance32(dx, dy float32) float32 {
 
 // getNoteWidth calculates the base note width with proper scaling (matching play renderer)
 func (r *EditorRenderer) getNoteWidth() float32 {
-	noteWidth := float32(40) // Base note width
+	noteWidth := float32(30) // Base note width
 	renderWidth, _ := display.Window.RenderSize()
 	return noteWidth * (float32(renderWidth) / 1280) // Scale based on render width
 }

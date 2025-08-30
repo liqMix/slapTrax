@@ -43,7 +43,7 @@ var (
 
 	// Notes
 	noteLength            = playWidth * 0.25
-	noteWidth             = float32(40)
+	noteWidth             = float32(30)
 	noteComboRatio        = float32(1.5)
 	noteMaxAlpha          = uint8(255)
 	centerNoteLengthRatio = 0.5

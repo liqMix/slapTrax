@@ -35,10 +35,12 @@ type EventContext struct {
 	Song        *Song
 	Chart       *Chart
 
-	// System accessors (will be populated during integration)
-	AudioManager interface{} // TODO: Replace with actual audio manager interface
-	RenderSystem interface{} // TODO: Replace with actual render system interface
-	EffectSystem interface{} // TODO: Replace with actual effect system interface
+	// System accessors for event execution
+	AudioInitSong  func(*Song)        // Function to initialize song
+	AudioPlaySong  func()             // Function to play song
+	AudioPlaySFX   func(string)       // Function to play sound effects
+	RenderSystem   interface{}        // TODO: Replace with actual render system interface
+	EffectSystem   interface{}        // TODO: Replace with actual effect system interface
 }
 
 // BaseEvent provides common functionality for all events
@@ -241,18 +243,77 @@ func (e *ParticleEffectEvent) Execute(ctx *EventContext) error {
 	return nil
 }
 
+// AudioStartEvent marks where audio playback should begin
+type AudioStartEvent struct {
+	BaseEvent
+}
+
+func NewAudioStartEvent(time int64) *AudioStartEvent {
+	return &AudioStartEvent{
+		BaseEvent: BaseEvent{
+			Time: time,
+			Type: schema.EventTypeAudioStart,
+		},
+	}
+}
+
+func (e *AudioStartEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	
+	// Debug: Print when audio start is executed
+	fmt.Printf("🎶 Audio start executed at %dms\n", ctx.CurrentTime)
+	
+	// Start the backing track audio if available
+	if ctx.Song != nil && ctx.AudioInitSong != nil && ctx.AudioPlaySong != nil {
+		ctx.AudioInitSong(ctx.Song)
+		ctx.AudioPlaySong()
+	}
+	
+	return nil
+}
+
+// CountdownBeatEvent marks countdown beats before the song starts
+type CountdownBeatEvent struct {
+	BaseEvent
+}
+
+func NewCountdownBeatEvent(time int64) *CountdownBeatEvent {
+	return &CountdownBeatEvent{
+		BaseEvent: BaseEvent{
+			Time: time,
+			Type: schema.EventTypeCountdownBeat,
+		},
+	}
+}
+
+func (e *CountdownBeatEvent) Execute(ctx *EventContext) error {
+	e.markExecuted()
+	
+	// Debug: Print when countdown beat is executed
+	fmt.Printf("🎵 Countdown beat executed at %dms\n", ctx.CurrentTime)
+	
+	// Play metronome/countdown sound
+	if ctx.AudioPlaySFX != nil {
+		ctx.AudioPlaySFX("select") // Using select sound which should be more audible
+	}
+	
+	return nil
+}
+
 // EventManager handles event scheduling and execution
 type EventManager struct {
 	events       []Event
 	activeEvents []Event
 	mu           sync.RWMutex
 	currentTime  int64
+	nextEventIdx int // Index of the next event to execute
 }
 
 func NewEventManager() *EventManager {
 	return &EventManager{
 		events:       make([]Event, 0),
 		activeEvents: make([]Event, 0),
+		nextEventIdx: 0,
 	}
 }
 
@@ -267,6 +328,9 @@ func (em *EventManager) AddEvent(event Event) {
 	sort.Slice(em.events, func(i, j int) bool {
 		return em.events[i].GetTime() < em.events[j].GetTime()
 	})
+	
+	// Reset queue index since events were resorted
+	em.nextEventIdx = 0
 }
 
 // Update processes events for the current time
@@ -277,20 +341,34 @@ func (em *EventManager) Update(currentTime int64, ctx *EventContext) error {
 	em.currentTime = currentTime
 	ctx.CurrentTime = currentTime
 
-	// Process new events that should trigger
-	for _, event := range em.events {
-		if event.GetTime() <= currentTime && !event.IsActive(currentTime) {
-			// Check if this is the first time we're executing this event
-			if event.GetTime() <= currentTime && event.GetTime() > em.currentTime-16 { // ~60fps tolerance
-				if err := event.Execute(ctx); err != nil {
-					return fmt.Errorf("failed to execute event %s at %dms: %w",
-						event.GetType(), event.GetTime(), err)
-				}
-			}
-		}
+	// Only check if we have events and haven't processed them all
+	if em.nextEventIdx >= len(em.events) {
+		return nil // All events processed
 	}
 
-	// Update active events list
+	// Process all events whose time has come (sequential processing)
+	for em.nextEventIdx < len(em.events) {
+		nextEvent := em.events[em.nextEventIdx]
+		
+		// If this event's time hasn't come yet, we're done (events are sorted)
+		if nextEvent.GetTime() > currentTime {
+			break
+		}
+		
+		// Execute the event
+		fmt.Printf("⚡ Executing %s event at %dms (current: %dms)\n", 
+			nextEvent.GetType(), nextEvent.GetTime(), currentTime)
+		
+		if err := nextEvent.Execute(ctx); err != nil {
+			return fmt.Errorf("failed to execute event %s at %dms: %w",
+				nextEvent.GetType(), nextEvent.GetTime(), err)
+		}
+		
+		// Move to next event
+		em.nextEventIdx++
+	}
+
+	// Update active events list (for visual/other systems that need this)
 	em.activeEvents = em.activeEvents[:0] // Clear without reallocation
 	for _, event := range em.events {
 		if event.IsActive(currentTime) {
@@ -322,6 +400,7 @@ func (em *EventManager) Reset() {
 	}
 	em.activeEvents = em.activeEvents[:0]
 	em.currentTime = 0
+	em.nextEventIdx = 0 // Reset to start of event queue
 }
 
 // Clear removes all events
@@ -332,6 +411,7 @@ func (em *EventManager) Clear() {
 	em.events = em.events[:0]
 	em.activeEvents = em.activeEvents[:0]
 	em.currentTime = 0
+	em.nextEventIdx = 0 // Reset queue index
 }
 
 // GetEventCount returns the total number of events
@@ -391,6 +471,12 @@ func CreateEventFromData(data schema.EventData) (Event, error) {
 			effect = "explosion"
 		}
 		return NewParticleEffectEvent(data.Time, data.Duration, effect), nil
+
+	case schema.EventTypeAudioStart:
+		return NewAudioStartEvent(data.Time), nil
+
+	case schema.EventTypeCountdownBeat:
+		return NewCountdownBeatEvent(data.Time), nil
 
 	default:
 		return nil, fmt.Errorf("unknown event type: %s", data.Type)

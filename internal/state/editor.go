@@ -15,7 +15,6 @@ import (
 	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/system"
 	"github.com/liqmix/slaptrax/internal/types"
-	"github.com/liqmix/slaptrax/internal/user"
 	"github.com/liqmix/slaptrax/internal/types/schema"
 )
 
@@ -65,6 +64,8 @@ type EditorState struct {
 	bpm            float64
 	timeDivision   int // 1, 2, 4, 8, 16, 32, 64, 128 (represents 1/1, 1/2, 1/4, etc.)
 	laneSpeed      float64 // Editor lane speed (separate from user settings during editing)
+	audioOffset    int64   // Audio starting position offset in milliseconds
+	eventManager   *types.EventManager // Event system for playback execution
 }
 
 func NewEditorState(args *EditorArgs) *EditorState {
@@ -79,7 +80,9 @@ func NewEditorState(args *EditorArgs) *EditorState {
 		redoStack:     make([]ChartAction, 0),
 		bpm:           120.0, // Default BPM
 		timeDivision:  4,     // Default to quarter notes (1/4)
-		laneSpeed:     user.S().LaneSpeed, // Use player's configured lane speed
+		laneSpeed:     1.0, // Default editor speed
+		audioOffset:   0,   // No audio offset by default
+		eventManager:  types.NewEventManager(), // Initialize event system
 	}
 
 	// Initialize empty chart or load existing one
@@ -142,6 +145,46 @@ func (e *EditorState) createEmptyChart() {
 	for _, trackName := range types.TrackNames() {
 		e.chart.tracks[trackName] = make([]*types.Note, 0)
 	}
+	
+	// Auto-generate event markers for new songs
+	e.generateDefaultEvents()
+}
+
+func (e *EditorState) generateDefaultEvents() {
+	// Calculate timing based on BPM (default 120 BPM)
+	// Quarter note duration = 60000 / BPM milliseconds
+	quarterNoteMs := int64(60000 / e.bpm)
+	
+	// Measure duration (4 quarter notes)
+	measureMs := quarterNoteMs * 4
+	
+	// Add countdown beat events on each quarter beat in the second measure (after one measure of silence)
+	for beat := 0; beat < 4; beat++ {
+		countdownTime := measureMs + int64(beat)*quarterNoteMs
+		countdownEvent := types.NewCountdownBeatEvent(countdownTime)
+		e.chart.events = append(e.chart.events, countdownEvent)
+	}
+	
+	// Add audio start marker at the beginning of the third measure
+	audioStartTime := measureMs * 2
+	audioStartEvent := types.NewAudioStartEvent(audioStartTime)
+	e.chart.events = append(e.chart.events, audioStartEvent)
+	
+	// Keep events sorted by time
+	sort.Slice(e.chart.events, func(i, j int) bool {
+		return e.chart.events[i].GetTime() < e.chart.events[j].GetTime()
+	})
+	
+	// Sync events to event manager
+	e.syncEventsToManager()
+}
+
+func (e *EditorState) syncEventsToManager() {
+	e.eventManager.Clear()
+	for _, event := range e.chart.events {
+		e.eventManager.AddEvent(event)
+	}
+	fmt.Printf("📝 Synced %d events to EventManager\n", len(e.chart.events))
 }
 
 func (e *EditorState) setupControls() {
@@ -167,97 +210,33 @@ func (e *EditorState) moveRight() {
 	e.stopPlayback()
 }
 
-func (e *EditorState) selectTrackUp() {
-	// More intuitive track selection order: visual left-to-right, top-to-bottom
-	visualOrder := []types.TrackName{
-		types.TrackLeftTop, types.TrackCenterTop, types.TrackRightTop,
-		types.TrackLeftBottom, types.TrackCenterBottom, types.TrackRightBottom,
-	}
-	
-	currentIndex := 0
-	for i, track := range visualOrder {
-		if track == e.selectedTrack {
-			currentIndex = i
-			break
-		}
-	}
-	
-	// Navigate upwards in the visual grid
-	if currentIndex >= 3 {
-		newIndex := currentIndex - 3 // Move up one row
-		e.selectedTrack = visualOrder[newIndex]
-	}
+func (e *EditorState) goToBeginning() {
+	e.currentTime = 0
+	e.stopPlayback()
 }
 
-func (e *EditorState) selectTrackDown() {
-	// More intuitive track selection order: visual left-to-right, top-to-bottom
-	visualOrder := []types.TrackName{
-		types.TrackLeftTop, types.TrackCenterTop, types.TrackRightTop,
-		types.TrackLeftBottom, types.TrackCenterBottom, types.TrackRightBottom,
-	}
+func (e *EditorState) goToLastNote() {
+	var lastTime int64 = 0
 	
-	currentIndex := 0
-	for i, track := range visualOrder {
-		if track == e.selectedTrack {
-			currentIndex = i
-			break
+	// Find the latest note across all tracks
+	for _, notes := range e.chart.tracks {
+		for _, note := range notes {
+			var noteEndTime int64
+			if note.IsHoldNote() {
+				noteEndTime = note.TargetRelease
+			} else {
+				noteEndTime = note.Target
+			}
+			if noteEndTime > lastTime {
+				lastTime = noteEndTime
+			}
 		}
 	}
 	
-	// Navigate downwards in the visual grid
-	if currentIndex < 3 {
-		newIndex := currentIndex + 3 // Move down one row
-		e.selectedTrack = visualOrder[newIndex]
-	}
-}
-
-func (e *EditorState) selectTrackLeft() {
-	// Move left in the visual grid (3x2 layout)
-	visualOrder := []types.TrackName{
-		types.TrackLeftTop, types.TrackCenterTop, types.TrackRightTop,
-		types.TrackLeftBottom, types.TrackCenterBottom, types.TrackRightBottom,
-	}
-	
-	currentIndex := 0
-	for i, track := range visualOrder {
-		if track == e.selectedTrack {
-			currentIndex = i
-			break
-		}
-	}
-	
-	// Move left within the same row
-	row := currentIndex / 3 // 0 = top row, 1 = bottom row
-	col := currentIndex % 3 // 0 = left, 1 = center, 2 = right
-	
-	if col > 0 {
-		newIndex := row*3 + (col - 1)
-		e.selectedTrack = visualOrder[newIndex]
-	}
-}
-
-func (e *EditorState) selectTrackRight() {
-	// Move right in the visual grid (3x2 layout)
-	visualOrder := []types.TrackName{
-		types.TrackLeftTop, types.TrackCenterTop, types.TrackRightTop,
-		types.TrackLeftBottom, types.TrackCenterBottom, types.TrackRightBottom,
-	}
-	
-	currentIndex := 0
-	for i, track := range visualOrder {
-		if track == e.selectedTrack {
-			currentIndex = i
-			break
-		}
-	}
-	
-	// Move right within the same row
-	row := currentIndex / 3 // 0 = top row, 1 = bottom row
-	col := currentIndex % 3 // 0 = left, 1 = center, 2 = right
-	
-	if col < 2 {
-		newIndex := row*3 + (col + 1)
-		e.selectedTrack = visualOrder[newIndex]
+	// If no notes found, stay at current position
+	if lastTime > 0 {
+		e.currentTime = lastTime
+		e.stopPlayback()
 	}
 }
 
@@ -274,10 +253,10 @@ func (e *EditorState) exitEditor() {
 }
 
 func (e *EditorState) getTimeStep() int64 {
-	if input.K.Is(ebiten.KeyShift, input.Held) {
+	if e.isShiftHeld() {
 		// Measure (4 beats)
 		return e.calculateTimeDivision(1) * 4
-	} else if input.K.Is(ebiten.KeyControl, input.Held) {
+	} else if e.isControlHeld() {
 		// Fine adjustment
 		return 10
 	}
@@ -342,8 +321,49 @@ func (e *EditorState) GetLaneSpeed() float64 {
 	return e.laneSpeed
 }
 
+func (e *EditorState) GetWholeNoteMs() int64 {
+	return e.calculateTimeDivision(1) // Always return whole note duration (1/1)
+}
+
+func (e *EditorState) GetQuarterNoteMs() int64 {
+	return e.calculateTimeDivision(4) // Always return quarter note duration (1/4)
+}
+
+func (e *EditorState) GetEighthNoteMs() int64 {
+	return e.calculateTimeDivision(8) // Always return eighth note duration (1/8)
+}
+
 func (e *EditorState) adjustLaneSpeed(delta float64) {
 	e.laneSpeed = math.Max(0.5, math.Min(10.0, e.laneSpeed+delta)) // Clamp between 0.5-10.0
+}
+
+func (e *EditorState) GetAudioOffset() int64 {
+	return e.audioOffset
+}
+
+func (e *EditorState) adjustAudioOffset(delta int64) {
+	// Allow audio offset range from -5 seconds to +5 seconds
+	e.audioOffset = max(-5000, min(5000, e.audioOffset+delta))
+}
+
+
+// Helper functions to check for modifier keys (including left/right variants)
+func (e *EditorState) isAltHeld() bool {
+	return input.K.Is(ebiten.KeyAlt, input.Held) ||
+		   input.K.Is(ebiten.KeyAltLeft, input.Held) ||
+		   input.K.Is(ebiten.KeyAltRight, input.Held)
+}
+
+func (e *EditorState) isShiftHeld() bool {
+	return input.K.Is(ebiten.KeyShift, input.Held) ||
+		   input.K.Is(ebiten.KeyShiftLeft, input.Held) ||
+		   input.K.Is(ebiten.KeyShiftRight, input.Held)
+}
+
+func (e *EditorState) isControlHeld() bool {
+	return input.K.Is(ebiten.KeyControl, input.Held) ||
+		   input.K.Is(ebiten.KeyControlLeft, input.Held) ||
+		   input.K.Is(ebiten.KeyControlRight, input.Held)
 }
 
 // Get current time position as a time division fraction (e.g., "3/4", "5/8")
@@ -401,13 +421,50 @@ func (e *EditorState) placeNote() {
 		e.isHolding = false
 		e.holdStartTime = 0
 	} else {
-		if input.K.Is(ebiten.KeyShift, input.Held) {
+		if e.isShiftHeld() {
 			// Start hold note
 			e.isHolding = true
 			e.holdStartTime = time
 		} else {
 			// Place tap note
 			note = types.NewNote(e.selectedTrack, time, 0)
+			e.addNote(note)
+		}
+	}
+}
+
+func (e *EditorState) toggleNoteOnTrack(trackName types.TrackName) {
+	time := e.snapTime(e.currentTime)
+	
+	// Check if note already exists at this position
+	existingNote := e.getNoteAt(trackName, time)
+	if existingNote != nil {
+		// Remove existing note
+		e.removeNote(existingNote)
+		return
+	}
+
+	// Create new note
+	var note *types.Note
+	if e.isHolding {
+		// End hold note
+		if e.holdStartTime > 0 {
+			duration := time - e.holdStartTime
+			if duration > 0 {
+				note = types.NewNote(trackName, e.holdStartTime, e.holdStartTime+duration)
+				e.addNote(note)
+			}
+		}
+		e.isHolding = false
+		e.holdStartTime = 0
+	} else {
+		if e.isShiftHeld() {
+			// Start hold note
+			e.isHolding = true
+			e.holdStartTime = time
+		} else {
+			// Place tap note
+			note = types.NewNote(trackName, time, 0)
 			e.addNote(note)
 		}
 	}
@@ -481,10 +538,15 @@ func (e *EditorState) startPlayback() {
 	e.startTime = time.Now()
 	e.playbackOffset = e.currentTime
 	
+	// Reset event manager for fresh playback
+	e.eventManager.Reset()
+	
 	// Start audio from current position if song is available
 	if e.song != nil {
 		audio.InitSong(e.song)
-		audio.SetSongPositionMS(int(e.currentTime))
+		// Apply audio offset to the playback position
+		audioPosition := e.currentTime + e.audioOffset
+		audio.SetSongPositionMS(int(max(0, audioPosition))) // Ensure non-negative position
 		audio.PlaySong()
 	}
 	// If no song, playback will just update the timeline position for editing
@@ -492,9 +554,10 @@ func (e *EditorState) startPlayback() {
 
 func (e *EditorState) stopPlayback() {
 	e.playing = false
-	if e.song != nil {
-		audio.StopSong()
-	}
+	
+	// Stop all audio (both song and SFX)
+	audio.StopAll()
+	
 	// Snap to nearest time division when stopping playback
 	e.currentTime = e.snapTime(e.currentTime)
 }
@@ -559,6 +622,101 @@ func (e *EditorState) removeNoteInternal(note *types.Note) {
 	e.chart.modified = true
 }
 
+// Event management methods
+func (e *EditorState) addEvent(event types.Event) {
+	e.chart.events = append(e.chart.events, event)
+	
+	// Keep events sorted by time
+	sort.Slice(e.chart.events, func(i, j int) bool {
+		return e.chart.events[i].GetTime() < e.chart.events[j].GetTime()
+	})
+	
+	e.chart.modified = true
+	e.syncEventsToManager()
+}
+
+func (e *EditorState) removeEvent(time int64, eventType string) bool {
+	for i, event := range e.chart.events {
+		// Check if event is at the same time and of the same type
+		if abs(event.GetTime()-time) < e.gridSize/4 && event.GetType() == eventType {
+			// Remove the event
+			e.chart.events = append(e.chart.events[:i], e.chart.events[i+1:]...)
+			e.chart.modified = true
+			e.syncEventsToManager()
+			return true
+		}
+	}
+	return false
+}
+
+func (e *EditorState) getEventsAt(time int64) []types.Event {
+	var events []types.Event
+	for _, event := range e.chart.events {
+		if abs(event.GetTime()-time) < e.gridSize/4 {
+			events = append(events, event)
+		}
+	}
+	return events
+}
+
+func (e *EditorState) getAllEvents() []types.Event {
+	// Return a copy to avoid external modification
+	events := make([]types.Event, len(e.chart.events))
+	copy(events, e.chart.events)
+	return events
+}
+
+// GetAllEvents returns all events (public method for renderer)
+func (e *EditorState) GetAllEvents() []types.Event {
+	return e.getAllEvents()
+}
+
+// Event marker toggle methods
+func (e *EditorState) toggleAudioStartMarker() {
+	time := e.snapTime(e.currentTime)
+	
+	// Check if an audio start event already exists at this position
+	if e.removeEvent(time, "audio_start") {
+		return // Event was removed
+	}
+	
+	// Remove any existing audio start markers (only one allowed)
+	e.removeAllAudioStartMarkers()
+	
+	// Create new audio start event
+	event := types.NewAudioStartEvent(time)
+	e.addEvent(event)
+}
+
+func (e *EditorState) removeAllAudioStartMarkers() {
+	// Remove all existing audio start events
+	var filteredEvents []types.Event
+	for _, event := range e.chart.events {
+		if event.GetType() != "audio_start" {
+			filteredEvents = append(filteredEvents, event)
+		}
+	}
+	
+	if len(filteredEvents) != len(e.chart.events) {
+		e.chart.events = filteredEvents
+		e.chart.modified = true
+		e.syncEventsToManager()
+	}
+}
+
+func (e *EditorState) toggleCountdownBeatMarker() {
+	time := e.snapTime(e.currentTime)
+	
+	// Check if a countdown beat event already exists at this position
+	if e.removeEvent(time, "countdown_beat") {
+		return // Event was removed
+	}
+	
+	// Create new countdown beat event
+	event := types.NewCountdownBeatEvent(time)
+	e.addEvent(event)
+}
+
 func (e *EditorState) Update() error {
 	e.BaseGameState.Update()
 	
@@ -566,6 +724,29 @@ func (e *EditorState) Update() error {
 	if e.playing {
 		elapsed := time.Since(e.startTime).Milliseconds()
 		e.currentTime = e.playbackOffset + elapsed
+		
+		// Execute events during playback
+		ctx := &types.EventContext{
+			CurrentTime:   e.currentTime,
+			Song:          e.song,
+			Chart:         nil, // TODO: Convert EditorChart to Chart if needed
+			AudioInitSong: audio.InitSong,
+			AudioPlaySong: audio.PlaySong,
+			AudioPlaySFX:  func(sfxCode string) {
+				switch sfxCode {
+				case "hat":
+					audio.PlaySFX(audio.SFXHat)
+				case "select":
+					audio.PlaySFX(audio.SFXSelect)
+				default:
+					// Default to select sound for unknown codes
+					audio.PlaySFX(audio.SFXSelect)
+				}
+			},
+		}
+		if err := e.eventManager.Update(e.currentTime, ctx); err != nil {
+			logger.Warn("Event execution error: %v", err)
+		}
 		
 		// Stop playback if we've reached the end of the song
 		if e.song != nil && e.currentTime >= int64(e.song.Length) {
@@ -578,7 +759,7 @@ func (e *EditorState) Update() error {
 	bpmDivisionHandled := false
 	
 	// BPM controls (Shift + -/+)
-	if input.K.Is(ebiten.KeyShift, input.Held) {
+	if e.isShiftHeld() {
 		if input.K.Is(ebiten.KeyMinus, input.JustPressed) {
 			e.adjustBPM(-1.0)
 			bpmDivisionHandled = true
@@ -590,7 +771,7 @@ func (e *EditorState) Update() error {
 	}
 	
 	// Time division controls (Ctrl + -/+)
-	if input.K.Is(ebiten.KeyControl, input.Held) {
+	if e.isControlHeld() {
 		if input.K.Is(ebiten.KeyMinus, input.JustPressed) {
 			e.adjustTimeDivision(false) // Decrease division (longer notes)
 			bpmDivisionHandled = true
@@ -601,40 +782,61 @@ func (e *EditorState) Update() error {
 		}
 	}
 	
-	// Lane speed controls (Alt + -/+)
-	if input.K.Is(ebiten.KeyAlt, input.Held) {
-		if input.K.Is(ebiten.KeyMinus, input.JustPressed) {
-			e.adjustLaneSpeed(-0.5)
-			bpmDivisionHandled = true
-		}
-		if input.K.Is(ebiten.KeyEqual, input.JustPressed) { // Plus key
-			e.adjustLaneSpeed(0.5)
-			bpmDivisionHandled = true
-		}
-	}
-	
-	// Handle time navigation (arrow keys) - only if BPM/division wasn't handled
+	// Handle arrow keys - context depends on modifiers
 	if !bpmDivisionHandled {
-		if input.K.Is(ebiten.KeyArrowLeft, input.JustPressed) {
-			e.moveLeft()
-		}
-		if input.K.Is(ebiten.KeyArrowRight, input.JustPressed) {
-			e.moveRight()
+		// Lane speed controls (Alt + Up/Down arrows) and audio offset (Alt + Plus/Minus)
+		if e.isAltHeld() {
+			if input.K.Is(ebiten.KeyArrowUp, input.JustPressed) {
+				e.adjustLaneSpeed(0.5) // Increase lane speed
+				bpmDivisionHandled = true
+			}
+			if input.K.Is(ebiten.KeyArrowDown, input.JustPressed) {
+				e.adjustLaneSpeed(-0.5) // Decrease lane speed
+				bpmDivisionHandled = true
+			}
+			if input.K.Is(ebiten.KeyMinus, input.JustPressed) {
+				e.adjustAudioOffset(-10) // Decrease audio offset by 10ms
+				bpmDivisionHandled = true
+			}
+			if input.K.Is(ebiten.KeyEqual, input.JustPressed) { // Plus key
+				e.adjustAudioOffset(10) // Increase audio offset by 10ms
+				bpmDivisionHandled = true
+			}
+		} else {
+			// Time navigation (Left/Right arrows) and time division (Up/Down arrows)
+			if input.K.Is(ebiten.KeyArrowLeft, input.JustPressed) {
+				e.moveLeft()
+			}
+			if input.K.Is(ebiten.KeyArrowRight, input.JustPressed) {
+				e.moveRight()
+			}
+			if input.K.Is(ebiten.KeyArrowUp, input.JustPressed) {
+				e.adjustTimeDivision(true) // Increase division (shorter notes)
+			}
+			if input.K.Is(ebiten.KeyArrowDown, input.JustPressed) {
+				e.adjustTimeDivision(false) // Decrease division (longer notes)
+			}
 		}
 	}
 	
-	// Handle track selection (WASD)
-	if input.K.Is(ebiten.KeyW, input.JustPressed) {
-		e.selectTrackUp()
+	// Handle direct track note toggling (QWE for top tracks, ASD for bottom tracks)
+	if input.K.Is(ebiten.KeyQ, input.JustPressed) {
+		e.toggleNoteOnTrack(types.TrackLeftTop)
 	}
-	if input.K.Is(ebiten.KeyS, input.JustPressed) {
-		e.selectTrackDown()
+	if input.K.Is(ebiten.KeyW, input.JustPressed) {
+		e.toggleNoteOnTrack(types.TrackCenterTop)
+	}
+	if input.K.Is(ebiten.KeyE, input.JustPressed) {
+		e.toggleNoteOnTrack(types.TrackRightTop)
 	}
 	if input.K.Is(ebiten.KeyA, input.JustPressed) {
-		e.selectTrackLeft()
+		e.toggleNoteOnTrack(types.TrackLeftBottom)
+	}
+	if input.K.Is(ebiten.KeyS, input.JustPressed) {
+		e.toggleNoteOnTrack(types.TrackCenterBottom)
 	}
 	if input.K.Is(ebiten.KeyD, input.JustPressed) {
-		e.selectTrackRight()
+		e.toggleNoteOnTrack(types.TrackRightBottom)
 	}
 	
 	// Handle keyboard input
@@ -649,6 +851,14 @@ func (e *EditorState) Update() error {
 	if input.K.Is(ebiten.KeyR, input.JustPressed) {
 		e.currentTime = 0
 		e.stopPlayback()
+	}
+	
+	if input.K.Is(ebiten.KeyB, input.JustPressed) {
+		if e.isShiftHeld() {
+			e.goToLastNote()
+		} else {
+			e.goToBeginning()
+		}
 	}
 	
 	if input.K.Is(ebiten.KeyHome, input.JustPressed) {
@@ -692,8 +902,17 @@ func (e *EditorState) Update() error {
 		e.metronomeOn = !e.metronomeOn
 	}
 	
+	// Event markers
+	if input.K.Is(ebiten.KeyK, input.JustPressed) {
+		e.toggleAudioStartMarker()
+	}
+	
+	if input.K.Is(ebiten.KeyI, input.JustPressed) {
+		e.toggleCountdownBeatMarker()
+	}
+	
 	// Ctrl key combinations (only undo/redo here, BPM/division handled earlier)  
-	if input.K.Is(ebiten.KeyControl, input.Held) && !bpmDivisionHandled {
+	if e.isControlHeld() && !bpmDivisionHandled {
 		// Undo/Redo
 		if input.K.Is(ebiten.KeyZ, input.JustPressed) {
 			e.undo()
@@ -705,7 +924,7 @@ func (e *EditorState) Update() error {
 			e.saveChart()
 		}
 		if input.K.Is(ebiten.KeyO, input.JustPressed) {
-			if input.K.Is(ebiten.KeyShift, input.Held) {
+			if e.isShiftHeld() {
 				e.openAudioFile()
 			} else {
 				e.loadChart()
@@ -743,6 +962,10 @@ func (e *EditorState) GridSize() int64 {
 }
 
 func (e *EditorState) Playing() bool {
+	return e.playing
+}
+
+func (e *EditorState) IsPlaying() bool {
 	return e.playing
 }
 
@@ -908,6 +1131,15 @@ func (e *EditorState) exportToJSON() *schema.SongDataV2 {
 		chartData.Tracks[trackStr] = jsonNotes
 	}
 	
+	// Convert events to JSON format
+	for _, event := range e.chart.events {
+		eventData := schema.EventData{
+			Time: event.GetTime(),
+			Type: event.GetType(),
+		}
+		chartData.Events = append(chartData.Events, eventData)
+	}
+	
 	// Create song data
 	songData := &schema.SongDataV2{
 		Schema:  "https://slaptrax.dev/schema/song/v2.json",
@@ -982,6 +1214,24 @@ func (e *EditorState) importFromJSON(songData *schema.SongDataV2, chartData *sch
 			e.chart.tracks[trackName] = append(e.chart.tracks[trackName], note)
 		}
 	}
+	
+	// Import events
+	for _, eventData := range chartData.Events {
+		event, err := types.CreateEventFromData(eventData)
+		if err != nil {
+			logger.Warn("Failed to create event: %v", err)
+			continue
+		}
+		e.chart.events = append(e.chart.events, event)
+	}
+	
+	// Keep events sorted by time
+	sort.Slice(e.chart.events, func(i, j int) bool {
+		return e.chart.events[i].GetTime() < e.chart.events[j].GetTime()
+	})
+	
+	// Sync events to event manager
+	e.syncEventsToManager()
 }
 
 func (e *EditorState) calculateMaxCombo() int {

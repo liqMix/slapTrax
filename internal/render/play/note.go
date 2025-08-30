@@ -47,6 +47,7 @@ func CreateNotePath(track types.TrackName, progress float32, opts *NotePathOpts)
 	return CreateNotePathFromPoints(notePoints[track], progress, opts)
 }
 
+
 func CreateNotePathFromPoints(pts []*ui.Point, progress float32, opts *NotePathOpts) *cache.CachedPath {
 	if len(pts) == 0 {
 		return nil
