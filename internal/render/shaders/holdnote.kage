@@ -24,64 +24,107 @@ var HoldStartProgress float // Where hold starts (0.0-1.0)
 var HoldEndProgress float   // Where hold ends (0.0-1.0)
 var WasHit float           // 1.0 if hit, 0.0 otherwise
 var WasReleased float      // 1.0 if released, 0.0 otherwise
+var FadeInThreshold float  // Progress below which notes are invisible
+var FadeOutThreshold float // Progress above which notes are fully visible
 
 func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     fragX := position.x
     fragY := position.y
     
-    // We'll calculate hold positions dynamically in the loop below
+    // Calculate hold start and end track positions
+    startP1X := CenterX + (Point1X - CenterX) * HoldStartProgress
+    startP1Y := CenterY + (Point1Y - CenterY) * HoldStartProgress
+    startP2X := CenterX + (Point2X - CenterX) * HoldStartProgress
+    startP2Y := CenterY + (Point2Y - CenterY) * HoldStartProgress  
+    startP3X := CenterX + (Point3X - CenterX) * HoldStartProgress
+    startP3Y := CenterY + (Point3Y - CenterY) * HoldStartProgress
     
-    // Check if fragment is inside the hold area (trapezoid shape)
-    // We'll use a simple approach: check if the point is inside the polygon
-    // formed by the start and end track shapes
+    endP1X := CenterX + (Point1X - CenterX) * HoldEndProgress
+    endP1Y := CenterY + (Point1Y - CenterY) * HoldEndProgress
+    endP2X := CenterX + (Point2X - CenterX) * HoldEndProgress
+    endP2Y := CenterY + (Point2Y - CenterY) * HoldEndProgress
+    endP3X := CenterX + (Point3X - CenterX) * HoldEndProgress  
+    endP3Y := CenterY + (Point3Y - CenterY) * HoldEndProgress
     
-    // For simplicity, we'll approximate by checking distance to the two track segments
-    // at various points along the hold length
+    // Check if fragment is inside the trapezoid formed by start and end track shapes
+    // We'll test against the filled area between the two track shapes
     
     minDistanceToHold := 1000000.0 // Large number
+    closestProgress := 0.0
     
-    // Sample multiple points along the hold to find minimum distance
-    for i := 0.0; i < 10.0; i += 1.0 {
-        t := i / 9.0 // 0.0 to 1.0
-        progress := HoldStartProgress + (HoldEndProgress - HoldStartProgress) * t
+    // Find the closest point on the hold by projecting onto the center line
+    centerStartX := (startP1X + startP2X + startP3X) / 3.0
+    centerStartY := (startP1Y + startP2Y + startP3Y) / 3.0
+    centerEndX := (endP1X + endP2X + endP3X) / 3.0
+    centerEndY := (endP1Y + endP2Y + endP3Y) / 3.0
+    
+    // Vector from start to end center
+    holdDirX := centerEndX - centerStartX
+    holdDirY := centerEndY - centerStartY
+    holdLength := sqrt(holdDirX*holdDirX + holdDirY*holdDirY)
+    
+    if holdLength > 0.1 {
+        // Normalize direction
+        holdDirX /= holdLength
+        holdDirY /= holdLength
         
-        // Interpolate track points at this progress
-        p1X := CenterX + (Point1X - CenterX) * progress
-        p1Y := CenterY + (Point1Y - CenterY) * progress
-        p2X := CenterX + (Point2X - CenterX) * progress
-        p2Y := CenterY + (Point2Y - CenterY) * progress
-        p3X := CenterX + (Point3X - CenterX) * progress
-        p3Y := CenterY + (Point3Y - CenterY) * progress
+        // Project fragment onto hold centerline
+        toFragX := fragX - centerStartX
+        toFragY := fragY - centerStartY
+        projection := toFragX*holdDirX + toFragY*holdDirY
+        projection = max(0.0, min(holdLength, projection))
         
-        // Distance to track segments
-        dist1 := distanceToLineSegment(fragX, fragY, p1X, p1Y, p2X, p2Y)
-        dist2 := distanceToLineSegment(fragX, fragY, p2X, p2Y, p3X, p3Y)
+        // Calculate progress along hold (0.0 to 1.0)
+        holdT := projection / holdLength
+        closestProgress = HoldStartProgress + (HoldEndProgress - HoldStartProgress) * holdT
         
-        segmentDist := min(dist1, dist2)
-        effectiveWidth := Width * progress * WidthScale
+        // Get track shape at this progress
+        interpP1X := CenterX + (Point1X - CenterX) * closestProgress
+        interpP1Y := CenterY + (Point1Y - CenterY) * closestProgress
+        interpP2X := CenterX + (Point2X - CenterX) * closestProgress
+        interpP2Y := CenterY + (Point2Y - CenterY) * closestProgress
+        interpP3X := CenterX + (Point3X - CenterX) * closestProgress
+        interpP3Y := CenterY + (Point3Y - CenterY) * closestProgress
         
-        // If within this segment's width, we're inside the hold
-        if segmentDist < effectiveWidth * 0.5 {
-            minDistanceToHold = 0.0
-            break
-        }
+        // Distance to track segments at this progress
+        dist1 := distanceToLineSegment(fragX, fragY, interpP1X, interpP1Y, interpP2X, interpP2Y)
+        dist2 := distanceToLineSegment(fragX, fragY, interpP2X, interpP2Y, interpP3X, interpP3Y)
         
-        minDistanceToHold = min(minDistanceToHold, segmentDist - effectiveWidth * 0.5)
+        minDistanceToHold = min(dist1, dist2)
+    } else {
+        // Very short hold - treat as single note
+        dist1 := distanceToLineSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y)
+        dist2 := distanceToLineSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y)
+        minDistanceToHold = min(dist1, dist2)
+        closestProgress = HoldStartProgress
     }
     
-    if minDistanceToHold > 2.0 {
+    // Calculate effective width at the closest progress point
+    effectiveWidth := Width * WidthScale * closestProgress
+    halfWidth := effectiveWidth * 0.5
+    
+    // Distance-based alpha for anti-aliasing
+    alpha := 1.0 - smoothstep(halfWidth-1.0, halfWidth+1.0, minDistanceToHold)
+    
+    if alpha <= 0.0 {
         return vec4(0)
     }
     
-    // Calculate alpha based on distance to hold area
-    alpha := 1.0 - smoothstep(0.0, 2.0, minDistanceToHold)
+    // Apply fade in/out based on the closest progress point
+    fadeAlpha := 1.0
+    if closestProgress < FadeInThreshold {
+        fadeAlpha = 0.0
+    } else if closestProgress < FadeOutThreshold {
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        fadeProgress := (closestProgress - FadeInThreshold) / fadeRange
+        fadeAlpha = fadeProgress
+    }
     
-    // Base color
-    finalColor := vec4(ColorR, ColorG, ColorB, ColorA * alpha)
+    // Base color with combined alpha
+    finalColor := vec4(ColorR, ColorG, ColorB, ColorA * alpha * fadeAlpha)
     
     // Add hit effect
     if WasHit > 0.5 {
-        // Add slight brightness increase
         finalColor.rgb *= 1.2
         
         if WasReleased < 0.5 {
@@ -93,7 +136,8 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     
     // Add glow for active holds
     if Glow > 0.0 || (WasHit > 0.5 && WasReleased < 0.5) {
-        glowAlpha := 0.5 * (1.0 - smoothstep(0.0, 10.0, minDistanceToHold))
+        glowRadius := effectiveWidth * 1.5
+        glowAlpha := 0.5 * (1.0 - smoothstep(0.0, glowRadius, minDistanceToHold))
         glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.4)
         finalColor = mix(finalColor, glowColor, glowAlpha)
     }

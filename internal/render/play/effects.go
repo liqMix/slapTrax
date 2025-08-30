@@ -24,28 +24,6 @@ func (r *Play) addHitEffects() {
 		now := r.state.CurrentTime()
 		speed := r.state.GetTravelTime()
 
-		// path := GetNotePath(hit.Note.TrackName, hit.Note, true)
-		// if path != nil {
-		// 	getOrCreatePath(&cache.PathCacheKey{
-		// 		TrackName:        int(hit.Note.TrackName),
-
-		// 		Progress:         int64(progress * 100),
-		// 		Solo:             true,
-		// 		IsHitEffectTrail: true,
-		// 	})
-
-		// 	// var p []*cache.CachedPath
-		// 	// copy([]*cache.CachedPath{path}, p)
-		// 	// noteColor := hit.Note.TrackName.NoteColor()
-		// 	// ui.ColorVertices(p[0].Vertices, color.RGBA{
-		// 	// 	R: noteColor.R,
-		// 	// 	G: noteColor.G,
-		// 	// 	B: color.B,
-		// 	// 	A: uint8(200 * endProgress),
-		// 	// })
-		// 	r.vectorCollection.AddPath(path)
-		// }
-
 		progress := types.GetTrackProgress(hitTime, now, -speed/4)
 		if progress > 0 {
 			if !hit.Note.IsHoldNote() {

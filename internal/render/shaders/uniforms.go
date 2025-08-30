@@ -31,6 +31,10 @@ type NoteUniforms struct {
 	Glow     float32 // Glow intensity
 	Solo     float32 // 1.0 if solo, 0.0 otherwise
 	TimeMs   float32 // Current time in milliseconds for animations
+	
+	// Fade thresholds
+	FadeInThreshold  float32 // Progress below which notes are invisible
+	FadeOutThreshold float32 // Progress above which notes are fully visible
 }
 
 // HoldNoteUniforms contains parameters for hold note rendering
@@ -87,6 +91,10 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	}
 	uniforms.Glow = 0.0
 	
+	// Set fade thresholds - notes start invisible and fade in as they approach judgment line
+	uniforms.FadeInThreshold = smoothProgress(0.2)  // Start fading in at 20% of travel
+	uniforms.FadeOutThreshold = smoothProgress(0.6) // Fully visible at 60% of travel
+	
 	return uniforms
 }
 
@@ -140,6 +148,7 @@ func (u *NoteUniforms) ToSlice() []float32 {
 		u.Width, u.WidthScale,
 		u.ColorR, u.ColorG, u.ColorB, u.ColorA,
 		u.Glow, u.Solo, u.TimeMs,
+		u.FadeInThreshold, u.FadeOutThreshold,
 	}
 }
 

@@ -12,7 +12,6 @@ import (
 	"github.com/liqmix/slaptrax/internal/debug"
 	"github.com/liqmix/slaptrax/internal/display"
 	"github.com/liqmix/slaptrax/internal/input"
-	"github.com/liqmix/slaptrax/internal/l"
 	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
@@ -131,9 +130,6 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if cache.Path.IsBuilding() {
-		return nil
-	}
 	audio.Update()
 	input.Update()
 
@@ -196,27 +192,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	bgOpts.ColorScale.Scale(0.25, 0.25, 0.25, 0.25)
 	canvas.DrawImage(g.background, bgOpts)
 
-	if cache.Path.IsBuilding() {
-		ui.DrawNoteThemedRect(canvas, &ui.Point{X: 0.5, Y: 0.5}, &ui.Point{X: 0.25, Y: 0.15})
-		ui.DrawTextAt(canvas, l.String(l.LOADING), &ui.Point{X: 0.5, Y: 0.5}, g.loadingTextOpts, nil)
-	} else {
-		if g.currentState != nil {
-			for i, s := range g.stateStack {
-				opts := &ebiten.DrawImageOptions{}
-				a := float32(0.25) * float32(i+1)
-				opts.ColorScale.Scale(a, a, a, a)
-				s.Draw(canvas, opts)
-			}
-			g.currentState.Draw(canvas, nil)
-
-			// Draw nav action bar if navigable
-			if g.currentState.state.IsNavigable() {
-				g.navText.Draw(canvas, nil)
-			}
+	if g.currentState != nil {
+		for i, s := range g.stateStack {
+			opts := &ebiten.DrawImageOptions{}
+			a := float32(0.25) * float32(i+1)
+			opts.ColorScale.Scale(a, a, a, a)
+			s.Draw(canvas, opts)
 		}
+		g.currentState.Draw(canvas, nil)
 
-		g.userHeader.Draw(canvas, nil)
+		// Draw nav action bar if navigable
+		if g.currentState.state.IsNavigable() {
+			g.navText.Draw(canvas, nil)
+		}
 	}
+
+	g.userHeader.Draw(canvas, nil)
 	opts := display.Window.GetScreenDrawOptions()
 	if !g.started {
 		scale := float32(g.startTicks) / float32(startingTicks)

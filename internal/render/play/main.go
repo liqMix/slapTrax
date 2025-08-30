@@ -2,7 +2,6 @@ package play
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/display"
 	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/render/shaders"
@@ -31,52 +30,22 @@ func NewPlayRender(s state.State) *Play {
 	// Initialize shader system
 	if err := shaders.InitManager(); err != nil {
 		logger.Error("Failed to initialize shader manager: %v", err)
-		logger.Info("Falling back to vertex-based rendering")
-		ShaderRenderingEnabled = false
-	} else {
-		shaders.InitRenderer()
-		// Enable shader rendering by default for testing
-		ShaderRenderingEnabled = true
-		logger.Info("Shader-based note rendering initialized successfully")
+		return nil
 	}
-
-	// Only initialize vector cache system if shaders failed
-	if !ShaderRenderingEnabled {
-		logger.Info("Initializing vector cache system")
-		cache.Path.RemoveCbs()
-		cb := func() {
-			go func() {
-				if cache.Path.IsBuilding() {
-					return
-				}
-				cache.Path.SetIsBuilding(true)
-				RebuildVectorCache()
-				cache.Path.SetIsBuilding(false)
-			}()
-		}
-		cache.Path.AddCb(&cb)
-		cache.Path.Clear()
-	} else {
-		logger.Info("Skipping vector cache initialization - using shaders")
-	}
+	
+	shaders.InitRenderer()
+	ShaderRenderingEnabled = true
+	logger.Info("Shader-based note rendering initialized successfully")
 	return p
 }
 
 func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	if cache.Path.IsBuilding() {
-		return
-	}
-
 	r.BaseRenderer.Draw(screen, opts)
 	r.drawMeasureMarkers(screen)
 
 	// Track vectors
 	for _, track := range r.state.Tracks {
-		if ShaderRenderingEnabled {
-			r.addNotePathShader(track, screen)
-		} else {
-			r.addNotePath(track)
-		}
+		r.addNotePathShader(track, screen)
 		r.addJudgementPath(track)
 		if !user.S().DisableLaneEffects {
 			r.addTrackPath(track)
