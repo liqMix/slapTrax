@@ -1,0 +1,274 @@
+//kage:unit pixels
+package main
+
+// Note shader uniforms (3D version)
+var Progress float         // 0.0 (at center) to 1.0 (at judgment line)
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Note color alpha
+var Glow float             // Glow intensity
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var TimeMs float           // Time in milliseconds for animations
+var FadeInThreshold float  // Progress below which notes are invisible
+var FadeOutThreshold float // Progress above which notes are fully visible
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Calculate interpolated positions of the 3 track points based on progress
+    // Progress 0.0 = at center, Progress 1.0 = at judgment line
+    p1X := CenterX + (Point1X - CenterX) * Progress
+    p1Y := CenterY + (Point1Y - CenterY) * Progress
+    
+    p2X := CenterX + (Point2X - CenterX) * Progress
+    p2Y := CenterY + (Point2Y - CenterY) * Progress
+    
+    p3X := CenterX + (Point3X - CenterX) * Progress
+    p3Y := CenterY + (Point3Y - CenterY) * Progress
+    
+    // Calculate effective width based on progress and scale (perspective effect)
+    // Double the thickness for better 3D appearance
+    effectiveWidth := Width * WidthScale * Progress * 2.0
+    halfWidth := effectiveWidth * 0.5
+    
+    // Calculate distance from fragment to the two line segments that form the track
+    // Segment 1: from p1 to p2
+    distToSeg1 := distanceToLineSegment(fragX, fragY, p1X, p1Y, p2X, p2Y)
+    
+    // Segment 2: from p2 to p3
+    distToSeg2 := distanceToLineSegment(fragX, fragY, p2X, p2Y, p3X, p3Y)
+    
+    // Use the minimum distance to either segment
+    minDist := min(distToSeg1, distToSeg2)
+    
+    // Distance-based alpha for anti-aliasing with better occlusion
+    // Make the core more opaque for better depth occlusion
+    alpha := 1.0 - smoothstep(halfWidth-0.5, halfWidth+0.5, minDist)
+    
+    // Early exit if not within track area
+    if alpha <= 0.0 {
+        return vec4(0)
+    }
+    
+    // Apply fade in/out based on progress distance from judgment line
+    fadeIntensity := 1.0
+    
+    if Progress < FadeInThreshold {
+        // Notes are invisible when too far from judgment line
+        fadeIntensity = 0.0
+    } else if Progress < FadeOutThreshold {
+        // Gradual fade in between thresholds
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        if fadeRange > 0.0 {
+            fadeProgress := (Progress - FadeInThreshold) / fadeRange
+            fadeIntensity = fadeProgress
+        }
+    }
+    // Above FadeOutThreshold: fully visible (fadeIntensity = 1.0)
+    
+    // ===== 3D EXTRUSION SIMULATION =====
+    
+    // Depth factor for perspective
+    depthFactor := Progress // 0 = far, 1 = near
+    
+    // 1. DETERMINE SURFACE TYPE - removed unused variables
+    surfaceBrightness := 1.0
+    
+    widthFactor := clamp(minDist / halfWidth, 0.0, 1.0)
+    
+    if widthFactor < 0.7 {
+        // TOP SURFACE - the main face of the note (brightest)
+        surfaceBrightness = 1.0 + (0.3 * depthFactor) // Slightly brighter when closer
+        
+        // Add subtle top surface shading - slightly brighter in center
+        topCenterBoost := 1.0 + (1.0 - widthFactor) * 0.2
+        surfaceBrightness *= topCenterBoost
+        
+    } else {
+        // SIDE WALLS - the extruded edges (darker, like they're in shadow)
+        
+        // Side walls get darker as they're more "vertical" (further from center)
+        wallDarkening := 0.4 + (1.0 - widthFactor) * 0.4 // Range 0.4 to 0.8
+        surfaceBrightness = wallDarkening
+        
+        // Add simulated wall depth based on viewing angle
+        // Walls facing toward viewer are brighter than walls facing away
+        wallAngleFactor := (widthFactor - 0.7) / 0.3 // 0 to 1 across wall region
+        
+        // Simulate which side of the track we're on for asymmetric lighting
+        // Use fragment position relative to track to determine "left" vs "right" wall
+        trackCenterX := (p1X + p2X + p3X) / 3.0
+        trackCenterY := (p1Y + p2Y + p3Y) / 3.0
+        
+        // Calculate track perpendicular direction for left/right determination
+        trackDirX := p2X - p1X // Simplified track direction
+        trackDirY := p2Y - p1Y
+        trackLen := sqrt(trackDirX * trackDirX + trackDirY * trackDirY)
+        
+        if trackLen > 0.0 {
+            trackDirX /= trackLen
+            trackDirY /= trackLen
+            
+            // Perpendicular to track (points to "right" side)
+            perpX := -trackDirY
+            perpY := trackDirX
+            
+            // Determine which side of track this fragment is on
+            toFragX := fragX - trackCenterX
+            toFragY := fragY - trackCenterY
+            sideSign := (toFragX * perpX + toFragY * perpY)
+            
+            // Right side walls are brighter (simulating light from upper-right)
+            if sideSign > 0.0 {
+                surfaceBrightness *= (1.0 + wallAngleFactor * 0.3) // Right wall: brighter
+            } else {
+                surfaceBrightness *= (1.0 - wallAngleFactor * 0.2) // Left wall: darker
+            }
+        }
+    }
+    
+    // 3. SUBTLE SPECULAR HIGHLIGHT - follows the track shape
+    // Create highlight along the track by offsetting slightly from centerline
+    specularBoost := 1.0
+    
+    // Find the closest point on each track segment
+    closestOnSeg1X := 0.0
+    closestOnSeg1Y := 0.0
+    closestOnSeg2X := 0.0 
+    closestOnSeg2Y := 0.0
+    
+    // Segment 1: p1 to p2
+    seg1X := p2X - p1X
+    seg1Y := p2Y - p1Y
+    toFragX := fragX - p1X
+    toFragY := fragY - p1Y
+    seg1Len := seg1X * seg1X + seg1Y * seg1Y
+    if seg1Len > 0.0 {
+        t1 := clamp((toFragX * seg1X + toFragY * seg1Y) / seg1Len, 0.0, 1.0)
+        closestOnSeg1X = p1X + t1 * seg1X
+        closestOnSeg1Y = p1Y + t1 * seg1Y
+    }
+    
+    // Segment 2: p2 to p3
+    seg2X := p3X - p2X
+    seg2Y := p3Y - p2Y
+    toFrag2X := fragX - p2X
+    toFrag2Y := fragY - p2Y
+    seg2Len := seg2X * seg2X + seg2Y * seg2Y
+    if seg2Len > 0.0 {
+        t2 := clamp((toFrag2X * seg2X + toFrag2Y * seg2Y) / seg2Len, 0.0, 1.0)
+        closestOnSeg2X = p2X + t2 * seg2X
+        closestOnSeg2Y = p2Y + t2 * seg2Y
+    }
+    
+    // Use the closest point from either segment
+    closestX := closestOnSeg1X
+    closestY := closestOnSeg1Y
+    if distToSeg2 < distToSeg1 {
+        closestX = closestOnSeg2X
+        closestY = closestOnSeg2Y
+    }
+    
+    // Create highlight offset from the track centerline
+    highlightOffsetX := closestX + (effectiveWidth * 0.15)
+    highlightOffsetY := closestY - (effectiveWidth * 0.1)
+    distToHighlight := distance(vec2(fragX, fragY), vec2(highlightOffsetX, highlightOffsetY))
+    
+    highlightRadius := effectiveWidth * 0.4
+    if distToHighlight < highlightRadius {
+        highlightFactor := 1.0 - (distToHighlight / highlightRadius)
+        highlightFactor = pow(highlightFactor, 2.0)
+        specularBoost = 1.0 + (highlightFactor * 0.8 * depthFactor)
+    }
+    
+    // 4. ENHANCED EDGE SHADING - create strong bevel effect for 3D depth
+    edgeShading := 1.0
+    edgeDistance := halfWidth - minDist
+    
+    // Create multiple levels of edge shading for stronger 3D effect
+    if edgeDistance < halfWidth * 0.15 {
+        // Very close to edge - strong darkening
+        edgeFactor := (halfWidth * 0.15 - edgeDistance) / (halfWidth * 0.15)
+        edgeShading = 1.0 - (edgeFactor * 0.6) // Up to 60% darker at very edge
+    } else if edgeDistance < halfWidth * 0.4 {
+        // Medium distance from edge - medium darkening  
+        edgeFactor := (halfWidth * 0.4 - edgeDistance) / (halfWidth * 0.25)
+        edgeShading = 1.0 - (edgeFactor * 0.25) // Up to 25% darker in middle zone
+    }
+    
+    // 5. ADDITIONAL DEPTH CUE - simulate ambient occlusion in track "valleys"
+    ambientOcclusion := 1.0
+    if widthFactor > 0.3 {
+        aoFactor := (widthFactor - 0.3) / 0.7
+        ambientOcclusion = 1.0 - (aoFactor * aoFactor * 0.2) // Subtle AO toward edges
+    }
+    
+    // Combine all 3D effects - simplified for extrusion simulation
+    threeDEffect := surfaceBrightness * specularBoost * max(edgeShading * ambientOcclusion, 0.5)
+    
+    // Apply final color with dramatic 3D effects and fade
+    finalR := ColorR * fadeIntensity * threeDEffect
+    finalG := ColorG * fadeIntensity * threeDEffect
+    finalB := ColorB * fadeIntensity * threeDEffect
+    
+    finalColor := vec4(finalR, finalG, finalB, ColorA * alpha)
+    
+    // Add glow effect if enabled
+    if Glow > 0.0 {
+        glowRadius := effectiveWidth * 2.0
+        glowAlpha := Glow * (1.0 - smoothstep(0.0, glowRadius, minDist))
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.3)
+        finalColor = mix(finalColor, glowColor, glowAlpha)
+    }
+    
+    // Add subtle animation for solo notes
+    if Solo > 0.5 {
+        pulse := sin(TimeMs * 0.005) * 0.1 + 0.9
+        finalColor.rgb *= pulse
+    }
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    // Vector from A to B
+    abx := bx - ax
+    aby := by - ay
+    
+    // Vector from A to P
+    apx := px - ax
+    apy := py - ay
+    
+    // Project AP onto AB
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        // A and B are the same point, return distance to A
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    // Find closest point on segment
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    // Return distance to closest point
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}

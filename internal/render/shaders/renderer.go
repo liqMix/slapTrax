@@ -131,7 +131,12 @@ func (sr *ShaderRenderer) createHoldNoteBoundedGeometry(trackPoints []*ui.Point,
 
 // RenderNote renders a single note using shaders
 func (sr *ShaderRenderer) RenderNote(img *ebiten.Image, track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) {
-	if Manager == nil || Manager.noteShader == nil {
+	if Manager == nil {
+		return
+	}
+	
+	shader := Manager.GetNoteShader()
+	if shader == nil {
 		return
 	}
 	
@@ -168,12 +173,17 @@ func (sr *ShaderRenderer) RenderNote(img *ebiten.Image, track types.TrackName, n
 		"FadeOutThreshold": uniforms.FadeOutThreshold,
 	}
 	
-	img.DrawTrianglesShader(vertices, sr.baseIndices, Manager.noteShader, options)
+	img.DrawTrianglesShader(vertices, sr.baseIndices, shader, options)
 }
 
 // RenderHoldNote renders a hold note using shaders
 func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) {
-	if Manager == nil || Manager.holdNoteShader == nil {
+	if Manager == nil {
+		return
+	}
+	
+	shader := Manager.GetHoldNoteShader()
+	if shader == nil {
 		return
 	}
 	
@@ -214,7 +224,7 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 		"FadeOutThreshold":   uniforms.FadeOutThreshold,
 	}
 	
-	img.DrawTrianglesShader(vertices, sr.baseIndices, Manager.holdNoteShader, options)
+	img.DrawTrianglesShader(vertices, sr.baseIndices, shader, options)
 }
 
 // Global shader renderer instance

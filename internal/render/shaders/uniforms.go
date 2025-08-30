@@ -93,8 +93,8 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	
 	// Set fade thresholds - start fade much earlier to reduce center clutter
 	// These values work with smoothProgress - use small values due to perspective compression
-	uniforms.FadeInThreshold = 0.005 // Start fading in much earlier to reduce center clutter
-	uniforms.FadeOutThreshold = 0.03  // Reach full visibility very quickly after fade starts
+	uniforms.FadeInThreshold = 0.02  // Start fading in later to reduce center clutter
+	uniforms.FadeOutThreshold = 0.06  // Reach full visibility quickly after fade starts
 	
 	return uniforms
 }

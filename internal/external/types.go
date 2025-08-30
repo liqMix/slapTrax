@@ -51,6 +51,7 @@ type Settings struct {
 	DisableHitEffects  bool    `json:"disable_hit_effects"`
 	DisableLaneEffects bool    `json:"disable_lane_effects"`
 	EdgePlayArea       bool    `json:"fullscreen_play_area"`
+	Use3DNotes         bool    `json:"use_3d_notes"`
 }
 
 func (s *Settings) Value() (driver.Value, error) {

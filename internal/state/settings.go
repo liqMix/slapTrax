@@ -488,6 +488,22 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
+
+	b = ui.NewValueElement()
+	b.SetCenter(optionPos)
+	b.SetLabel("3D Note Rendering") // TODO: Add to localization
+	b.SetGetValueText(func() string {
+		if user.S().Use3DNotes {
+			return l.String(l.ON)
+		}
+		return l.String(l.OFF)
+	})
+	b.SetTrigger(func() {
+		user.S().Use3DNotes = !user.S().Use3DNotes
+		// 3D rendering only affects shaders, no cache clearing needed
+	})
+	group.Add(b)
+	optionPos.Y += optionsOffset
 }
 
 func (s *Settings) Update() error {

@@ -4,14 +4,17 @@ import (
 	"embed"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/slaptrax/internal/user"
 )
 
 //go:embed *.kage
 var shaderFS embed.FS
 
 type ShaderManager struct {
-	noteShader     *ebiten.Shader
-	holdNoteShader *ebiten.Shader
+	noteShader2D     *ebiten.Shader
+	noteShader3D     *ebiten.Shader
+	holdNoteShader2D *ebiten.Shader
+	holdNoteShader3D *ebiten.Shader
 }
 
 var Manager *ShaderManager
@@ -47,24 +50,46 @@ func ReinitSystem() error {
 func (sm *ShaderManager) loadShaders() error {
 	var err error
 	
-	// Load note shader
-	noteSource, err := shaderFS.ReadFile("note.kage")
+	// Load 2D note shader
+	noteSource2D, err := shaderFS.ReadFile("note.kage")
 	if err != nil {
 		return err
 	}
 	
-	sm.noteShader, err = ebiten.NewShader(noteSource)
+	sm.noteShader2D, err = ebiten.NewShader(noteSource2D)
 	if err != nil {
 		return err
 	}
 	
-	// Load hold note shader
-	holdSource, err := shaderFS.ReadFile("holdnote.kage")
+	// Load 3D note shader
+	noteSource3D, err := shaderFS.ReadFile("note3d.kage")
 	if err != nil {
 		return err
 	}
 	
-	sm.holdNoteShader, err = ebiten.NewShader(holdSource)
+	sm.noteShader3D, err = ebiten.NewShader(noteSource3D)
+	if err != nil {
+		return err
+	}
+	
+	// Load 2D hold note shader
+	holdSource2D, err := shaderFS.ReadFile("holdnote.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.holdNoteShader2D, err = ebiten.NewShader(holdSource2D)
+	if err != nil {
+		return err
+	}
+	
+	// Load 3D hold note shader
+	holdSource3D, err := shaderFS.ReadFile("holdnote3d.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.holdNoteShader3D, err = ebiten.NewShader(holdSource3D)
 	if err != nil {
 		return err
 	}
@@ -72,10 +97,20 @@ func (sm *ShaderManager) loadShaders() error {
 	return nil
 }
 
+// GetNoteShader returns the appropriate note shader based on user settings
 func (sm *ShaderManager) GetNoteShader() *ebiten.Shader {
-	return sm.noteShader
+	// Safety check - if user settings not available, default to 2D
+	if user.S() == nil || !user.S().Use3DNotes {
+		return sm.noteShader2D
+	}
+	return sm.noteShader3D
 }
 
+// GetHoldNoteShader returns the appropriate hold note shader based on user settings  
 func (sm *ShaderManager) GetHoldNoteShader() *ebiten.Shader {
-	return sm.holdNoteShader
+	// Safety check - if user settings not available, default to 2D
+	if user.S() == nil || !user.S().Use3DNotes {
+		return sm.holdNoteShader2D
+	}
+	return sm.holdNoteShader3D
 }

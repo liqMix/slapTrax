@@ -77,7 +77,7 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     }
     // Above FadeOutThreshold: fully visible (fadeIntensity = 1.0)
     
-    // Apply color intensity fade - multiply RGB channels by fade intensity
+    // Apply color intensity fade - clean 2D rendering
     finalColor := vec4(ColorR * fadeIntensity, ColorG * fadeIntensity, ColorB * fadeIntensity, ColorA * alpha)
     
     // Add glow effect if enabled

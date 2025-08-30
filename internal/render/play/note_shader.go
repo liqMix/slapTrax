@@ -1,6 +1,8 @@
 package play
 
 import (
+	"sort"
+	
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/render/shaders"
 	"github.com/liqmix/slaptrax/internal/types"
@@ -18,8 +20,16 @@ func (r *Play) addNotePathShader(track *types.Track, screen *ebiten.Image) {
 		return
 	}
 	
-	// Render each note using shaders
-	for _, note := range track.ActiveNotes {
+	// Sort notes by progress for proper depth ordering (back to front)
+	// Notes with lower progress (further from judgment line) should render first
+	sortedNotes := make([]*types.Note, len(track.ActiveNotes))
+	copy(sortedNotes, track.ActiveNotes)
+	sort.Slice(sortedNotes, func(i, j int) bool {
+		return sortedNotes[i].Progress < sortedNotes[j].Progress
+	})
+	
+	// Render each note using shaders in depth order
+	for _, note := range sortedNotes {
 		if note.IsHoldNote() {
 			// Render hold note using hold shader
 			shaders.Renderer.RenderHoldNote(screen, track.Name, note, trackPoints, &playCenterPoint)
