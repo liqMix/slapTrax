@@ -20,6 +20,7 @@ type Play struct {
 
 	hitRecordIdx int
 	lastCacheCheck bool
+	isFrozen     bool // Flag to indicate if we're rendering for frozen state
 }
 
 func NewPlayRender(s state.State) *Play {
@@ -58,6 +59,11 @@ func (r *Play) shouldReinitLayouts() bool {
 	return false
 }
 
+// SetFrozen sets the frozen state to skip animated effects when cached
+func (r *Play) SetFrozen(frozen bool) {
+	r.isFrozen = frozen
+}
+
 func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	// Check if layouts need to be reinitialized
 	if cache.LayoutReinitRequested {
@@ -71,23 +77,26 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	
 	r.BaseRenderer.Draw(screen, opts)
 	
-	// Render tunnel background first (underneath everything)
-	if !user.S().DisableLaneEffects && shaders.LaneRendererInstance != nil {
-		shaders.LaneRendererInstance.RenderTunnelBackground(screen, &playCenterPoint, float32(playLeft), float32(playRight), float32(playTop), float32(playBottom))
-	}
-	
-	// Shader-based lane rendering
-	for _, track := range r.state.Tracks {
-		// Render lane background using shader
+	// Skip animated shader effects when frozen (for pause caching)
+	if !r.isFrozen {
+		// Render tunnel background first (underneath everything)
 		if !user.S().DisableLaneEffects && shaders.LaneRendererInstance != nil {
-			trackPoints := notePoints[track.Name]
-			isActive := track.IsPressed()
-			shaders.LaneRendererInstance.RenderLaneBackground(screen, track.Name, trackPoints, &playCenterPoint, isActive)
+			shaders.LaneRendererInstance.RenderTunnelBackground(screen, &playCenterPoint, float32(playLeft), float32(playRight), float32(playTop), float32(playBottom))
 		}
+		
+		// Shader-based lane rendering
+		for _, track := range r.state.Tracks {
+			// Render lane background using shader
+			if !user.S().DisableLaneEffects && shaders.LaneRendererInstance != nil {
+				trackPoints := notePoints[track.Name]
+				isActive := track.IsPressed()
+				shaders.LaneRendererInstance.RenderLaneBackground(screen, track.Name, trackPoints, &playCenterPoint, isActive)
+			}
+		}
+		
+		// Render shader-based measure markers
+		r.drawMeasureMarkersShader(screen)
 	}
-	
-	// Render shader-based measure markers
-	r.drawMeasureMarkersShader(screen)
 
 	// Track vectors
 	for _, track := range r.state.Tracks {

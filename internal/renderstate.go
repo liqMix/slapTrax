@@ -10,6 +10,11 @@ import (
 	"github.com/liqmix/slaptrax/internal/types"
 )
 
+// Freezable interface for renderers that need to know when they're being frozen
+type Freezable interface {
+	SetFrozen(bool)
+}
+
 type RenderState struct {
 	id     string
 	frozen bool
@@ -52,8 +57,16 @@ func GetState(gs types.GameState, arg interface{}) *RenderState {
 
 func (r *RenderState) Freeze() {
 	r.frozen = true
+	// Notify renderer if it implements Freezable interface
+	if freezable, ok := r.renderer.(Freezable); ok {
+		freezable.SetFrozen(true)
+	}
 }
 
 func (r *RenderState) Unfreeze() {
 	r.frozen = false
+	// Notify renderer if it implements Freezable interface
+	if freezable, ok := r.renderer.(Freezable); ok {
+		freezable.SetFrozen(false)
+	}
 }

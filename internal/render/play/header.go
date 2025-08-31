@@ -51,7 +51,7 @@ func (r *Play) drawHeaderBackground(screen *ebiten.Image, opts *ebiten.DrawImage
 func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	// Art - positioned in right side of header
 	artSize := headerHeight * 0.4 // Use 40% of header height
-	rightMargin := 0.05 // Margin from right edge
+	equalMargin := 0.025 // Equal distance from top, sides, and border (matches user profile)
 	
 	art := ui.NewElement()
 	art.SetDisabled(true)
@@ -60,7 +60,7 @@ func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 		Y: artSize,
 	})
 	art.SetCenter(ui.Point{
-		X: headerRight - rightMargin - (artSize / 2),
+		X: headerRight - equalMargin - (artSize / 2),
 		Y: headerCenter.Y,
 	})
 	art.SetImage(r.state.Song.Art)
@@ -68,7 +68,7 @@ func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 	// Draw art directly
 	artGroup := ui.NewUIGroup()
 	artGroup.SetDisabled(true)
-	artGroup.SetCenter(ui.Point{X: headerRight - rightMargin - (artSize / 2), Y: headerCenter.Y})
+	artGroup.SetCenter(ui.Point{X: headerRight - equalMargin - (artSize / 2), Y: headerCenter.Y})
 	artGroup.SetSize(ui.Point{X: artSize, Y: artSize})
 	artGroup.Add(art)
 	artGroup.Draw(screen, opts)
@@ -81,7 +81,7 @@ func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 
 	// Song title
 	textCenter := &ui.Point{
-		X: headerRight - rightMargin - artSize - textMargin,
+		X: headerRight - equalMargin - artSize - textMargin,
 		Y: headerCenter.Y - 0.03, // Adjusted for smaller text
 	}
 
