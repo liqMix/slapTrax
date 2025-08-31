@@ -56,6 +56,12 @@ func (r *Play) drawHitDetails(screen *ebiten.Image, opts *ebiten.DrawImageOption
 		hitType := lastHit.HitRating
 		c := hitType.Color().C()
 
+		// Make SLIP and SLOP text smaller than SLAP
+		scale := 1.0
+		if hitType == types.Slip || hitType == types.Slop {
+			scale = 0.8
+		}
+
 		ui.DrawTextAt(
 			screen,
 			hitType.String(),
@@ -65,7 +71,7 @@ func (r *Play) drawHitDetails(screen *ebiten.Image, opts *ebiten.DrawImageOption
 			},
 			&ui.TextOptions{
 				Align: etxt.Center,
-				Scale: 1.0,
+				Scale: scale,
 				Color: c,
 			},
 			opts,

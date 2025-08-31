@@ -33,9 +33,9 @@ func (r HitTiming) String() string {
 }
 
 func GetHitTiming(diff int64) HitTiming {
-	if diff > int64(Perfect) {
+	if diff > int64(Slap) {
 		return HitTimingEarly
-	} else if diff < int64(-Perfect) {
+	} else if diff < int64(-Slap) {
 		return HitTimingLate
 	}
 	return HitTimingNone
@@ -44,49 +44,42 @@ func GetHitTiming(diff int64) HitTiming {
 type HitRating int
 
 const (
-	Perfect HitRating = iota
-	Good
-	Bad
-	Miss
+	Slap HitRating = iota
+	Slip
+	Slop
 	None
 )
 
 func (r HitRating) String() string {
 	switch r {
-	case Perfect:
-		return "PERFECT"
-	case Good:
-		return "GOOD"
-	case Bad:
-		return "OK"
-	case Miss:
-		return "MISS"
+	case Slap:
+		return "SLAP"
+	case Slip:
+		return "SLIP"
+	case Slop:
+		return "SLOP"
 	}
 	return ""
 }
 
 func (r HitRating) Value() float64 {
 	switch r {
-	case Perfect:
+	case Slap:
 		return 1
-	case Good:
+	case Slip:
 		return 0.5
-	case Bad:
-		return 0.25
 	}
 	return 0
 }
 
 func (r HitRating) Color() GameColor {
 	switch r {
-	case Perfect:
+	case Slap:
 		return Green
-	case Good:
+	case Slip:
 		return Yellow
-	case Bad:
-		return Orange
-	case Miss:
-		return Red
+	case Slop:
+		return Gray
 	}
 	return White
 }
@@ -100,11 +93,9 @@ func (r HitRating) Window(early bool) float64 {
 		scale = earlyScale
 	}
 	switch r {
-	case Perfect:
+	case Slap:
 		return 60
-	case Good:
-		return 70 * scale
-	case Bad:
+	case Slip:
 		return 120 * scale
 	}
 	return 0
@@ -114,16 +105,14 @@ func GetHitRating(diff int64) HitRating {
 	d := math.Abs(float64(diff))
 
 	early := GetHitTiming(diff) == HitTimingEarly
-	if d < Perfect.Window(early) {
-		return Perfect
-	} else if d < Good.Window(early) {
-		return Good
-	} else if d < Bad.Window(early) {
-		return Bad
+	if d < Slap.Window(early) {
+		return Slap
+	} else if d < Slip.Window(early) {
+		return Slip
 	}
 
 	return None
 }
 
-var EarliestWindow = int64(Bad.Window(true))
-var LatestWindow = int64(Bad.Window(false))
+var EarliestWindow = int64(Slip.Window(true))
+var LatestWindow = int64(Slip.Window(false))

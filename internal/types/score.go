@@ -88,10 +88,9 @@ type Score struct {
 
 	TotalScore int
 	Rating     SongRating
-	Perfect    int
-	Good       int
-	Bad        int
-	Miss       int
+	Slap       int
+	Slip       int
+	Slop       int
 
 	Combo    int
 	MaxCombo int
@@ -119,10 +118,9 @@ func NewScore(song *Song, difficulty Difficulty) *Score {
 }
 
 func (s *Score) Reset() {
-	s.Perfect = 0
-	s.Good = 0
-	s.Bad = 0
-	s.Miss = 0
+	s.Slap = 0
+	s.Slip = 0
+	s.Slop = 0
 
 	s.Combo = 0
 	s.MaxCombo = 0
@@ -138,17 +136,15 @@ func (s *Score) GetLastHitRecord() *HitRecord {
 func AddHit(h *HitRecord) {
 	s := score
 	hitType := h.HitRating
-	if hitType == None || hitType == Miss {
+	if hitType == None || hitType == Slop {
 		return
 	}
 	s.HitRecords = append(s.HitRecords, h)
 	switch hitType {
-	case Perfect:
-		s.Perfect++
-	case Good:
-		s.Good++
-	case Bad:
-		s.Bad++
+	case Slap:
+		s.Slap++
+	case Slip:
+		s.Slip++
 	}
 	s.Combo++
 	if s.Combo > s.MaxCombo {
@@ -167,13 +163,13 @@ func AddHit(h *HitRecord) {
 func (s *Score) AddMiss(n *Note) {
 	record := &HitRecord{
 		Note:      n,
-		HitRating: Miss,
+		HitRating: Slop,
 	}
 	s.HitRecords = append(s.HitRecords, record)
-	s.Miss++
+	s.Slop++
 	s.Combo = 0
 }
 
 func (s *Score) GetAccuracy() float64 {
-	return float64(s.Perfect) / float64(s.TotalNotes)
+	return float64(s.Slap) / float64(s.TotalNotes)
 }

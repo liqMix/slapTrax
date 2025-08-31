@@ -102,7 +102,7 @@ func (n *Note) Hit(hitTime int64, score *Score) bool {
 }
 
 func (n *Note) Miss(score *Score) {
-	n.HitRating = Miss
+	n.HitRating = Slop
 	score.AddMiss(n)
 }
 
@@ -124,9 +124,9 @@ func (n *Note) Release(releaseTime int64) {
 				ReleaseDiff: diff,
 			}
 
-			if diff > int64(Bad.Window(false)*3) {
-				n.HitRating = Miss
-				hit.HitRating = Miss
+			if diff > int64(Slip.Window(false)*3) {
+				n.HitRating = Slop
+				hit.HitRating = Slop
 				hit.HitTiming = HitTimingEarly
 
 			} else {
