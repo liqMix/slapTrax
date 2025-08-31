@@ -296,7 +296,7 @@ func (sr *ShaderRenderer) RenderHoldNoteHead(img *ebiten.Image, track types.Trac
 	
 	// Only render the head if the release progress is above the fade-in threshold
 	// This prevents the head from appearing at the judgment line when the hold note first spawns
-	fadeInThreshold := float64(0.02) // Same threshold used in uniforms
+	fadeInThreshold := float64(0.01) // Match the threshold used in uniforms
 	if note.ReleaseProgress < fadeInThreshold {
 		return // Head is not yet visible, don't render it
 	}

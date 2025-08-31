@@ -94,10 +94,10 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	}
 	uniforms.Glow = 0.0
 	
-	// Set fade thresholds - start fade much earlier to reduce center clutter
+	// Set fade thresholds - balanced for visibility and preparation time
 	// These values work with smoothProgress - use small values due to perspective compression
-	uniforms.FadeInThreshold = 0.02  // Start fading in later to reduce center clutter
-	uniforms.FadeOutThreshold = 0.06  // Reach full visibility quickly after fade starts
+	uniforms.FadeInThreshold = 0.01   // Start fading in earlier than before (was 0.02)
+	uniforms.FadeOutThreshold = 0.04  // Reach full visibility earlier than before (was 0.06)
 	
 	// Set current time for animations (use modulo to keep values manageable for sine calculations)
 	uniforms.TimeMs = float32(time.Now().UnixMilli() % 100000)
