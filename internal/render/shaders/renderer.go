@@ -186,7 +186,10 @@ func (sr *ShaderRenderer) RenderHoldNote(img *ebiten.Image, track types.TrackNam
 	// In 3D mode, render tail and head separately
 	if user.S() != nil && user.S().Use3DNotes {
 		sr.RenderHoldNoteTail(img, track, note, trackPoints, centerPoint)
-		sr.RenderHoldNoteHead(img, track, note, trackPoints, centerPoint)
+		// Only render head when hold is not active (not hit yet or already released)
+		if !(note.WasHit() && !note.WasReleased()) {
+			sr.RenderHoldNoteHead(img, track, note, trackPoints, centerPoint)
+		}
 	} else {
 		// In 2D mode, use the original hold note shader
 		shader := Manager.GetHoldNoteShader()

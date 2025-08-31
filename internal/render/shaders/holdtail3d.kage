@@ -84,18 +84,30 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     var oscillatedEndP2X, oscillatedEndP2Y float = endP2X, endP2Y
     var oscillatedEndP3X, oscillatedEndP3Y float = endP3X, endP3Y
     
-    // DEBUG: Simple sine wave oscillation - always on for testing
-    if true {
-        // Simple horizontal sine wave - visible and smooth
-        oscillationOffset := sin(TimeMs * 0.005) * 20.0
+    // SOUND WAVE PROPAGATION - only when hold is active
+    if WasHit > 0.5 && WasReleased < 0.5 {
+        // Calculate BPM-based wave speed
+        beatsPerSecond := BPM / 60.0
+        waveSpeed := TimeMs * 0.001 * beatsPerSecond * 6.28318 // Radians per second
         
-        // Apply the same oscillation to all track points
-        oscillatedStartP1X += oscillationOffset
-        oscillatedStartP2X += oscillationOffset
-        oscillatedStartP3X += oscillationOffset
-        oscillatedEndP1X += oscillationOffset
-        oscillatedEndP2X += oscillationOffset
-        oscillatedEndP3X += oscillationOffset
+        // Sound wave parameters
+        wavelength := 4.0 // Creates ~2-3 waves along typical hold length
+        amplitude := 10.0 // Controlled oscillation amplitude
+        
+        // Calculate wave phase for this fragment's position along the hold
+        // Wave travels from start (0.0) to end (1.0) of hold
+        wavePhase := waveSpeed * 2.0 - progressAlongHold * wavelength
+        
+        // Calculate oscillation for this specific position
+        waveOscillation := sin(wavePhase) * amplitude
+        
+        // Apply the same oscillation to all track points (they move as a unit)
+        oscillatedStartP1X += waveOscillation
+        oscillatedStartP2X += waveOscillation
+        oscillatedStartP3X += waveOscillation
+        oscillatedEndP1X += waveOscillation
+        oscillatedEndP2X += waveOscillation
+        oscillatedEndP3X += waveOscillation
     }
     
     // Now find distance using oscillated geometry
@@ -131,74 +143,41 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
         }
     }
     
-    // ===== TAIL 3D EFFECTS =====
+    // ===== SIMPLIFIED SOUND WAVE EFFECTS =====
     
-    // Distance from fragment to track centerline (normalized 0-1)
+    // Simple depth effect based on distance to center
     normalizedDist := clamp(minDist / halfWidth, 0.0, 1.0)
+    centerBrightness := 1.0 + (1.0 - normalizedDist) * 0.3 // Subtle center highlight
     
-    // 1. Modest radial brightness for subtle tail depth
-    radialBrightness := 1.0 + (1.0 - normalizedDist) * 0.4 // Up to 1.4x brighter in center
-    
-    // 2. Minimal specular for tail (just subtle sheen)
-    specularBoost := 1.0 + (1.0 - normalizedDist) * 0.2 // Subtle highlight
-    
-    // 3. Gentle edge darkening for tail definition
-    edgeDarkening := 1.0
-    if normalizedDist > 0.8 {
-        darkeningFactor := (normalizedDist - 0.8) / 0.2
-        edgeDarkening = 1.0 - (darkeningFactor * 0.15) // Very gentle edge effect
+    // State-based intensity
+    stateIntensity := 1.0
+    if WasHit > 0.5 && WasReleased < 0.5 {
+        // Active hold - slight brightness boost
+        stateIntensity = 1.2
+    } else if WasReleased > 0.5 {
+        // Released hold - dimmed
+        stateIntensity = 0.6
     }
     
-    // 4. Depth-based intensity
-    depthIntensity := 0.6 + (currentProgress * 0.4) // Range 0.6 to 1.0
+    // Simple combined effect
+    finalIntensity := centerBrightness * stateIntensity * fadeIntensity
     
-    // 5. Gradient along tail length (darker at start, brighter toward end)  
-    // Calculate normalized progress along the hold (0.0 to 1.0)
-    holdProgress := 0.5 // Default
-    if HoldEndProgress != HoldStartProgress {
-        holdProgress = (currentProgress - HoldStartProgress) / (HoldEndProgress - HoldStartProgress)
-        holdProgress = clamp(holdProgress, 0.0, 1.0)
-    }
-    gradientEffect := 0.7 + (holdProgress * 0.3) // Range 0.7 to 1.0
-    
-    // 6. State-based effects
-    stateModifier := 1.0
-    if WasHit > 0.5 {
-        if WasReleased > 0.5 {
-            // Released hold - dimmer tail
-            stateModifier = 0.5
-        } else {
-            // Active hold - subtle pulse on tail
-            pulse := sin(TimeMs * 0.002) * 0.1 + 0.9
-            stateModifier = pulse
-        }
-    }
-    
-    // Combine all tail effects
-    threeDEffect := depthIntensity * radialBrightness * specularBoost * edgeDarkening * gradientEffect * stateModifier
-    
-    // Apply final color with tail effects and fade
-    finalR := ColorR * fadeIntensity * threeDEffect
-    finalG := ColorG * fadeIntensity * threeDEffect
-    finalB := ColorB * fadeIntensity * threeDEffect
+    // Apply final color
+    finalR := ColorR * finalIntensity
+    finalG := ColorG * finalIntensity
+    finalB := ColorB * finalIntensity
     
     // Tail is more transparent than head
     tailAlpha := ColorA * alpha * 0.8
     
     finalColor := vec4(finalR, finalG, finalB, tailAlpha)
     
-    // Add subtle glow if enabled
-    if Glow > 0.0 {
-        glowRadius := tailWidth * 1.2
-        glowAlpha := Glow * (1.0 - smoothstep(0.0, glowRadius, minDist))
-        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.1)
+    // Simple glow for active holds
+    if WasHit > 0.5 && WasReleased < 0.5 && Glow > 0.0 {
+        glowRadius := tailWidth * 1.5
+        glowAlpha := Glow * (1.0 - smoothstep(0.0, glowRadius, minDist)) * 0.3
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha)
         finalColor = mix(finalColor, glowColor, glowAlpha)
-    }
-    
-    // Solo note animation (subtle for tail)
-    if Solo > 0.5 {
-        pulse := sin(TimeMs * 0.003) * 0.05 + 0.95
-        finalColor.rgb *= pulse
     }
     
     return finalColor
