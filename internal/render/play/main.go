@@ -7,7 +7,6 @@ import (
 	"github.com/liqmix/slaptrax/internal/logger"
 	"github.com/liqmix/slaptrax/internal/render/shaders"
 	"github.com/liqmix/slaptrax/internal/state"
-	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
 	"github.com/liqmix/slaptrax/internal/user"
 )
@@ -118,6 +117,6 @@ func (r *Play) static(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
 }
 
 func (r *Play) renderBackground(img *ebiten.Image, _ *ebiten.DrawImageOptions) {
-	// TODO: actually make some sort of background?
-	img.Fill(types.Black.C())
+	// Background is already rendered by game.go, no need to fill
+	// The tunnel background will provide proper occlusion where needed
 }

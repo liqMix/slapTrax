@@ -41,13 +41,16 @@ func (u *UserProfile) Update() {
 }
 
 func (u *UserProfile) Draw(image *ebiten.Image, opts *ebiten.DrawImageOptions) {
-	if !u.connected || external.GetLoginState() == external.StateOffline {
-		return
-	}
-
 	textOpts := GetDefaultTextOptions()
 	textOpts.Align = etxt.Left
 	textOpts.Scale = 2
+
+	if !u.connected || external.GetLoginState() == external.StateOffline {
+		// Show "slapGuest" when not logged in
+		textOpts.Color = CornerTrackColor()
+		DrawTextAt(image, "slapGuest", &u.position, textOpts, opts)
+		return
+	}
 
 	// Draw the username and rank in top left corner
 	if u.username != "" {

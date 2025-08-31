@@ -67,8 +67,8 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     // Calculate depth factor for 3D tunnel effect
     depthFactor := getDepthFactor(fragX, fragY, CenterX, CenterY)
     
-    // Create strong 3D tunnel gradient - very dark at center (far), bright at edges (near)
-    baseGradient := 0.05 + (depthFactor * depthFactor * 0.4) // Exponential falloff for depth
+    // Create dimmer 3D tunnel gradient - very dark at center (far), subtly brighter at edges (near)
+    baseGradient := 0.02 + (depthFactor * depthFactor * 0.15) // Reduced from 0.05 + 0.4 to 0.02 + 0.15
     
     // Calculate distance to track edges for tunnel wall highlighting
     edgeDist1 := distanceToLineSegment(fragX, fragY, Point1X, Point1Y, Point2X, Point2Y)
@@ -76,18 +76,18 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     
     minEdgeDist := min(edgeDist1, edgeDist2)
     
-    // Create tunnel wall highlighting - brighter near track boundaries
+    // Create dimmer tunnel wall highlighting - subtler near track boundaries
     wallFalloff := 40.0 // Distance in pixels for wall highlight falloff
     wallHighlight := 1.0 - clamp(minEdgeDist / wallFalloff, 0.0, 1.0)
-    wallHighlight = wallHighlight * wallHighlight * 0.25 // Squared falloff, moderate intensity
+    wallHighlight = wallHighlight * wallHighlight * 0.1 // Reduced from 0.25 to 0.1
     
-    // Active lane effects - subtle clean glow without spatial artifacts
+    // Active lane effects - more subtle clean glow without spatial artifacts
     activeBoost := 1.0
     activeGlow := 0.0
     if IsActive > 0.5 {
-        activeBoost = 1.3 // Subtle 30% brightness boost when pressed
+        activeBoost = 1.15 // Reduced from 1.3 to 1.15 (15% boost instead of 30%)
         // Add clean glow effect - enhance wall highlighting for smoother appearance
-        activeGlow = 0.1 // Minimal uniform glow boost
+        activeGlow = 0.05 // Reduced from 0.1 to 0.05
     }
     
     // Combine all lighting effects with clean active glow

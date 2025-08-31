@@ -20,8 +20,8 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     maxDist := sqrt(PlayAreaWidth*PlayAreaWidth + PlayAreaHeight*PlayAreaHeight) / 2.0
     normalizedDist := clamp(distToCenter / maxDist, 0.0, 1.0)
     
-    // Create visible radial tunnel gradient - dark at center, brighter at edges
-    tunnelGradient := 0.1 + (normalizedDist * normalizedDist * 0.2) // Range 0.1 to 0.3
+    // Create dimmer radial tunnel gradient - very dark at center, subtly brighter at edges
+    tunnelGradient := 0.05 + (normalizedDist * normalizedDist * 0.1) // Range 0.05 to 0.15
     
     // Add subtle radial grid lines for tunnel depth perception
     angle := atan2(distY, distX)

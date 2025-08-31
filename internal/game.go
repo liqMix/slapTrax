@@ -189,6 +189,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	canvas := g.GetCanvasImage()
 
 	bgOpts := &ebiten.DrawImageOptions{}
+	
+	// Scale background to fit render size
+	renderWidth, renderHeight := display.Window.RenderSize()
+	if g.background != nil {
+		scaleX := float64(renderWidth) / float64(g.background.Bounds().Dx())
+		scaleY := float64(renderHeight) / float64(g.background.Bounds().Dy())
+		bgOpts.GeoM.Scale(scaleX, scaleY)
+	}
+	
 	bgOpts.ColorScale.Scale(0.25, 0.25, 0.25, 0.25)
 	canvas.DrawImage(g.background, bgOpts)
 

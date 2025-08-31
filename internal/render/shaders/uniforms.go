@@ -94,10 +94,10 @@ func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*
 	}
 	uniforms.Glow = 0.0
 	
-	// Set fade thresholds - balanced for visibility and preparation time
+	// Set fade thresholds - faster fade-in with earlier start for better preparation time
 	// These values work with smoothProgress - use small values due to perspective compression
-	uniforms.FadeInThreshold = 0.01   // Start fading in earlier than before (was 0.02)
-	uniforms.FadeOutThreshold = 0.04  // Reach full visibility earlier than before (was 0.06)
+	uniforms.FadeInThreshold = 0.005  // Start fading in much earlier (was 0.01)
+	uniforms.FadeOutThreshold = 0.025 // Reach full visibility faster (was 0.04)
 	
 	// Set current time for animations (use modulo to keep values manageable for sine calculations)
 	uniforms.TimeMs = float32(time.Now().UnixMilli() % 100000)
@@ -176,7 +176,7 @@ func (u *HoldNoteUniforms) ToSlice() []float32 {
 // Helper functions duplicated from play package to avoid circular imports
 const (
 	minT        = 0.01 // Small value for vanishing point calculation (matches play package)
-	noteWidth   = 18.0
+	noteWidth   = 36.0 // Doubled from 18.0 for thicker notes
 	noteMaxAlpha = uint8(255)
 )
 

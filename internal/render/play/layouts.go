@@ -16,11 +16,11 @@ var (
 	centerY      = minY + ((maxY - minY) / 2)
 
 	//// Header
-	headerWidth  = maxX * 0.3
-	headerHeight = maxY * 0.065
-	headerTop    = minY + windowOffset
-	headerRight  = maxX
-	headerLeft   = headerRight - headerWidth
+	headerWidth  = 1.0 // Full width
+	headerHeight = 0.2 // 1/5th of screen height
+	headerTop    = 0.0
+	headerRight  = 1.0
+	headerLeft   = 0.0
 	headerBottom = headerTop + headerHeight
 	headerCenter = ui.Point{
 		X: headerLeft + (headerWidth / 2),
@@ -106,11 +106,11 @@ func applyLayout() {
 	centerY = minY + ((maxY - minY) / 2)
 
 	//// Header
-	headerWidth = maxX * 0.3
-	headerHeight = maxY * 0.065
-	headerTop = minY + windowOffset
-	headerRight = maxX
-	headerLeft = headerRight - headerWidth
+	headerWidth = 1.0 // Full width
+	headerHeight = 0.2 // 1/5th of screen height
+	headerTop = 0.0
+	headerRight = 1.0
+	headerLeft = 0.0
 	headerBottom = headerTop + headerHeight
 	headerCenter = ui.Point{
 		X: headerLeft + (headerWidth / 2),
