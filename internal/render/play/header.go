@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
+	"github.com/liqmix/slaptrax/internal/user"
 	"github.com/tinne26/etxt"
 )
 
@@ -22,6 +23,11 @@ func (r *Play) drawStaticHeader(screen *ebiten.Image, opts *ebiten.DrawImageOpti
 
 // Draw header background panel with bottom border only
 func (r *Play) drawHeaderBackground(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	// Skip header background and border when in edge play area mode
+	if user.S().EdgePlayArea {
+		return
+	}
+	
 	// Header panel dimensions (full width, 1/5 height)
 	center := headerCenter
 	size := ui.Point{
@@ -49,6 +55,16 @@ func (r *Play) drawHeaderBackground(screen *ebiten.Image, opts *ebiten.DrawImage
 
 // Right side of header
 func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
+	// Apply dimming in edge play area mode for less distraction
+	detailOpts := opts
+	if user.S().EdgePlayArea {
+		detailOpts = &ebiten.DrawImageOptions{}
+		if opts != nil {
+			*detailOpts = *opts
+		}
+		detailOpts.ColorScale.Scale(0.4, 0.4, 0.4, 0.6) // Subtle dimming
+	}
+	
 	// Art - positioned in right side of header
 	artSize := headerHeight * 0.4 // Use 40% of header height
 	equalMargin := 0.025 // Equal distance from top, sides, and border (matches user profile)
@@ -71,13 +87,23 @@ func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 	artGroup.SetCenter(ui.Point{X: headerRight - equalMargin - (artSize / 2), Y: headerCenter.Y})
 	artGroup.SetSize(ui.Point{X: artSize, Y: artSize})
 	artGroup.Add(art)
-	artGroup.Draw(screen, opts)
+	artGroup.Draw(screen, detailOpts)
 
 	// Text - positioned to the left of the art
 	textMargin := 0.02
 	textOpts := ui.GetDefaultTextOptions()
 	textOpts.Align = etxt.Right
 	textOpts.Scale = 1.3 // Reduced from 1.8
+	
+	// Apply text dimming in edge play area mode
+	if user.S().EdgePlayArea {
+		textOpts.Color = color.RGBA{
+			R: uint8(float32(textOpts.Color.R) * 0.4),
+			G: uint8(float32(textOpts.Color.G) * 0.4), 
+			B: uint8(float32(textOpts.Color.B) * 0.4),
+			A: uint8(float32(textOpts.Color.A) * 0.6),
+		}
+	}
 
 	// Song title
 	textCenter := &ui.Point{
@@ -86,21 +112,21 @@ func (r *Play) drawSongDetails(screen *ebiten.Image, opts *ebiten.DrawImageOptio
 	}
 
 	// Bold title
-	ui.DrawTextAt(screen, r.state.Song.Title, textCenter, textOpts, opts)
+	ui.DrawTextAt(screen, r.state.Song.Title, textCenter, textOpts, detailOpts)
 	textCenter.X += 0.001
-	ui.DrawTextAt(screen, r.state.Song.Title, textCenter, textOpts, opts)
+	ui.DrawTextAt(screen, r.state.Song.Title, textCenter, textOpts, detailOpts)
 	textCenter.X -= 0.001
 
 	textOpts.Scale = 1.0 // Reduced from 1.4
 	textCenter.Y += 0.04
 
 	// Artist
-	ui.DrawTextAt(screen, r.state.Song.Artist, textCenter, textOpts, opts)
+	ui.DrawTextAt(screen, r.state.Song.Artist, textCenter, textOpts, detailOpts)
 	textCenter.Y += 0.03
 
 	// Album
 	textOpts.Scale = 0.9 // Reduced from 1.2
-	ui.DrawTextAt(screen, r.state.Song.Album, textCenter, textOpts, opts)
+	ui.DrawTextAt(screen, r.state.Song.Album, textCenter, textOpts, detailOpts)
 }
 
 // Center of header - score display
@@ -115,8 +141,25 @@ func (r *Play) drawScore(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		Scale: 4.0, // Larger scale for the bigger header
 		Color: types.White.C(),
 	}
+	
+	// Apply dimming in edge play area mode
+	scoreOpts := opts
+	if user.S().EdgePlayArea {
+		scoreOpts = &ebiten.DrawImageOptions{}
+		if opts != nil {
+			*scoreOpts = *opts
+		}
+		scoreOpts.ColorScale.Scale(0.4, 0.4, 0.4, 0.6) // Subtle dimming
+		
+		textOpts.Color = color.RGBA{
+			R: uint8(float32(textOpts.Color.R) * 0.4),
+			G: uint8(float32(textOpts.Color.G) * 0.4),
+			B: uint8(float32(textOpts.Color.B) * 0.4),
+			A: uint8(float32(textOpts.Color.A) * 0.6),
+		}
+	}
 
 	totalScore := fmt.Sprintf("%d", score.TotalScore)
 
-	ui.DrawTextAt(screen, totalScore, center, textOpts, opts)
+	ui.DrawTextAt(screen, totalScore, center, textOpts, scoreOpts)
 }

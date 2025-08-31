@@ -34,6 +34,15 @@ func DarkenColor(c color.RGBA, scale float32) color.RGBA {
 	}
 }
 
+func ApplyColorScale(c color.RGBA, r, g, b, a float32) color.RGBA {
+	return color.RGBA{
+		R: uint8(float32(c.R) * r),
+		G: uint8(float32(c.G) * g),
+		B: uint8(float32(c.B) * b),
+		A: uint8(float32(c.A) * a),
+	}
+}
+
 func BorderColor() color.RGBA {
 	track := types.TrackLeftTop
 	color := track.NoteColor()

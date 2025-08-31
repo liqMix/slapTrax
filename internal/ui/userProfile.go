@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/liqmix/slaptrax/internal/assets"
@@ -85,6 +86,7 @@ func (u *UserProfile) Draw(image *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	})
 	
 	u.avatarGroup.SetCenter(Point{X: equalMargin + (avatarSize / 2), Y: headerCenterY})
+	
 	u.avatarGroup.Draw(image, opts)
 
 	// Text - positioned to the right of the avatar (mirror of song details)
@@ -92,6 +94,19 @@ func (u *UserProfile) Draw(image *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	textOpts := GetDefaultTextOptions()
 	textOpts.Align = etxt.Left // Keep left-aligned for user details
 	textOpts.Scale = 1.3       // Match song title scale
+	
+	// Apply text dimming in edge play area mode (when not already handled by opts)
+	if user.S().EdgePlayArea && (opts == nil || (opts.ColorScale.R() == 1.0 && opts.ColorScale.G() == 1.0 && opts.ColorScale.B() == 1.0 && opts.ColorScale.A() == 1.0)) {
+		textOpts.Color = CornerTrackColor()
+		textOpts.Color = color.RGBA{
+			R: uint8(float32(textOpts.Color.R) * 0.4),
+			G: uint8(float32(textOpts.Color.G) * 0.4),
+			B: uint8(float32(textOpts.Color.B) * 0.4),
+			A: uint8(float32(textOpts.Color.A) * 0.6),
+		}
+	} else {
+		textOpts.Color = CornerTrackColor()
+	}
 
 	// Username (mirror of song title)
 	textCenter := &Point{
@@ -101,31 +116,48 @@ func (u *UserProfile) Draw(image *ebiten.Image, opts *ebiten.DrawImageOptions) {
 
 	if !u.connected || external.GetLoginState() == external.StateOffline {
 		// Show "slapGuest" when not logged in
-		textOpts.Color = CornerTrackColor()
 		DrawTextAt(image, "slapGuest", textCenter, textOpts, opts)
 		return
 	}
 
 	// Draw the username, rank, and title (mirroring song details structure)
 	if u.username != "" {
-		// Username (bold, like song title)
-		textOpts.Color = CornerTrackColor()
+		// Username
 		DrawTextAt(image, u.username, textCenter, textOpts, opts)
-		textCenter.X += 0.001
-		DrawTextAt(image, u.username, textCenter, textOpts, opts) // Bold effect
-		textCenter.X -= 0.001
 
 		textOpts.Scale = 1.0 // Match artist scale
 		textCenter.Y += 0.04
 
 		// Rank (like artist)
-		textOpts.Color = CenterTrackColor()
+		if user.S().EdgePlayArea && (opts == nil || (opts.ColorScale.R() == 1.0 && opts.ColorScale.G() == 1.0 && opts.ColorScale.B() == 1.0 && opts.ColorScale.A() == 1.0)) {
+			// Apply dimming to center track color in edge mode
+			baseColor := CenterTrackColor()
+			textOpts.Color = color.RGBA{
+				R: uint8(float32(baseColor.R) * 0.4),
+				G: uint8(float32(baseColor.G) * 0.4),
+				B: uint8(float32(baseColor.B) * 0.4),
+				A: uint8(float32(baseColor.A) * 0.6),
+			}
+		} else {
+			textOpts.Color = CenterTrackColor()
+		}
 		DrawTextAt(image, fmt.Sprintf("SF: %.2f", u.rank), textCenter, textOpts, opts)
 		textCenter.Y += 0.03
 
 		// Title (like album)
 		textOpts.Scale = 0.9 // Match album scale
-		textOpts.Color = types.RankTitleFromRank(u.rank).Color()
+		if user.S().EdgePlayArea && (opts == nil || (opts.ColorScale.R() == 1.0 && opts.ColorScale.G() == 1.0 && opts.ColorScale.B() == 1.0 && opts.ColorScale.A() == 1.0)) {
+			// Apply dimming to rank title color in edge mode
+			baseColor := types.RankTitleFromRank(u.rank).Color()
+			textOpts.Color = color.RGBA{
+				R: uint8(float32(baseColor.R) * 0.4),
+				G: uint8(float32(baseColor.G) * 0.4),
+				B: uint8(float32(baseColor.B) * 0.4),
+				A: uint8(float32(baseColor.A) * 0.6),
+			}
+		} else {
+			textOpts.Color = types.RankTitleFromRank(u.rank).Color()
+		}
 		DrawTextAt(image, u.title, textCenter, textOpts, opts)
 	}
 }

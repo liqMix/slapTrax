@@ -112,7 +112,6 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 		r.addHitEffects()
 	}
 
-	r.drawHeader(screen, opts)
 	r.drawStats(screen, opts)
 	r.vectorCollection.Draw(screen)
 	r.vectorCollection.Clear()
@@ -122,7 +121,7 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 // These are static items we only need to render once
 func (r *Play) static(img *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	r.renderBackground(img, opts)
-	r.drawStaticHeader(img, opts)
+	// Header rendering moved to unified system in game.go
 }
 
 func (r *Play) renderBackground(img *ebiten.Image, _ *ebiten.DrawImageOptions) {

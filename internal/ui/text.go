@@ -88,7 +88,7 @@ func DrawTextAt(screen *ebiten.Image, txt string, center *Point, opts *TextOptio
 	}
 	color := opts.Color
 	if screenOpts != nil {
-		color = ApplyAlphaScale(color, screenOpts.ColorScale.A())
+		color = ApplyColorScale(color, screenOpts.ColorScale.R(), screenOpts.ColorScale.G(), screenOpts.ColorScale.B(), screenOpts.ColorScale.A())
 	}
 	text := getTextRenderer(&TextOptions{
 		Align: opts.Align,
@@ -110,7 +110,7 @@ func DrawTextBlockAt(screen *ebiten.Image, s []string, p *Point, opts *TextOptio
 
 	color := opts.Color
 	if screenOpts != nil {
-		color = ApplyAlphaScale(color, screenOpts.ColorScale.A())
+		color = ApplyColorScale(color, screenOpts.ColorScale.R(), screenOpts.ColorScale.G(), screenOpts.ColorScale.B(), screenOpts.ColorScale.A())
 	}
 
 	text := getTextRenderer(&TextOptions{
@@ -141,7 +141,7 @@ func DrawHoverMarkersCenteredAt(screen *ebiten.Image, center *Point, size *Point
 	}
 	color := opts.Color
 	if screenOpts != nil {
-		color = ApplyAlphaScale(color, screenOpts.ColorScale.A())
+		color = ApplyColorScale(color, screenOpts.ColorScale.R(), screenOpts.ColorScale.G(), screenOpts.ColorScale.B(), screenOpts.ColorScale.A())
 	}
 	text := getTextRenderer(&TextOptions{
 		Align: opts.Align,
