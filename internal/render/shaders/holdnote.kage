@@ -24,6 +24,7 @@ var HoldStartProgress float // Where hold starts (0.0-1.0)
 var HoldEndProgress float   // Where hold ends (0.0-1.0)
 var WasHit float           // 1.0 if hit, 0.0 otherwise
 var WasReleased float      // 1.0 if released, 0.0 otherwise
+var IsActive float         // 1.0 if currently active (being held), 0.0 otherwise
 var FadeInThreshold float  // Progress below which notes are invisible
 var FadeOutThreshold float // Progress above which notes are fully visible
 
@@ -135,7 +136,8 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     }
     
     // Add glow for active holds
-    if Glow > 0.0 || (WasHit > 0.5 && WasReleased < 0.5) {
+    // Use IsActive for reactivated notes that may not have WasHit set
+    if Glow > 0.0 || IsActive > 0.5 || (WasHit > 0.5 && WasReleased < 0.5) {
         glowRadius := effectiveWidth * 1.5
         glowAlpha := 0.5 * (1.0 - smoothstep(0.0, glowRadius, minDistanceToHold))
         glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.4)

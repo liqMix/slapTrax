@@ -24,6 +24,7 @@ var HoldStartProgress float // Where hold starts (0.0-1.0)
 var HoldEndProgress float   // Where hold ends (0.0-1.0)
 var WasHit float           // 1.0 if hit, 0.0 otherwise
 var WasReleased float      // 1.0 if released, 0.0 otherwise
+var IsActive float         // 1.0 if currently active (being held), 0.0 otherwise
 var BPM float              // Song BPM for oscillation sync
 var FadeInThreshold float  // Progress below which notes are invisible
 var FadeOutThreshold float // Progress above which notes are fully visible
@@ -85,7 +86,8 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     var oscillatedEndP3X, oscillatedEndP3Y float = endP3X, endP3Y
     
     // SOUND WAVE PROPAGATION - only when hold is active
-    if WasHit > 0.5 && WasReleased < 0.5 {
+    // Use IsActive for reactivated notes that may not have WasHit set
+    if IsActive > 0.5 || (WasHit > 0.5 && WasReleased < 0.5) {
         // Calculate BPM-based wave speed
         beatsPerSecond := BPM / 60.0
         waveSpeed := TimeMs * 0.001 * beatsPerSecond * 6.28318 // Radians per second

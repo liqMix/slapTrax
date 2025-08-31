@@ -30,6 +30,11 @@ func (r *Play) addNotePathShader(track *types.Track, screen *ebiten.Image) {
 	
 	// Render each note using shaders in depth order
 	for _, note := range sortedNotes {
+		// Skip rendering hold notes that are past their end time
+		if note.IsHoldNote() && note.ReleaseProgress >= 1.0 {
+			continue
+		}
+		
 		if note.IsHoldNote() {
 			// Render hold note using hold shader
 			shaders.Renderer.RenderHoldNote(screen, track.Name, note, trackPoints, &playCenterPoint)

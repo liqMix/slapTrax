@@ -99,6 +99,11 @@ type Score struct {
 	Late       int
 	HitRecords []*HitRecord
 	hitValue   int
+
+	// Hold note interval tracking
+	HoldIntervals    int // Total intervals across all holds
+	HoldIntervalsHit int // Successfully held intervals
+	holdIntervalValue int // Points per interval
 }
 
 var score *Score
@@ -107,12 +112,15 @@ func NewScore(song *Song, difficulty Difficulty) *Score {
 	chart := song.Charts[difficulty]
 	totalNotes := chart.TotalNotes
 
+	// Hold notes are worth 2× regular notes: initial hit + intervals
+	totalScoreUnits := totalNotes + (chart.TotalHoldNotes * 2)
+	
 	score = &Score{
 		Song:       song,
 		Difficulty: difficulty,
 		TotalNotes: totalNotes,
 		HitRecords: make([]*HitRecord, 0, totalNotes),
-		hitValue:   MaxScore / (totalNotes + chart.TotalHoldNotes),
+		hitValue:   MaxScore / totalScoreUnits,
 	}
 	return score
 }
@@ -124,6 +132,9 @@ func (s *Score) Reset() {
 
 	s.Combo = 0
 	s.MaxCombo = 0
+	
+	s.HoldIntervals = 0
+	s.HoldIntervalsHit = 0
 }
 
 func (s *Score) GetLastHitRecord() *HitRecord {
@@ -172,4 +183,26 @@ func (s *Score) AddMiss(n *Note) {
 
 func (s *Score) GetAccuracy() float64 {
 	return float64(s.Slap) / float64(s.TotalNotes)
+}
+
+// AddHoldInterval adds scoring for hold note intervals
+func AddHoldInterval(hit bool) {
+	AddHoldIntervalWithCombo(hit, true)
+}
+
+// AddHoldIntervalWithCombo adds scoring for hold note intervals with optional combo breaking
+func AddHoldIntervalWithCombo(hit bool, breakComboOnMiss bool) {
+	s := score
+	s.HoldIntervals++
+	
+	if hit {
+		s.HoldIntervalsHit++
+		// Award interval points - each interval is worth hitValue/intervalCount
+		s.TotalScore += s.holdIntervalValue
+	} else {
+		// Only break combo if this is a definitive miss (not temporary release)
+		if breakComboOnMiss {
+			s.Combo = 0
+		}
+	}
 }

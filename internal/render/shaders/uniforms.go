@@ -48,6 +48,7 @@ type HoldNoteUniforms struct {
 	HoldEndProgress   float32 // Where the hold ends (0.0-1.0)
 	WasHit            float32 // 1.0 if hit, 0.0 otherwise
 	WasReleased       float32 // 1.0 if released, 0.0 otherwise
+	IsActive          float32 // 1.0 if currently active (being held), 0.0 otherwise
 	BPM               float32 // Song BPM for oscillation sync
 }
 
@@ -130,19 +131,19 @@ func CreateHoldNoteUniforms(track types.TrackName, note *types.Note, trackPoints
 		holdUniforms.WasReleased = 1.0
 	}
 	
+	holdUniforms.IsActive = 0.0
+	if note.IsActive {
+		holdUniforms.IsActive = 1.0
+	}
+	
 	// Set BPM for oscillation effects
 	holdUniforms.BPM = bpm
 	
-	// Adjust alpha based on hold state
-	if note.WasHit() {
-		if note.WasReleased() {
-			holdUniforms.ColorA = 50.0 / 255.0
-		} else {
-			holdUniforms.ColorA = 200.0 / 255.0
-		}
-	} else {
-		holdUniforms.ColorA = 100.0 / 255.0
-	}
+	// Set base alpha for hold notes
+	holdUniforms.ColorA = 1.0
+	
+	// Apply opacity based on active state (this handles dimming for inactive notes)
+	holdUniforms.ColorA = note.GetHoldOpacity()
 	
 	return holdUniforms
 }
@@ -168,6 +169,7 @@ func (u *HoldNoteUniforms) ToSlice() []float32 {
 	hold := []float32{
 		u.HoldStartProgress, u.HoldEndProgress,
 		u.WasHit, u.WasReleased,
+		u.IsActive,
 		u.BPM,
 	}
 	return append(base, hold...)
