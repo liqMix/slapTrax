@@ -1,0 +1,106 @@
+//kage:unit pixels
+package main
+
+// Measure/beat marker shader uniforms
+var Progress float         // Current marker progress (0.0 at center to 1.0 at judgment)
+var Corner1X float         // Top-left corner of marker square
+var Corner1Y float
+var Corner2X float         // Top-right corner
+var Corner2Y float  
+var Corner3X float         // Bottom-right corner
+var Corner3Y float
+var Corner4X float         // Bottom-left corner
+var Corner4Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var MarkerType float       // 0.0 for beat marker, 1.0 for measure marker
+var TimeMs float           // Time in milliseconds for animations
+var FadeInThreshold float  // Progress below which markers are invisible
+var FadeOutThreshold float // Progress above which markers are fully visible
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Interpolate marker corners based on progress
+    interpC1X := CenterX + (Corner1X - CenterX) * Progress
+    interpC1Y := CenterY + (Corner1Y - CenterY) * Progress
+    interpC2X := CenterX + (Corner2X - CenterX) * Progress
+    interpC2Y := CenterY + (Corner2Y - CenterY) * Progress
+    interpC3X := CenterX + (Corner3X - CenterX) * Progress
+    interpC3Y := CenterY + (Corner3Y - CenterY) * Progress
+    interpC4X := CenterX + (Corner4X - CenterX) * Progress
+    interpC4Y := CenterY + (Corner4Y - CenterY) * Progress
+    
+    // Calculate distance to the square frame (outline only)
+    // Distance to each edge of the square
+    distTop := distanceToLineSegment(fragX, fragY, interpC1X, interpC1Y, interpC2X, interpC2Y)
+    distRight := distanceToLineSegment(fragX, fragY, interpC2X, interpC2Y, interpC3X, interpC3Y)
+    distBottom := distanceToLineSegment(fragX, fragY, interpC3X, interpC3Y, interpC4X, interpC4Y)
+    distLeft := distanceToLineSegment(fragX, fragY, interpC4X, interpC4Y, interpC1X, interpC1Y)
+    
+    // Find minimum distance to any edge
+    minDist := min(min(distTop, distRight), min(distBottom, distLeft))
+    
+    // Marker width increases with progress (perspective effect) - EXTREMELY skinny
+    markerWidth := 0.3 + (Progress * 0.2) // Range 0.3 to 0.5 pixels
+    
+    // Distance-based alpha for anti-aliasing - much tighter smoothstep
+    alpha := 1.0 - smoothstep(markerWidth-0.1, markerWidth+0.1, minDist)
+    
+    if alpha <= 0.0 {
+        return vec4(0)
+    }
+    
+    // Apply fade in/out based on progress
+    fadeAlpha := 1.0
+    if Progress < FadeInThreshold {
+        fadeAlpha = 0.0
+    } else if Progress < FadeOutThreshold {
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        if fadeRange > 0.0 {
+            fadeProgress := (Progress - FadeInThreshold) / fadeRange
+            fadeAlpha = fadeProgress
+        }
+    }
+    
+    // Base opacity based on marker type - EXTREMELY FAINT
+    baseOpacity := 0.008 // Beat markers (1/4) - barely perceptible
+    if MarkerType > 0.5 {
+        baseOpacity = 0.015 // Measure markers (1/1) - slightly more visible but still very faint
+        
+        // Add subtle pulse to measure markers
+        pulse := sin(TimeMs * 0.003) * 0.1 + 0.9
+        baseOpacity *= pulse
+    }
+    
+    // Final color (very dark gray markers - much dimmer)
+    finalAlpha := alpha * fadeAlpha * baseOpacity
+    finalColor := vec4(0.15, 0.15, 0.15, finalAlpha)
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    abx := bx - ax
+    aby := by - ay
+    apx := px - ax
+    apy := py - ay
+    
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}

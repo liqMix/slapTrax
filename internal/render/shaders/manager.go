@@ -16,6 +16,8 @@ type ShaderManager struct {
 	holdNoteShader2D *ebiten.Shader
 	holdNoteShader3D *ebiten.Shader
 	holdTailShader3D *ebiten.Shader // New tail shader for 3D hold notes
+	laneShader       *ebiten.Shader // Lane background shader
+	markerShader     *ebiten.Shader // Measure/beat marker shader
 }
 
 var Manager *ShaderManager
@@ -26,6 +28,9 @@ func InitManager() error {
 	if err := Manager.loadShaders(); err != nil {
 		return err
 	}
+	
+	// Initialize lane renderer
+	InitLaneRenderer()
 	
 	return nil
 }
@@ -45,6 +50,7 @@ func ReinitSystem() error {
 		return err
 	}
 	ReinitRenderer()
+	InitLaneRenderer()
 	return nil
 }
 
@@ -106,6 +112,28 @@ func (sm *ShaderManager) loadShaders() error {
 		return err
 	}
 	
+	// Load lane background shader
+	laneSource, err := shaderFS.ReadFile("lane.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.laneShader, err = ebiten.NewShader(laneSource)
+	if err != nil {
+		return err
+	}
+	
+	// Load marker shader
+	markerSource, err := shaderFS.ReadFile("marker.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.markerShader, err = ebiten.NewShader(markerSource)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -134,4 +162,14 @@ func (sm *ShaderManager) GetHoldTailShader() *ebiten.Shader {
 		return nil
 	}
 	return sm.holdTailShader3D
+}
+
+// GetLaneShader returns the lane background shader
+func (sm *ShaderManager) GetLaneShader() *ebiten.Shader {
+	return sm.laneShader
+}
+
+// GetMarkerShader returns the marker shader
+func (sm *ShaderManager) GetMarkerShader() *ebiten.Shader {
+	return sm.markerShader
 }

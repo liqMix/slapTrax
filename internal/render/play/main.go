@@ -71,14 +71,26 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	}
 	
 	r.BaseRenderer.Draw(screen, opts)
-	r.drawMeasureMarkers(screen)
+	
+	// Shader-based lane rendering
+	for _, track := range r.state.Tracks {
+		// Render lane background using shader
+		if !user.S().DisableLaneEffects && shaders.LaneRendererInstance != nil {
+			trackPoints := notePoints[track.Name]
+			isActive := track.IsPressed()
+			shaders.LaneRendererInstance.RenderLaneBackground(screen, track.Name, trackPoints, &playCenterPoint, isActive)
+		}
+	}
+	
+	// Render shader-based measure markers
+	r.drawMeasureMarkersShader(screen)
 
 	// Track vectors
 	for _, track := range r.state.Tracks {
 		r.addNotePathShader(track, screen)
 		r.addJudgementPath(track)
 		if !user.S().DisableLaneEffects {
-			r.addTrackPath(track)
+			// Only keep track effects (particles, etc.), not the track path itself
 			r.addTrackEffects(track)
 		}
 	}
