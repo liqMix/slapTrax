@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/slaptrax/internal/display"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
 )
@@ -299,6 +300,49 @@ func (lr *LaneRenderer) createMarkerBounds(markerCorners []*ui.Point, centerPoin
 
 // Global lane renderer instance
 var LaneRendererInstance *LaneRenderer
+
+// RenderTunnelBackground renders the tunnel background constrained to play area using the tunnel shader
+func (lr *LaneRenderer) RenderTunnelBackground(img *ebiten.Image, centerPoint *ui.Point, playLeft, playRight, playTop, playBottom float32) {
+	if Manager == nil {
+		return
+	}
+	
+	tunnelShader := Manager.GetTunnelShader()
+	if tunnelShader == nil {
+		return
+	}
+	
+	centerX, centerY := centerPoint.ToRender32()
+	
+	// Convert play area bounds to render coordinates
+	renderWidth, renderHeight := display.Window.RenderSize()
+	playLeftRender := playLeft * float32(renderWidth)
+	playRightRender := playRight * float32(renderWidth)
+	playTopRender := playTop * float32(renderHeight)
+	playBottomRender := playBottom * float32(renderHeight)
+	
+	// Create geometry constrained to play area bounds
+	vertices := []ebiten.Vertex{
+		{DstX: playLeftRender, DstY: playTopRender, SrcX: 0, SrcY: 0, ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1},
+		{DstX: playRightRender, DstY: playTopRender, SrcX: 1, SrcY: 0, ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1},
+		{DstX: playRightRender, DstY: playBottomRender, SrcX: 1, SrcY: 1, ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1},
+		{DstX: playLeftRender, DstY: playBottomRender, SrcX: 0, SrcY: 1, ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1},
+	}
+	
+	playAreaWidth := playRightRender - playLeftRender
+	playAreaHeight := playBottomRender - playTopRender
+	
+	options := &ebiten.DrawTrianglesShaderOptions{}
+	options.Blend = ebiten.BlendSourceOver
+	options.Uniforms = map[string]interface{}{
+		"CenterX":        centerX,
+		"CenterY":        centerY,
+		"PlayAreaWidth":  playAreaWidth,
+		"PlayAreaHeight": playAreaHeight,
+	}
+	
+	img.DrawTrianglesShader(vertices, lr.baseIndices, tunnelShader, options)
+}
 
 // InitLaneRenderer initializes the lane renderer
 func InitLaneRenderer() {

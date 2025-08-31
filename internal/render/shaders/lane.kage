@@ -81,17 +81,17 @@ func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
     wallHighlight := 1.0 - clamp(minEdgeDist / wallFalloff, 0.0, 1.0)
     wallHighlight = wallHighlight * wallHighlight * 0.25 // Squared falloff, moderate intensity
     
-    // Active lane effects
+    // Active lane effects - subtle clean glow without spatial artifacts
     activeBoost := 1.0
-    activePulse := 1.0
+    activeGlow := 0.0
     if IsActive > 0.5 {
-        activeBoost = 2.5 // Strong brightness boost when pressed
-        // Add rhythmic pulse effect
-        activePulse = 1.0 + (sin(fragX * 0.05 + fragY * 0.05) * 0.15)
+        activeBoost = 1.3 // Subtle 30% brightness boost when pressed
+        // Add clean glow effect - enhance wall highlighting for smoother appearance
+        activeGlow = 0.1 // Minimal uniform glow boost
     }
     
-    // Combine all lighting effects
-    finalIntensity := (baseGradient + wallHighlight) * activeBoost * activePulse
+    // Combine all lighting effects with clean active glow
+    finalIntensity := (baseGradient + wallHighlight + activeGlow) * activeBoost
     
     // Apply lane color with 3D tunnel effect
     finalR := ColorR * finalIntensity

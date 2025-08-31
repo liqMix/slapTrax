@@ -72,6 +72,11 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	
 	r.BaseRenderer.Draw(screen, opts)
 	
+	// Render tunnel background first (underneath everything)
+	if !user.S().DisableLaneEffects && shaders.LaneRendererInstance != nil {
+		shaders.LaneRendererInstance.RenderTunnelBackground(screen, &playCenterPoint, float32(playLeft), float32(playRight), float32(playTop), float32(playBottom))
+	}
+	
 	// Shader-based lane rendering
 	for _, track := range r.state.Tracks {
 		// Render lane background using shader

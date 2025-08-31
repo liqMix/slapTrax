@@ -18,6 +18,7 @@ type ShaderManager struct {
 	holdTailShader3D *ebiten.Shader // New tail shader for 3D hold notes
 	laneShader       *ebiten.Shader // Lane background shader
 	markerShader     *ebiten.Shader // Measure/beat marker shader
+	tunnelShader     *ebiten.Shader // Tunnel background shader
 }
 
 var Manager *ShaderManager
@@ -134,6 +135,17 @@ func (sm *ShaderManager) loadShaders() error {
 		return err
 	}
 	
+	// Load tunnel background shader
+	tunnelSource, err := shaderFS.ReadFile("tunnel.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.tunnelShader, err = ebiten.NewShader(tunnelSource)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -172,4 +184,9 @@ func (sm *ShaderManager) GetLaneShader() *ebiten.Shader {
 // GetMarkerShader returns the marker shader
 func (sm *ShaderManager) GetMarkerShader() *ebiten.Shader {
 	return sm.markerShader
+}
+
+// GetTunnelShader returns the tunnel background shader
+func (sm *ShaderManager) GetTunnelShader() *ebiten.Shader {
+	return sm.tunnelShader
 }
