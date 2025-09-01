@@ -1,0 +1,43 @@
+//kage:unit pixels
+package main
+
+// Tunnel background shader uniforms
+var CenterX float          // Vanishing point X
+var CenterY float          // Vanishing point Y
+var PlayAreaWidth float    // Width of play area for scaling
+var PlayAreaHeight float   // Height of play area for scaling
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Calculate distance from center vanishing point
+    distX := fragX - CenterX
+    distY := fragY - CenterY
+    distToCenter := sqrt(distX*distX + distY*distY)
+    
+    // Normalize distance by play area size
+    maxDist := sqrt(PlayAreaWidth*PlayAreaWidth + PlayAreaHeight*PlayAreaHeight) / 2.0
+    normalizedDist := clamp(distToCenter / maxDist, 0.0, 1.0)
+    
+    // Create dimmer radial tunnel gradient - very dark at center, subtly brighter at edges
+    tunnelGradient := 0.05 + (normalizedDist * normalizedDist * 0.1) // Range 0.05 to 0.15
+    
+    // Add subtle radial grid lines for tunnel depth perception
+    angle := atan2(distY, distX)
+    radialLines := sin(angle * 8.0) * 0.02 // 8 radial lines, subtle but visible
+    
+    // Add subtle concentric circles for depth rings
+    depthRings := sin(normalizedDist * 12.0) * 0.015 // Fewer rings, more visible
+    
+    // Combine all tunnel effects additively (not multiplicatively)
+    finalIntensity := tunnelGradient + radialLines + depthRings
+    
+    // Use visible dark gray for tunnel background
+    tunnelR := 0.3 * finalIntensity
+    tunnelG := 0.3 * finalIntensity
+    tunnelB := 0.35 * finalIntensity // Slightly blue tint
+    tunnelA := 0.6 // Visible but not overwhelming
+    
+    return vec4(tunnelR, tunnelG, tunnelB, tunnelA)
+}

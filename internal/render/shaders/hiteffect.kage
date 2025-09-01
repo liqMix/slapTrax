@@ -1,0 +1,107 @@
+//kage:unit pixels
+package main
+
+// Hit effect shader uniforms - based on note3d.kage but simplified for effects
+var Progress float         // 0.0 (at hit point) to 1.0 (at vanishing point) - reverse travel
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Base alpha (modified by fade)
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var HitProgress float      // Progress from hit point (1.0) to center (0.0) - for reverse travel
+var EffectOpacity float    // Fade-out opacity (1.0 at start, 0.0 at end)
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // HitProgress represents travel from hit point (1.0) towards center (0.0)
+    // Use HitProgress directly - no inversion needed
+    // HitProgress 1.0 = at judgment line (hit point), HitProgress 0.0 = at center (vanishing point)
+    
+    p1X := CenterX + (Point1X - CenterX) * HitProgress
+    p1Y := CenterY + (Point1Y - CenterY) * HitProgress
+    
+    p2X := CenterX + (Point2X - CenterX) * HitProgress
+    p2Y := CenterY + (Point2Y - CenterY) * HitProgress
+    
+    p3X := CenterX + (Point3X - CenterX) * HitProgress
+    p3Y := CenterY + (Point3Y - CenterY) * HitProgress
+    
+    // Calculate effective width based on progress and scale (perspective effect)
+    // Use HitProgress directly for width calculation
+    effectiveWidth := Width * WidthScale * HitProgress * 2.0
+    halfWidth := effectiveWidth * 0.5
+    
+    // Calculate distance from fragment to the two line segments that form the track
+    // Segment 1: from p1 to p2
+    distToSeg1 := distanceToLineSegment(fragX, fragY, p1X, p1Y, p2X, p2Y)
+    
+    // Segment 2: from p2 to p3
+    distToSeg2 := distanceToLineSegment(fragX, fragY, p2X, p2Y, p3X, p3Y)
+    
+    // Find minimum distance to either segment
+    minDist := min(distToSeg1, distToSeg2)
+    
+    // Early exit if fragment is too far from the track
+    if minDist > halfWidth {
+        return vec4(0, 0, 0, 0)
+    }
+    
+    // Calculate alpha based on distance from track center (same as note shader)
+    alpha := 1.0 - smoothstep(0.0, halfWidth, minDist)
+    
+    // Fix transparency by darkening RGB values significantly
+    // The issue is bright RGB values make the effect appear opaque even with low alpha
+    darknessFactor := 0.2 // Very dark - only 20% of original brightness
+    darkR := ColorR * darknessFactor
+    darkG := ColorG * darknessFactor  
+    darkB := ColorB * darknessFactor
+    
+    // Calculate final alpha with high transparency
+    finalAlpha := ColorA * alpha * HitProgress * EffectOpacity
+    
+    return vec4(darkR, darkG, darkB, finalAlpha)
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, x1, y1, x2, y2 float) float {
+    // Vector from line start to point
+    dx := px - x1
+    dy := py - y1
+    
+    // Vector along the line segment
+    lx := x2 - x1
+    ly := y2 - y1
+    
+    // Length squared of line segment
+    lengthSquared := lx*lx + ly*ly
+    
+    if lengthSquared == 0 {
+        // Line segment is a point
+        return sqrt(dx*dx + dy*dy)
+    }
+    
+    // Calculate projection parameter t
+    t := max(0, min(1, (dx*lx + dy*ly) / lengthSquared))
+    
+    // Find closest point on line segment
+    closestX := x1 + t*lx
+    closestY := y1 + t*ly
+    
+    // Calculate distance from point to closest point on segment
+    distX := px - closestX
+    distY := py - closestY
+    
+    return sqrt(distX*distX + distY*distY)
+}

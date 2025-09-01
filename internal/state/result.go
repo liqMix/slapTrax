@@ -134,27 +134,21 @@ func NewResultState(args *ResultStateArgs) *Result {
 	right.Y += yOffset
 	left.Y += yOffset
 
-	leftTextOpts.Color = types.Perfect.Color().C()
-	ui.DrawTextAt(img, types.Perfect.String(), &left, leftTextOpts, nil)
-	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Perfect), &right, rightTextOpts, nil)
+	leftTextOpts.Color = types.Slap.Color().C()
+	ui.DrawTextAt(img, types.Slap.String(), &left, leftTextOpts, nil)
+	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Slap), &right, rightTextOpts, nil)
 	right.Y += yOffset
 	left.Y += yOffset
 
-	leftTextOpts.Color = types.Good.Color().C()
-	ui.DrawTextAt(img, types.Good.String(), &left, leftTextOpts, nil)
-	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Good), &right, rightTextOpts, nil)
+	leftTextOpts.Color = types.Slip.Color().C()
+	ui.DrawTextAt(img, types.Slip.String(), &left, leftTextOpts, nil)
+	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Slip), &right, rightTextOpts, nil)
 	right.Y += yOffset
 	left.Y += yOffset
 
-	leftTextOpts.Color = types.Bad.Color().C()
-	ui.DrawTextAt(img, types.Bad.String(), &left, leftTextOpts, nil)
-	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Bad), &right, rightTextOpts, nil)
-	right.Y += yOffset
-	left.Y += yOffset
-
-	leftTextOpts.Color = types.Miss.Color().C()
-	ui.DrawTextAt(img, types.Miss.String(), &left, leftTextOpts, nil)
-	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Miss), &right, rightTextOpts, nil)
+	leftTextOpts.Color = types.Slop.Color().C()
+	ui.DrawTextAt(img, types.Slop.String(), &left, leftTextOpts, nil)
+	ui.DrawTextAt(img, fmt.Sprintf("%d", score.Slop), &right, rightTextOpts, nil)
 
 	leftTextOpts.Color = types.LightBlue.C()
 	ui.DrawTextAt(img, fmt.Sprintf("EARLY\n%d", score.Early), &ui.Point{X: 0.33, Y: detailsStart}, leftTextOpts, nil)

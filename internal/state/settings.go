@@ -27,8 +27,7 @@ var (
 type Settings struct {
 	types.BaseGameState
 
-	clearingCache bool
-	tabs          *ui.Tabs
+	tabs              *ui.Tabs
 }
 
 func NewSettingsState() *Settings {
@@ -99,7 +98,6 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		display.Window.SetFixedRenderScale(isFixed)
 		user.S().FixedRenderScale = isFixed
 		cache.Clear()
-		s.clearingCache = false
 	})
 	// Render size
 	renderSize := ui.NewValueElement()
@@ -134,7 +132,6 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		user.S().RenderHeight = h
 		display.Window.SetRenderSize(w, h)
 		cache.Clear()
-		s.clearingCache = false
 	})
 	group.Add(renderSize)
 	optionPos.Y += optionsOffset
@@ -155,7 +152,6 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		fixedRender.SetHidden(!user.S().Fullscreen)
 
 		cache.Clear()
-		s.clearingCache = false
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -194,7 +190,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 			cornerNoteColorB.SetHidden(true)
 		}
 
-		s.clearingCache = true
+		// Color settings only affect shaders, no cache clearing needed
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -226,7 +222,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		user.S().CenterNoteColor = types.HexFromColor(colors[centerIdx].C())
 		centerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CenterNoteColor))
 
-		s.clearingCache = true
+		// Color settings only affect shaders, no cache clearing needed
 	})
 	group.Add(centerNoteColorB)
 	optionPos.Y += optionsOffset
@@ -244,7 +240,7 @@ func (s *Settings) createGraphicsOptions(group *ui.UIGroup) {
 		user.S().CornerNoteColor = types.HexFromColor(colors[cornerIdx].C())
 		cornerNoteColorB.SetTextColor(types.ColorFromHex(user.S().CornerNoteColor))
 
-		s.clearingCache = true
+		// Color settings only affect shaders, no cache clearing needed
 
 	})
 	group.Add(cornerNoteColorB)
@@ -356,7 +352,7 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	noteWidth.SetTrigger(func() {
 		currentWidthIdx = (currentWidthIdx + 1) % len(noteWidths)
 		user.S().NoteWidth = noteWidths[currentWidthIdx]
-		s.clearingCache = true
+		// Note width only affects shaders, no cache clearing needed
 	})
 	group.Add(noteWidth)
 	optionPos.Y += optionsOffset
@@ -396,7 +392,7 @@ func (s *Settings) createGameplayOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S().EdgePlayArea = !user.S().EdgePlayArea
-		s.clearingCache = true
+		cache.RequestLayoutReinit()
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -472,7 +468,7 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S().DisableHitEffects = !user.S().DisableHitEffects
-		s.clearingCache = true
+		// Hit effects only affect shaders, no cache clearing needed
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -488,7 +484,23 @@ func (s *Settings) createAccessOptions(group *ui.UIGroup) {
 	})
 	b.SetTrigger(func() {
 		user.S().DisableLaneEffects = !user.S().DisableLaneEffects
-		s.clearingCache = true
+		// Lane effects only affect shaders, no cache clearing needed
+	})
+	group.Add(b)
+	optionPos.Y += optionsOffset
+
+	b = ui.NewValueElement()
+	b.SetCenter(optionPos)
+	b.SetLabel("3D Note Rendering") // TODO: Add to localization
+	b.SetGetValueText(func() string {
+		if user.S().Use3DNotes {
+			return l.String(l.ON)
+		}
+		return l.String(l.OFF)
+	})
+	b.SetTrigger(func() {
+		user.S().Use3DNotes = !user.S().Use3DNotes
+		// 3D rendering only affects shaders, no cache clearing needed
 	})
 	group.Add(b)
 	optionPos.Y += optionsOffset
@@ -499,11 +511,6 @@ func (s *Settings) Update() error {
 
 	if input.K.Is(ebiten.KeyEscape, input.JustPressed) || input.K.Is(ebiten.KeyF1, input.JustPressed) {
 		user.Save()
-
-		if s.clearingCache {
-			cache.Clear()
-			s.clearingCache = false
-		}
 		s.SetNextState(types.GameStateBack, nil)
 	}
 	s.tabs.Update()

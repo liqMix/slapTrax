@@ -1,0 +1,127 @@
+//kage:unit pixels
+package main
+
+// Lane background shader uniforms
+var Point1X float          // First corner of track
+var Point1Y float
+var Point2X float          // Second corner (usually center/corner)
+var Point2Y float
+var Point3X float          // Third corner of track
+var Point3Y float
+var Point4X float          // Fourth corner (duplicated from 3rd for compatibility)
+var Point4Y float
+var CenterX float          // Vanishing point X
+var CenterY float          // Vanishing point Y
+var ColorR float           // Lane color red
+var ColorG float           // Lane color green
+var ColorB float           // Lane color blue
+var IsActive float         // 1.0 if lane is active/pressed, 0.0 otherwise
+
+// Helper function to check if point is inside triangle using barycentric coordinates
+func isInsideTriangle(px, py, x1, y1, x2, y2, x3, y3 float) bool {
+    denom := (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3)
+    if abs(denom) < 0.0001 {
+        return false // Degenerate triangle
+    }
+    
+    a := ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denom
+    b := ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denom
+    c := 1.0 - a - b
+    
+    return (a >= 0.0 && b >= 0.0 && c >= 0.0)
+}
+
+// Check if point is in lane area (tunnel wedges from center to track edges)
+func isInLaneArea(px, py float) bool {
+    // Create tunnel wedge from center point to track outline
+    // For 3-point tracks, create triangular tunnels:
+    // Triangle 1: Center -> Point1 -> Point2
+    // Triangle 2: Center -> Point2 -> Point3
+    
+    inTriangle1 := isInsideTriangle(px, py, CenterX, CenterY, Point1X, Point1Y, Point2X, Point2Y)
+    inTriangle2 := isInsideTriangle(px, py, CenterX, CenterY, Point2X, Point2Y, Point3X, Point3Y)
+    
+    return inTriangle1 || inTriangle2
+}
+
+// Calculate distance from center with perspective scaling
+func getDepthFactor(px, py, centerX, centerY float) float {
+    distX := px - centerX
+    distY := py - centerY
+    distToCenter := sqrt(distX*distX + distY*distY)
+    
+    // Normalize by screen diagonal approximation
+    maxScreenDist := 600.0
+    return clamp(distToCenter / maxScreenDist, 0.0, 1.0)
+}
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Check if we're inside the tunnel lane area
+    if !isInLaneArea(fragX, fragY) {
+        return vec4(0) // Transparent outside lane tunnel
+    }
+    
+    // Calculate depth factor for 3D tunnel effect
+    depthFactor := getDepthFactor(fragX, fragY, CenterX, CenterY)
+    
+    // Create dimmer 3D tunnel gradient - very dark at center (far), subtly brighter at edges (near)
+    baseGradient := 0.02 + (depthFactor * depthFactor * 0.15) // Reduced from 0.05 + 0.4 to 0.02 + 0.15
+    
+    // Calculate distance to track edges for tunnel wall highlighting
+    edgeDist1 := distanceToLineSegment(fragX, fragY, Point1X, Point1Y, Point2X, Point2Y)
+    edgeDist2 := distanceToLineSegment(fragX, fragY, Point2X, Point2Y, Point3X, Point3Y)
+    
+    minEdgeDist := min(edgeDist1, edgeDist2)
+    
+    // Create dimmer tunnel wall highlighting - subtler near track boundaries
+    wallFalloff := 40.0 // Distance in pixels for wall highlight falloff
+    wallHighlight := 1.0 - clamp(minEdgeDist / wallFalloff, 0.0, 1.0)
+    wallHighlight = wallHighlight * wallHighlight * 0.1 // Reduced from 0.25 to 0.1
+    
+    // Active lane effects - more subtle clean glow without spatial artifacts
+    activeBoost := 1.0
+    activeGlow := 0.0
+    if IsActive > 0.5 {
+        activeBoost = 1.15 // Reduced from 1.3 to 1.15 (15% boost instead of 30%)
+        // Add clean glow effect - enhance wall highlighting for smoother appearance
+        activeGlow = 0.05 // Reduced from 0.1 to 0.05
+    }
+    
+    // Combine all lighting effects with clean active glow
+    finalIntensity := (baseGradient + wallHighlight + activeGlow) * activeBoost
+    
+    // Apply lane color with 3D tunnel effect
+    finalR := ColorR * finalIntensity
+    finalG := ColorG * finalIntensity  
+    finalB := ColorB * finalIntensity
+    finalA := finalIntensity * 0.7 // Overall tunnel visibility
+    
+    return vec4(finalR, finalG, finalB, finalA)
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    abx := bx - ax
+    aby := by - ay
+    apx := px - ax
+    apy := py - ay
+    
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}

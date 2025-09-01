@@ -331,6 +331,7 @@ func GetDefaultSettings() *Settings {
 		DisableHoldNotes:   false,
 		DisableHitEffects:  false,
 		DisableLaneEffects: false,
+		Use3DNotes:         true, // Default to 3D rendering
 		IsNewUser:          true,
 		NoteWidth:          1.0,
 		KeyConfig:          0,

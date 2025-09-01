@@ -1,6 +1,9 @@
 package play
 
-import "github.com/liqmix/slaptrax/internal/ui"
+import (
+	"github.com/liqmix/slaptrax/internal/ui"
+	"github.com/liqmix/slaptrax/internal/user"
+)
 
 var (
 	//// Overall
@@ -13,11 +16,11 @@ var (
 	centerY      = minY + ((maxY - minY) / 2)
 
 	//// Header
-	headerWidth  = maxX * 0.3
-	headerHeight = maxY * 0.065
-	headerTop    = minY + windowOffset
-	headerRight  = maxX
-	headerLeft   = headerRight - headerWidth
+	headerWidth  = 1.0 // Full width
+	headerHeight = 0.2 // 1/5th of screen height
+	headerTop    = 0.0
+	headerRight  = 1.0
+	headerLeft   = 0.0
 	headerBottom = headerTop + headerHeight
 	headerCenter = ui.Point{
 		X: headerLeft + (headerWidth / 2),
@@ -103,11 +106,11 @@ func applyLayout() {
 	centerY = minY + ((maxY - minY) / 2)
 
 	//// Header
-	headerWidth = maxX * 0.3
-	headerHeight = maxY * 0.065
-	headerTop = minY + windowOffset
-	headerRight = maxX
-	headerLeft = headerRight - headerWidth
+	headerWidth = 1.0 // Full width
+	headerHeight = 0.2 // 1/5th of screen height
+	headerTop = 0.0
+	headerRight = 1.0
+	headerLeft = 0.0
 	headerBottom = headerTop + headerHeight
 	headerCenter = ui.Point{
 		X: headerLeft + (headerWidth / 2),
@@ -199,4 +202,13 @@ func applyEdgeLayout() {
 	judgementWidth = noteWidth / 4
 	// judgementPressedRatio = float32(2.0)
 	applyLayout()
+}
+
+// ReinitLayouts reinitializes the play area layouts based on current settings
+func ReinitLayouts() {
+	if user.S().EdgePlayArea {
+		applyEdgeLayout()
+	} else {
+		applyDefaultLayout()
+	}
 }

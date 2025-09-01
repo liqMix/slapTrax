@@ -1,0 +1,277 @@
+//kage:unit pixels
+package main
+
+// Hold note shader uniforms (3D version - includes all note uniforms plus hold-specific)
+var Progress float         // Current note progress
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Note color alpha
+var Glow float             // Glow intensity
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var TimeMs float           // Time in milliseconds for animations
+var HoldStartProgress float // Where hold starts (0.0-1.0)
+var HoldEndProgress float   // Where hold ends (0.0-1.0)
+var WasHit float           // 1.0 if hit, 0.0 otherwise
+var WasReleased float      // 1.0 if released, 0.0 otherwise
+var FadeInThreshold float  // Progress below which notes are invisible
+var FadeOutThreshold float // Progress above which notes are fully visible
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Calculate hold start and end track positions
+    startP1X := CenterX + (Point1X - CenterX) * HoldStartProgress
+    startP1Y := CenterY + (Point1Y - CenterY) * HoldStartProgress
+    startP2X := CenterX + (Point2X - CenterX) * HoldStartProgress
+    startP2Y := CenterY + (Point2Y - CenterY) * HoldStartProgress  
+    startP3X := CenterX + (Point3X - CenterX) * HoldStartProgress
+    startP3Y := CenterY + (Point3Y - CenterY) * HoldStartProgress
+    
+    endP1X := CenterX + (Point1X - CenterX) * HoldEndProgress
+    endP1Y := CenterY + (Point1Y - CenterY) * HoldEndProgress
+    endP2X := CenterX + (Point2X - CenterX) * HoldEndProgress
+    endP2Y := CenterY + (Point2Y - CenterY) * HoldEndProgress
+    endP3X := CenterX + (Point3X - CenterX) * HoldEndProgress  
+    endP3Y := CenterY + (Point3Y - CenterY) * HoldEndProgress
+    
+    // Calculate effective widths at start and end (for future use)
+    // startWidth := Width * WidthScale * HoldStartProgress
+    // endWidth := Width * WidthScale * HoldEndProgress
+    
+    // Check if fragment is inside the hold note area (trapezoid between start and end)
+    // First check distance to the track segments
+    
+    // Distance to start segments
+    distToStartSeg1 := distanceToLineSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y)
+    distToStartSeg2 := distanceToLineSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y)
+    minDistStart := min(distToStartSeg1, distToStartSeg2)
+    
+    // Distance to end segments  
+    distToEndSeg1 := distanceToLineSegment(fragX, fragY, endP1X, endP1Y, endP2X, endP2Y)
+    distToEndSeg2 := distanceToLineSegment(fragX, fragY, endP2X, endP2Y, endP3X, endP3Y)
+    minDistEnd := min(distToEndSeg1, distToEndSeg2)
+    
+    // Check if inside hold area - simplified trapezoid test
+    // Calculate which progress along the hold this fragment represents
+    // holdCenterX := (startP2X + endP2X) * 0.5
+    // holdCenterY := (startP2Y + endP2Y) * 0.5
+    
+    // Linear interpolation for width at this position
+    holdProgress := 0.5 // Default to middle
+    if HoldEndProgress != HoldStartProgress {
+        // Project fragment position onto the hold line to find progress
+        holdDirX := endP2X - startP2X
+        holdDirY := endP2Y - startP2Y
+        fragDirX := fragX - startP2X
+        fragDirY := fragY - startP2Y
+        
+        if holdDirX * holdDirX + holdDirY * holdDirY > 0.0 {
+            holdProgress = clamp((fragDirX * holdDirX + fragDirY * holdDirY) / (holdDirX * holdDirX + holdDirY * holdDirY), 0.0, 1.0)
+        }
+    }
+    
+    // Determine if this fragment is in the head or tail region
+    // Head region is the last 15% of the hold (where player releases)
+    headThreshold := 0.85
+    isHeadRegion := holdProgress > headThreshold
+    
+    // Calculate variable width: full width for head, thin for tail
+    baseWidth := Width * WidthScale * 2.0 // Double thickness like regular notes
+    
+    var regionWidth float
+    if isHeadRegion {
+        // Head region: full width with smooth transition
+        transitionFactor := (holdProgress - headThreshold) / (1.0 - headThreshold)
+        regionWidth = baseWidth * (0.4 + transitionFactor * 0.6) // Smooth transition from 0.4 to 1.0
+    } else {
+        // Tail region: thinner trail (40% of normal width)
+        regionWidth = baseWidth * 0.4
+    }
+    
+    // Apply progress-based scaling for perspective
+    currentProgress := HoldStartProgress + (HoldEndProgress - HoldStartProgress) * holdProgress
+    currentWidth := regionWidth * currentProgress
+    halfWidth := currentWidth * 0.5
+    
+    // Use minimum distance to track outline for alpha
+    minDist := min(minDistStart, minDistEnd)
+    alpha := 1.0 - smoothstep(halfWidth - 1.0, halfWidth + 1.0, minDist)
+    
+    if alpha <= 0.0 {
+        return vec4(0)
+    }
+    
+    // Apply fade in/out based on progress
+    fadeIntensity := 1.0
+    
+    if currentProgress < FadeInThreshold {
+        fadeIntensity = 0.0
+    } else if currentProgress < FadeOutThreshold {
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        if fadeRange > 0.0 {
+            fadeProgress := (currentProgress - FadeInThreshold) / fadeRange
+            fadeIntensity = fadeProgress
+        }
+    }
+    
+    // ===== DRAMATIC 3D EFFECTS FOR HOLD NOTES =====
+    
+    // Calculate hold note center for 3D effects
+    centerX := (startP1X + startP2X + startP3X + endP1X + endP2X + endP3X) / 6.0
+    centerY := (startP1Y + startP2Y + startP3Y + endP1Y + endP2Y + endP3Y) / 6.0
+    
+    // Distance from fragment to hold note center (normalized 0-1)
+    distFromCenter := distance(vec2(fragX, fragY), vec2(centerX, centerY))
+    normalizedDist := clamp(distFromCenter / (currentWidth * 0.5), 0.0, 1.0)
+    
+    // Apply different 3D effects for head vs tail regions
+    var radialBrightness, specularBoost, edgeDarkening float
+    
+    if isHeadRegion {
+        // HEAD: Full 3D effects like regular notes
+        // 1. Strong radial brightness for prominent head
+        radialBrightness = 1.0 + (1.0 - normalizedDist) * 1.3 // Up to 2.3x brighter in center
+        
+        // 2. Dramatic specular highlight for head prominence
+        highlightX := centerX - (currentWidth * 0.12)
+        highlightY := centerY - (currentWidth * 0.18)
+        distToHighlight := distance(vec2(fragX, fragY), vec2(highlightX, highlightY))
+        
+        specularBoost = 1.0
+        highlightRadius := currentWidth * 0.5 // Large highlight
+        if distToHighlight < highlightRadius {
+            highlightFactor := 1.0 - (distToHighlight / highlightRadius)
+            highlightFactor = pow(highlightFactor, 1.3)
+            specularBoost = 1.0 + (highlightFactor * 1.8)
+        }
+        
+        // 3. Strong edge definition for head
+        edgeDarkening = 1.0
+        if normalizedDist > 0.75 {
+            darkeningFactor := (normalizedDist - 0.75) / 0.25
+            edgeDarkening = 1.0 - (darkeningFactor * darkeningFactor * 0.5)
+        }
+    } else {
+        // TAIL: Subtle 3D effects to emphasize it's a trail
+        // 1. Modest radial brightness for subtle tail depth
+        radialBrightness = 1.0 + (1.0 - normalizedDist) * 0.6 // Up to 1.6x brighter in center
+        
+        // 2. Minimal specular for tail (just subtle sheen)
+        specularBoost = 1.0 + (1.0 - normalizedDist) * 0.3 // Subtle highlight
+        
+        // 3. Gentle edge darkening for tail definition
+        edgeDarkening = 1.0
+        if normalizedDist > 0.8 {
+            darkeningFactor := (normalizedDist - 0.8) / 0.2
+            edgeDarkening = 1.0 - (darkeningFactor * 0.2) // Gentler edge effect
+        }
+    }
+    
+    // 4. DEPTH-BASED INTENSITY - varies along hold length
+    depthIntensity := 0.5 + (currentProgress * 1.0) // Range 0.5 to 1.5
+    
+    // 5. BEVEL EFFECT - darkening near hold outline
+    bevelFactor := 1.0
+    edgeDistance := halfWidth - minDist
+    if edgeDistance < halfWidth * 0.25 {
+        bevelAmount := (halfWidth * 0.25 - edgeDistance) / (halfWidth * 0.25)
+        bevelFactor = 1.0 - (bevelAmount * 0.3)
+    }
+    
+    // 6. HOLD STATE EFFECTS - modify lighting based on hit/release state
+    stateModifier := 1.0
+    if WasHit > 0.5 {
+        if WasReleased > 0.5 {
+            // Released hold - dimmer but still visible
+            stateModifier = 0.6
+        } else {
+            // Active hold - brighter with pulse
+            pulse := sin(TimeMs * 0.003) * 0.15 + 1.2
+            stateModifier = pulse
+        }
+    }
+    
+    // Add gradient effect along the tail for visual flow
+    var gradientEffect float
+    if isHeadRegion {
+        // Head: no gradient modification, keep full brightness
+        gradientEffect = 1.0
+    } else {
+        // Tail: gradient from darker at start to brighter toward head
+        // holdProgress 0.0 = start (darker), 0.85 = transition to head (brighter)
+        tailGradient := holdProgress / headThreshold // Normalize to 0-1 across tail
+        gradientEffect = 0.7 + (tailGradient * 0.3) // Range from 0.7 to 1.0
+    }
+    
+    // Combine all 3D effects with gradient
+    threeDEffect := depthIntensity * radialBrightness * specularBoost * max(edgeDarkening * bevelFactor, 0.7) * stateModifier * gradientEffect
+    
+    // Apply final color with dramatic 3D effects and fade
+    finalR := ColorR * fadeIntensity * threeDEffect
+    finalG := ColorG * fadeIntensity * threeDEffect
+    finalB := ColorB * fadeIntensity * threeDEffect
+    
+    // Apply different alpha for head vs tail regions
+    var regionAlpha float
+    if isHeadRegion {
+        // Head: full opacity
+        regionAlpha = ColorA * alpha
+    } else {
+        // Tail: slightly more transparent to emphasize it's a trail
+        regionAlpha = ColorA * alpha * 0.85
+    }
+    
+    finalColor := vec4(finalR, finalG, finalB, regionAlpha)
+    
+    // Add glow effect if enabled
+    if Glow > 0.0 {
+        glowRadius := currentWidth * 1.5
+        glowAlpha := Glow * (1.0 - smoothstep(0.0, glowRadius, minDist))
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.2)
+        finalColor = mix(finalColor, glowColor, glowAlpha)
+    }
+    
+    // Solo note animation
+    if Solo > 0.5 {
+        pulse := sin(TimeMs * 0.005) * 0.1 + 0.9
+        finalColor.rgb *= pulse
+    }
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    abx := bx - ax
+    aby := by - ay
+    apx := px - ax
+    apy := py - ay
+    
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}

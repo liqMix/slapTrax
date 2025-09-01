@@ -6,9 +6,13 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/display"
 )
+
+type CachedPath struct {
+	Vertices []ebiten.Vertex
+	Indices  []uint16
+}
 
 // Create a 1x1 white image as the base texture
 func createBaseTriImg() *ebiten.Image {
@@ -195,7 +199,7 @@ func (vc *VectorCollection) Add(verts []ebiten.Vertex, inds []uint16) {
 	vc.idxIdx += ilen
 }
 
-func (vc *VectorCollection) AddPath(path *cache.CachedPath) {
+func (vc *VectorCollection) AddPath(path *CachedPath) {
 	if path == nil {
 		return
 	}

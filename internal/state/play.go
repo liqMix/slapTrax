@@ -28,7 +28,7 @@ type Play struct {
 	countTicks   []int64
 }
 
-const travelTime float64 = 10000
+const travelTime float64 = 5000
 
 func NewPlayState(args *PlayArgs) *Play {
 	song := args.Song

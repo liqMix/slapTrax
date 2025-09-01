@@ -5,7 +5,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/liqmix/slaptrax/internal/cache"
 	"github.com/liqmix/slaptrax/internal/types"
 	"github.com/liqmix/slaptrax/internal/ui"
 )
@@ -30,7 +29,7 @@ func (r *Play) addJudgementPath(track *types.Track) {
 	r.vectorCollection.AddPath(path)
 }
 
-func CreateJudgementPath(track types.TrackName, pressed bool) *cache.CachedPath {
+func CreateJudgementPath(track types.TrackName, pressed bool) *ui.CachedPath {
 	return CreateNotePath(track, 1, &NotePathOpts{
 		lineWidth:       judgementWidth,
 		largeWidthRatio: judgementPressedRatio,

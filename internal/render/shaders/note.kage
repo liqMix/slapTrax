@@ -1,0 +1,129 @@
+//kage:unit pixels
+package main
+
+// Note shader uniforms
+var Progress float         // 0.0 (at center) to 1.0 (at judgment line)
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Note color alpha
+var Glow float             // Glow intensity
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var TimeMs float           // Time in milliseconds for animations
+var FadeInThreshold float  // Progress below which notes are invisible
+var FadeOutThreshold float // Progress above which notes are fully visible
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Calculate interpolated positions of the 3 track points based on progress
+    // Progress 0.0 = at center, Progress 1.0 = at judgment line
+    p1X := CenterX + (Point1X - CenterX) * Progress
+    p1Y := CenterY + (Point1Y - CenterY) * Progress
+    
+    p2X := CenterX + (Point2X - CenterX) * Progress
+    p2Y := CenterY + (Point2Y - CenterY) * Progress
+    
+    p3X := CenterX + (Point3X - CenterX) * Progress
+    p3Y := CenterY + (Point3Y - CenterY) * Progress
+    
+    // Calculate effective width based on progress and scale (perspective effect)
+    // Width should have proper base size, then scale with progress for perspective
+    effectiveWidth := Width * WidthScale * Progress
+    halfWidth := effectiveWidth * 0.5
+    
+    // Calculate distance from fragment to the two line segments that form the track
+    // Segment 1: from p1 to p2
+    distToSeg1 := distanceToLineSegment(fragX, fragY, p1X, p1Y, p2X, p2Y)
+    
+    // Segment 2: from p2 to p3
+    distToSeg2 := distanceToLineSegment(fragX, fragY, p2X, p2Y, p3X, p3Y)
+    
+    // Use the minimum distance to either segment
+    minDist := min(distToSeg1, distToSeg2)
+    
+    // Distance-based alpha for anti-aliasing
+    alpha := 1.0 - smoothstep(halfWidth-1.0, halfWidth+1.0, minDist)
+    
+    // Early exit if not within track area
+    if alpha <= 0.0 {
+        return vec4(0)
+    }
+    
+    // Apply fade in/out based on progress distance from judgment line
+    fadeIntensity := 1.0
+    
+    if Progress < FadeInThreshold {
+        // Notes are invisible when too far from judgment line
+        fadeIntensity = 0.0
+    } else if Progress < FadeOutThreshold {
+        // Gradual fade in between thresholds
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        if fadeRange > 0.0 {
+            fadeProgress := (Progress - FadeInThreshold) / fadeRange
+            fadeIntensity = fadeProgress // Smooth fade from 0 to 1
+        }
+    }
+    // Above FadeOutThreshold: fully visible (fadeIntensity = 1.0)
+    
+    // Apply color intensity fade - clean 2D rendering
+    finalColor := vec4(ColorR * fadeIntensity, ColorG * fadeIntensity, ColorB * fadeIntensity, ColorA * alpha)
+    
+    // Add glow effect if enabled
+    if Glow > 0.0 {
+        glowRadius := effectiveWidth * 2.0
+        glowAlpha := Glow * (1.0 - smoothstep(0.0, glowRadius, minDist))
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.3)
+        finalColor = mix(finalColor, glowColor, glowAlpha)
+    }
+    
+    // Add subtle animation for solo notes
+    if Solo > 0.5 {
+        pulse := sin(TimeMs * 0.005) * 0.1 + 0.9
+        finalColor.rgb *= pulse
+    }
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    // Vector from A to B
+    abx := bx - ax
+    aby := by - ay
+    
+    // Vector from A to P
+    apx := px - ax
+    apy := py - ay
+    
+    // Project AP onto AB
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        // A and B are the same point, return distance to A
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    // Find closest point on segment
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    // Return distance to closest point
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}

@@ -38,6 +38,7 @@ func (s *Settings) MergeFrom(other *Settings) {
 	s.DisableHoldNotes = other.DisableHoldNotes
 	s.DisableHitEffects = other.DisableHitEffects
 	s.DisableLaneEffects = other.DisableLaneEffects
+	s.Use3DNotes = other.Use3DNotes
 
 	// Only update if positive values
 	if other.BGMVolume > 0 {

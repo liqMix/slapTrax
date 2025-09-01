@@ -1,0 +1,179 @@
+//kage:unit pixels
+package main
+
+// Hold note shader uniforms (includes all note uniforms plus hold-specific)
+var Progress float         // Current note progress
+var Point1X float          // First point of track shape
+var Point1Y float
+var Point2X float          // Second point (corner/center)
+var Point2Y float
+var Point3X float          // Third point of track shape
+var Point3Y float
+var CenterX float          // Center vanishing point X
+var CenterY float          // Center vanishing point Y
+var Width float            // Base width
+var WidthScale float       // Width multiplier
+var ColorR float           // Note color red
+var ColorG float           // Note color green
+var ColorB float           // Note color blue
+var ColorA float           // Note color alpha
+var Glow float             // Glow intensity
+var Solo float             // 1.0 if solo, 0.0 otherwise
+var TimeMs float           // Time in milliseconds for animations
+var HoldStartProgress float // Where hold starts (0.0-1.0)
+var HoldEndProgress float   // Where hold ends (0.0-1.0)
+var WasHit float           // 1.0 if hit, 0.0 otherwise
+var WasReleased float      // 1.0 if released, 0.0 otherwise
+var IsActive float         // 1.0 if currently active (being held), 0.0 otherwise
+var FadeInThreshold float  // Progress below which notes are invisible
+var FadeOutThreshold float // Progress above which notes are fully visible
+
+func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
+    fragX := position.x
+    fragY := position.y
+    
+    // Calculate hold start and end track positions
+    startP1X := CenterX + (Point1X - CenterX) * HoldStartProgress
+    startP1Y := CenterY + (Point1Y - CenterY) * HoldStartProgress
+    startP2X := CenterX + (Point2X - CenterX) * HoldStartProgress
+    startP2Y := CenterY + (Point2Y - CenterY) * HoldStartProgress  
+    startP3X := CenterX + (Point3X - CenterX) * HoldStartProgress
+    startP3Y := CenterY + (Point3Y - CenterY) * HoldStartProgress
+    
+    endP1X := CenterX + (Point1X - CenterX) * HoldEndProgress
+    endP1Y := CenterY + (Point1Y - CenterY) * HoldEndProgress
+    endP2X := CenterX + (Point2X - CenterX) * HoldEndProgress
+    endP2Y := CenterY + (Point2Y - CenterY) * HoldEndProgress
+    endP3X := CenterX + (Point3X - CenterX) * HoldEndProgress  
+    endP3Y := CenterY + (Point3Y - CenterY) * HoldEndProgress
+    
+    // Check if fragment is inside the trapezoid formed by start and end track shapes
+    // We'll test against the filled area between the two track shapes
+    
+    minDistanceToHold := 1000000.0 // Large number
+    closestProgress := 0.0
+    
+    // Find the closest point on the hold by projecting onto the center line
+    centerStartX := (startP1X + startP2X + startP3X) / 3.0
+    centerStartY := (startP1Y + startP2Y + startP3Y) / 3.0
+    centerEndX := (endP1X + endP2X + endP3X) / 3.0
+    centerEndY := (endP1Y + endP2Y + endP3Y) / 3.0
+    
+    // Vector from start to end center
+    holdDirX := centerEndX - centerStartX
+    holdDirY := centerEndY - centerStartY
+    holdLength := sqrt(holdDirX*holdDirX + holdDirY*holdDirY)
+    
+    if holdLength > 0.1 {
+        // Normalize direction
+        holdDirX /= holdLength
+        holdDirY /= holdLength
+        
+        // Project fragment onto hold centerline
+        toFragX := fragX - centerStartX
+        toFragY := fragY - centerStartY
+        projection := toFragX*holdDirX + toFragY*holdDirY
+        projection = max(0.0, min(holdLength, projection))
+        
+        // Calculate progress along hold (0.0 to 1.0)
+        holdT := projection / holdLength
+        closestProgress = HoldStartProgress + (HoldEndProgress - HoldStartProgress) * holdT
+        
+        // Get track shape at this progress
+        interpP1X := CenterX + (Point1X - CenterX) * closestProgress
+        interpP1Y := CenterY + (Point1Y - CenterY) * closestProgress
+        interpP2X := CenterX + (Point2X - CenterX) * closestProgress
+        interpP2Y := CenterY + (Point2Y - CenterY) * closestProgress
+        interpP3X := CenterX + (Point3X - CenterX) * closestProgress
+        interpP3Y := CenterY + (Point3Y - CenterY) * closestProgress
+        
+        // Distance to track segments at this progress
+        dist1 := distanceToLineSegment(fragX, fragY, interpP1X, interpP1Y, interpP2X, interpP2Y)
+        dist2 := distanceToLineSegment(fragX, fragY, interpP2X, interpP2Y, interpP3X, interpP3Y)
+        
+        minDistanceToHold = min(dist1, dist2)
+    } else {
+        // Very short hold - treat as single note
+        dist1 := distanceToLineSegment(fragX, fragY, startP1X, startP1Y, startP2X, startP2Y)
+        dist2 := distanceToLineSegment(fragX, fragY, startP2X, startP2Y, startP3X, startP3Y)
+        minDistanceToHold = min(dist1, dist2)
+        closestProgress = HoldStartProgress
+    }
+    
+    // Calculate effective width at the closest progress point
+    effectiveWidth := Width * WidthScale * closestProgress
+    halfWidth := effectiveWidth * 0.5
+    
+    // Distance-based alpha for anti-aliasing
+    alpha := 1.0 - smoothstep(halfWidth-1.0, halfWidth+1.0, minDistanceToHold)
+    
+    if alpha <= 0.0 {
+        return vec4(0)
+    }
+    
+    // Apply fade in/out based on the closest progress point
+    fadeAlpha := 1.0
+    if closestProgress < FadeInThreshold {
+        fadeAlpha = 0.0
+    } else if closestProgress < FadeOutThreshold {
+        fadeRange := FadeOutThreshold - FadeInThreshold
+        fadeProgress := (closestProgress - FadeInThreshold) / fadeRange
+        fadeAlpha = fadeProgress
+    }
+    
+    // Base color with combined alpha
+    finalColor := vec4(ColorR, ColorG, ColorB, ColorA * alpha * fadeAlpha)
+    
+    // Add hit effect
+    if WasHit > 0.5 {
+        finalColor.rgb *= 1.2
+        
+        if WasReleased < 0.5 {
+            // Still holding - add pulsing effect
+            pulse := sin(TimeMs * 0.01) * 0.1 + 1.0
+            finalColor.rgb *= pulse
+        }
+    }
+    
+    // Add glow for active holds
+    // Use IsActive for reactivated notes that may not have WasHit set
+    if Glow > 0.0 || IsActive > 0.5 || (WasHit > 0.5 && WasReleased < 0.5) {
+        glowRadius := effectiveWidth * 1.5
+        glowAlpha := 0.5 * (1.0 - smoothstep(0.0, glowRadius, minDistanceToHold))
+        glowColor := vec4(ColorR, ColorG, ColorB, glowAlpha * 0.4)
+        finalColor = mix(finalColor, glowColor, glowAlpha)
+    }
+    
+    return finalColor
+}
+
+// Helper function to calculate distance from point to line segment
+func distanceToLineSegment(px, py, ax, ay, bx, by float) float {
+    // Vector from A to B
+    abx := bx - ax
+    aby := by - ay
+    
+    // Vector from A to P
+    apx := px - ax
+    apy := py - ay
+    
+    // Project AP onto AB
+    ab2 := abx*abx + aby*aby
+    
+    if ab2 == 0.0 {
+        // A and B are the same point, return distance to A
+        return sqrt(apx*apx + apy*apy)
+    }
+    
+    t := (apx*abx + apy*aby) / ab2
+    t = max(0.0, min(1.0, t))
+    
+    // Find closest point on segment
+    closestX := ax + t * abx
+    closestY := ay + t * aby
+    
+    // Return distance to closest point
+    dx := px - closestX
+    dy := py - closestY
+    return sqrt(dx*dx + dy*dy)
+}
