@@ -1,6 +1,8 @@
 package play
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/liqmix/slaptrax/internal/render/shaders"
 	"github.com/liqmix/slaptrax/internal/types"
 )
 
@@ -18,27 +20,56 @@ func (r *Play) addTrackEffects(track *types.Track) {
 	// }
 
 }
-func (r *Play) addHitEffects() {
+func (r *Play) addHitEffects(screen *ebiten.Image) {
 	for _, hit := range r.state.Score.HitRecords[r.hitRecordIdx:] {
 		hitTime := hit.Note.HitTime
 		now := r.state.CurrentTime()
 		speed := r.state.GetTravelTime()
 
-		progress := types.GetTrackProgress(hitTime, now, -speed/4)
-		if progress > 0 {
+		// Calculate progress from hit point backwards towards center at 8x speed
+		// Normal notes use travelTime = speed
+		// For hit effects to travel very fast: travelTime = speed/8  
+		// With negative direction: -speed/8 (eighth travel time = 8x speed)
+		// This makes them shoot down the lane much faster
+		progress := types.GetTrackProgress(hitTime, now, -speed/8)
+		if progress > 0 && progress <= 1 {
 			if !hit.Note.IsHoldNote() {
-				op := hit.Note.Progress
-				hit.Note.Progress = progress
-				path := GetNotePath(hit.Note.TrackName, hit.Note, true)
-				hit.Note.Progress = op
-				if path != nil {
-					r.vectorCollection.AddPath(path)
-				}
+				r.addHitEffectShader(screen, hit.Note, float32(progress))
 			}
 		} else {
 			r.hitRecordIdx++
 		}
 	}
+}
+
+// addHitEffectShader renders a single hit effect using shaders
+func (r *Play) addHitEffectShader(screen *ebiten.Image, note *types.Note, hitProgress float32) {
+	if shaders.Renderer == nil {
+		return
+	}
+
+	// Get track points and center point for this track
+	trackPoints := notePoints[note.TrackName]
+	if len(trackPoints) == 0 {
+		return
+	}
+
+	// Calculate effect opacity - fade out as it approaches the center
+	// hitProgress is already correct: starts at 1.0 (hit point) and decreases to 0.0 (center)
+	// The negative travel time in GetTrackProgress already handles the backward direction
+	effectOpacity := hitProgress // Fade out as it approaches center (hitProgress goes 1.0 → 0.0)
+
+	// Render the hit effect using shaders
+	// Pass hitProgress directly - it's already 1.0 at hit point, 0.0 at center
+	shaders.Renderer.RenderHitEffect(
+		screen,
+		note.TrackName,
+		note,
+		trackPoints,
+		&playCenterPoint,
+		hitProgress,    // Use hitProgress directly for correct direction
+		effectOpacity,
+	)
 }
 
 // func (r *Play) drawNoteEffect(note *types.Note) {}

@@ -109,7 +109,7 @@ func (r *Play) Draw(screen *ebiten.Image, opts *ebiten.DrawImageOptions) {
 	}
 
 	if !user.S().DisableHitEffects {
-		r.addHitEffects()
+		r.addHitEffects(screen)
 	}
 
 	r.drawStats(screen, opts)

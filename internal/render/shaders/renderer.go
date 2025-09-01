@@ -358,6 +358,53 @@ func (sr *ShaderRenderer) RenderHoldNoteHead(img *ebiten.Image, track types.Trac
 	img.DrawTrianglesShader(vertices, sr.baseIndices, noteShader, options)
 }
 
+// RenderHitEffect renders a hit effect (shadow traveling backwards from hit point)
+func (sr *ShaderRenderer) RenderHitEffect(img *ebiten.Image, track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point, hitProgress, effectOpacity float32) {
+	if Manager == nil {
+		return
+	}
+	
+	hitEffectShader := Manager.GetHitEffectShader()
+	if hitEffectShader == nil {
+		return
+	}
+	
+	uniforms := CreateHitEffectUniforms(track, note, trackPoints, centerPoint, hitProgress, effectOpacity)
+	if uniforms == nil {
+		return
+	}
+	
+	// Create bounded geometry based on current hit progress
+	// hitProgress is already in the correct format: 1.0 at hit point, 0.0 at center
+	vertices := sr.createBoundedGeometry(trackPoints, centerPoint, hitProgress)
+	
+	options := &ebiten.DrawTrianglesShaderOptions{}
+	options.Blend = ebiten.BlendSourceOver
+	options.Uniforms = map[string]interface{}{
+		"Progress":     uniforms.Progress,
+		"Point1X":      uniforms.Point1X,
+		"Point1Y":      uniforms.Point1Y,
+		"Point2X":      uniforms.Point2X,
+		"Point2Y":      uniforms.Point2Y,
+		"Point3X":      uniforms.Point3X,
+		"Point3Y":      uniforms.Point3Y,
+		"CenterX":      uniforms.CenterX,
+		"CenterY":      uniforms.CenterY,
+		"Width":        uniforms.Width,
+		"WidthScale":   uniforms.WidthScale,
+		"ColorR":       uniforms.ColorR,
+		"ColorG":       uniforms.ColorG,
+		"ColorB":       uniforms.ColorB,
+		"ColorA":       uniforms.ColorA,
+		"Glow":         uniforms.Glow,
+		"Solo":         uniforms.Solo,
+		"HitProgress":  uniforms.HitProgress,
+		"EffectOpacity": uniforms.EffectOpacity,
+	}
+	
+	img.DrawTrianglesShader(vertices, sr.baseIndices, hitEffectShader, options)
+}
+
 // Global shader renderer instance
 var Renderer *ShaderRenderer
 

@@ -52,6 +52,15 @@ type HoldNoteUniforms struct {
 	BPM               float32 // Song BPM for oscillation sync
 }
 
+// HitEffectUniforms contains parameters for hit effect rendering (shadow that travels backwards)
+type HitEffectUniforms struct {
+	NoteUniforms
+	
+	// Hit effect specific
+	HitProgress    float32 // Progress from hit point (1.0) to vanishing point (0.0) - reverse travel
+	EffectOpacity  float32 // Fade-out opacity (1.0 at start, 0.0 at end)
+}
+
 // CreateNoteUniforms creates uniforms for a regular note
 func CreateNoteUniforms(track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point) *NoteUniforms {
 	if len(trackPoints) < 3 || centerPoint == nil {
@@ -148,6 +157,36 @@ func CreateHoldNoteUniforms(track types.TrackName, note *types.Note, trackPoints
 	return holdUniforms
 }
 
+// CreateHitEffectUniforms creates uniforms for a hit effect
+func CreateHitEffectUniforms(track types.TrackName, note *types.Note, trackPoints []*ui.Point, centerPoint *ui.Point, hitProgress, effectOpacity float32) *HitEffectUniforms {
+	baseUniforms := CreateNoteUniforms(track, note, trackPoints, centerPoint)
+	if baseUniforms == nil {
+		return nil
+	}
+	
+	hitUniforms := &HitEffectUniforms{
+		NoteUniforms: *baseUniforms,
+	}
+	
+	// Set hit effect specific properties
+	hitUniforms.HitProgress = hitProgress
+	hitUniforms.EffectOpacity = effectOpacity
+	
+	// Override Progress with linear (non-smoothed) value for constant speed
+	// The base CreateNoteUniforms applies smoothProgress which creates easing
+	// For hit effects, we want constant speed, so use raw linear progress
+	hitUniforms.Progress = hitProgress
+	
+	// Make the effect much more transparent than regular notes
+	// Set base alpha to 0.1 (instead of 1.0) for very high transparency
+	hitUniforms.ColorA = 0.1
+	
+	// Remove glow effects for clean shadow
+	hitUniforms.Glow = 0.0
+	
+	return hitUniforms
+}
+
 // ToSlice converts NoteUniforms to float32 slice for shader
 func (u *NoteUniforms) ToSlice() []float32 {
 	return []float32{
@@ -173,6 +212,16 @@ func (u *HoldNoteUniforms) ToSlice() []float32 {
 		u.BPM,
 	}
 	return append(base, hold...)
+}
+
+// ToSlice converts HitEffectUniforms to float32 slice for shader
+func (u *HitEffectUniforms) ToSlice() []float32 {
+	base := u.NoteUniforms.ToSlice()
+	effect := []float32{
+		u.HitProgress,
+		u.EffectOpacity,
+	}
+	return append(base, effect...)
 }
 
 // Helper functions duplicated from play package to avoid circular imports

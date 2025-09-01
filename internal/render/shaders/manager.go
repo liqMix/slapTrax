@@ -19,6 +19,7 @@ type ShaderManager struct {
 	laneShader       *ebiten.Shader // Lane background shader
 	markerShader     *ebiten.Shader // Measure/beat marker shader
 	tunnelShader     *ebiten.Shader // Tunnel background shader
+	hitEffectShader  *ebiten.Shader // Hit effect shader for on-hit shadows
 }
 
 var Manager *ShaderManager
@@ -146,6 +147,17 @@ func (sm *ShaderManager) loadShaders() error {
 		return err
 	}
 	
+	// Load hit effect shader
+	hitEffectSource, err := shaderFS.ReadFile("hiteffect.kage")
+	if err != nil {
+		return err
+	}
+	
+	sm.hitEffectShader, err = ebiten.NewShader(hitEffectSource)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -189,4 +201,9 @@ func (sm *ShaderManager) GetMarkerShader() *ebiten.Shader {
 // GetTunnelShader returns the tunnel background shader
 func (sm *ShaderManager) GetTunnelShader() *ebiten.Shader {
 	return sm.tunnelShader
+}
+
+// GetHitEffectShader returns the hit effect shader
+func (sm *ShaderManager) GetHitEffectShader() *ebiten.Shader {
+	return sm.hitEffectShader
 }
