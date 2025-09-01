@@ -112,9 +112,9 @@ func (t *Track) Update(currentTime int64, travelTime int64, maxTime int64) HitRa
 					}
 				}
 				
-				// Set note as active if track is active and note is not currently inactive
-				// OR if we can reactivate it (for missed initial notes)
-				if !n.IsInactive || n.CanReactivate(currentTime) {
+				// Set note as active only if it has been hit or can be reactivated
+				// Don't activate notes that are just approaching but not yet hit
+				if (n.WasHit() && !n.IsInactive) || n.CanReactivate(currentTime) {
 					n.IsActive = true
 					if n.MissedInitial {
 						n.IsInactive = false // Clear inactive state for reactivated missed notes

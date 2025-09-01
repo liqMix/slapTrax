@@ -96,13 +96,20 @@ func (n *Note) CanReactivate(currentTime int64) bool {
 	}
 	
 	// Can reactivate if:
-	// 1. Note is in inactive state OR missed initial hit
-	// 2. Current time is still within the hold note's duration window  
-	// 3. Haven't processed all intervals yet
+	// 1. Note was previously hit OR missed initial hit (not brand new notes)
+	// 2. Note is in inactive state OR missed initial hit
+	// 3. Current time is still within the hold note's duration window  
+	// 4. Haven't processed all intervals yet
 	
 	hasIntervals := len(n.HoldIntervals) > 0
 	withinDurationWindow := currentTime <= n.TargetRelease + LatestWindow
 	hasRemainingIntervals := !hasIntervals || n.LastCheckedInterval < len(n.HoldIntervals)
+	
+	// Only allow reactivation if note was previously interacted with
+	wasInteractedWith := n.WasHit() || n.MissedInitial
+	if !wasInteractedWith {
+		return false
+	}
 	
 	// For notes that missed the initial hit, allow reactivation during the hold duration
 	if n.MissedInitial && !n.IsActive {
