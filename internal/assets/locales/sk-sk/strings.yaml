@@ -1,0 +1,144 @@
+locale: "Slovenčina"
+title: "slapTrax"
+
+# General
+loading: "Načítava sa..."
+exit: "Ukončiť"
+back: "Naspäť"
+save: "Uložiť"
+cancel: "Zrušiť"
+continue: "Pokračovať"
+off: "Vyp"
+on: "Zap"
+chart: "Mapa"
+guest: "Hosť"
+difficulties: "Náročnosťi"
+corner: "Roh"
+center: "Stred"
+leaderboard: "Top Hráči"
+
+# Actions
+action.back: "Naspäť"
+action.select: "Vybrať"
+action.up: "Hore"
+action.down: "Dole"
+action.left: "Doľava"
+action.right: "Doprava"
+
+# Difficulties
+difficulty.easy: "Ľahká"
+difficulty.medium: "Stredná"
+difficulty.hard: "Ťažká"
+difficulty.unknown: "????"
+
+# Hit Judgments
+hit.perfect: "PERFECT"
+hit.good: "GOOD"
+hit.bad: "BAD"
+hit.miss: "MISS"
+
+# Song Information
+song.artist: "Interpret"
+song.album: "Album"
+
+# States
+state.greeting: "Vitaj"
+state.editor: "Editor"
+state.settings: "Nastavenia"
+state.profile: "Profil"
+state.play: "Hrať"
+state.offset: "Upraviť posun"
+state.song.selection: "Vybrať pieseň"
+state.difficulty.selection: "Vybrať náročnosť"
+state.login: "Prihlásiť sa"
+state.result: "Výsledky"
+state.howtoplay: "Ako hrať"
+
+# Login
+login.text.offline: "Offline režim"
+login.text.online: "Online režim"
+login.login: "Prihlásiť sa"
+login.logout: "Odhlásiť sa"
+login.username: "Používateľské meno"
+login.password: "Heslo"
+login.continue: "Pokračovať offline"
+
+# Graphics Settings
+settings.gfx: "Grafika"
+settings.gfx.fullscreen: "Fullscreen"
+settings.gfx.fixedrender: "Fixná vykresľovacia veľkosť"
+settings.gfx.vsync: "VSync"
+settings.gfx.screensize: "Veľkosť obrazovky"
+settings.gfx.rendersize: "Vykresľovacia veľkosť"
+settings.gfx.notecolor: "Farby nôt"
+
+# Render Sizes
+rendersize.tiny: "Maličká"
+rendersize.small: "Malá"
+rendersize.medium: "Stredná"
+rendersize.large: "Veľká"
+rendersize.max: "Maximálna"
+
+# Game Settings
+settings.game: "Hra"
+settings.game.locale: "Jazyk"
+settings.game.theme: "Motív"
+settings.game.audiooffset: "Posun zvuku"
+settings.game.inputoffset: "Posun vstupu"
+settings.game.lanespeed: "Rýchlosť"
+settings.game.notewidth: "Šírka nôt"
+settings.game.keyconfig: "Konfigurácia kláves"
+settings.game.edgeplayarea: "Maximálna hracia plocha"
+
+keyconfig.default: "Predvolená"
+keyconfig.default.desc: "(šípky a navigačné klávesy)"
+keyconfig.reduced: "Zredukovaná"
+keyconfig.reduced.desc: "(pre malé klávesnice)"
+
+# Audio Settings
+settings.audio: "Zvuk"
+settings.audio.bgmvolume: "Hlasitosť BGM"
+settings.audio.sfxvolume: "Hlasitosť efektov"
+settings.audio.songvolume: "Hlasitosť hudby"
+settings.audio.songpreviewvolume: "Hlasitosť ukážky"
+
+# Accessibility Settings
+settings.access: "Prístupnosť"
+settings.access.noholdnotes: "Zakázať držacie noty"
+settings.access.nohiteffect: "Zakázať efekty zásahu"
+settings.access.nolaneeffect: "Zakázať efekty pruhu"
+
+# Dialogs
+dialog.howtoplay: "Cieľom hry je dosiahnuť čo najvyššie skóre zasiahnutím všetkých nôt v skladbe.\nKaždá nota sa k tebe pohybuje po dráhe.\nTieto dráhy sú priradené ku klávesom v rovnakej časti tvojej klávesnice.\nStlač akýkoľvek kláves v danej sekcii presne v čase noty, aby si získal čo najlepšie skóre.\nNeskoré alebo predčasné zásahy majú za následok nižšie skóre za danú notu."
+dialog.besuretologin: "Nezabudni sa prihlásiť, aby si postupoval v rebríčku!"
+dialog.besuretooffset: "Ak máš problémy so zasahovaním nôt, skús si v nastaveniach upraviť posun."
+
+# Play State
+state.play.restart: "Reštartovať"
+state.play.pause: "Pauza"
+
+# Offset
+offset.instructions: "<b>Zvukový offset\nUpravuje, kedy sa prehráva hudba\nOvplyvňuje iba vizuálnu stránku\n\n<b>Vstupný offset\nUpravuje, kedy sa zaznamenávajú tvoje stlačenia\nOvplyvňuje iba vstup\n\nAk si všimneš, že noty nie sú zosynchronizované s hudbou, ktorú počuješ,\nuprav podľa toho svoj ZVUKOVÝ OFFSET:\nAk noty prichádzajú na čiaru zásahu PRED rytmom:\nZNÍŽ svoj ZVUKOVÝ OFFSET, aby sa hudba prehrávala skôr\nAk noty prichádzajú na čiaru zásahu PO rytme:\nZVÝŠ svoj ZVUKOVÝ OFFSET, aby sa hudba prehrávala neskôr\n\nAk si všimneš, že dostávaš hodnotenia BAD a MISS\nkeď noty stláčaš presne načas:\nUprav svoj VSTUPNÝ OFFSET"
+offset.input: "ZÁSAH: MEDZERNÍK\n\n\nZVUKOVÝ OFFSET:\nZVÝŠIŤ: ŠÍPKA HORE\nZNÍŽIŤ: ŠÍPKA DOLE\n\n\nVSTUPNÝ OFFSET:\nZVÝŠIŤ: ŠÍPKA VPRAVO\nZNÍŽIŤ: ŠÍPKA VĽAVO\n\n\nPoznámka:\nAk si nie si istý, skontroluj hlavné logo pre audio/vizuálnu synchronizáciu."
+
+# Themes
+theme.standard: "Štandardný"
+theme.leftbehind: "Zanechaný pozadu"
+
+# Colors
+color.white: "Biela"
+color.black: "Čierna"
+
+# Note Colors
+note.color.default: "Predvolená"
+note.color.mono: "Odtiene sivej"
+note.color.dusk: "Súmrak"
+note.color.dawn: "Svitanie"
+note.color.aurora: "Aurora"
+note.color.arorua: "Arorua"
+note.color.custom: "Vlastná"
+note.color.hamburger: "Hamburger"
+note.color.classic: "Klasická"
+
+# Other
+unknown: "???"
